@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.vercel/
+.local/
+*.log
+public/account.js
+
+
+.vercel
+.env*
+!.env.example
+supabase/.temp/
