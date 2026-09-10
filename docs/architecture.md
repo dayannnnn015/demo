@@ -1,4 +1,4 @@
-# Backend architecture and decisions
+# EDUNEXUS architecture and decisions
 
 EDUNEXUS is a modular TypeScript/Express API with PostgreSQL, Supabase Auth, and Vercel hosting. Modules share one transactional database and an explicit API contract. This fits a single elementary school's scale and allows later frontend work without changing business rules.
 

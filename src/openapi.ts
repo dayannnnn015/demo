@@ -52,7 +52,7 @@ for (const op of operations) {
 
 export const openapi = {
   openapi: '3.1.0',
-  info: { title: 'EDUNEXUS backend API', version: '0.1.0', description: 'Section 1: staff authorization and school configuration. Bearer tokens come from Supabase Auth. All deployed access requires MFA. Business roles are read from the database; client metadata never grants privileges. Dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. No learner, attendance, grade, or official-form endpoints exist yet.' },
+  info: { title: 'EDUNEXUS API', version: '0.1.0', description: 'Section 1: staff authorization and school configuration. Bearer tokens come from Supabase Auth. All deployed access requires MFA. Business roles are read from the database; client metadata never grants privileges. Dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. No learner, attendance, grade, or official-form endpoints exist yet.' },
   servers: [{ url: '/' }],
   paths,
   components: {

@@ -1,4 +1,4 @@
-# Backend implementation roadmap
+# EDUNEXUS implementation roadmap
 
 Build and review one section at a time. The user wants sustained backend refinement before frontend handoff. Do not implement later sections merely to fill out an interface.
 

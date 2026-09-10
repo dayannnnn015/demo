@@ -1,6 +1,6 @@
-# EDUNEXUS backend
+# EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository currently implements **Section 1: staff authorization and school configuration**. Backend development remains the priority; a basic [school workspace](https://edunexus-backend-dev.vercel.app/app) now makes the existing operations usable through forms. Full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository currently implements **Section 1: staff authorization and school configuration**. Backend development remains the priority; a basic [school workspace](https://edunexus-balili.vercel.app/app) now makes the existing operations usable through forms. Full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -14,7 +14,7 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Version checks to prevent lost updates, transactional audit records, and persistent request limits.
 - Versioned SQL migrations, an OpenAPI contract, automated tests, CI, and Vercel configuration.
 
-Learner records, attendance, grading, promotion, and form generation are subsequent sections. No learner data has been imported. The development Supabase schema is provisioned and tested, and the backend is deployed at [edunexus-backend-dev.vercel.app](https://edunexus-backend-dev.vercel.app). The initial administrator invitation was accepted by Supabase for delivery, and the school/account bootstrap is complete. Live route checks pass; the invited user's password/MFA enrollment remains to be verified. See [deployment](docs/deployment.md).
+Learner records, attendance, grading, promotion, and form generation are subsequent sections. No learner data has been imported. The development Supabase schema is provisioned and tested, and the backend is deployed at [edunexus-balili.vercel.app](https://edunexus-balili.vercel.app). The initial administrator invitation was accepted by Supabase for delivery, and the school/account bootstrap is complete. Live route checks pass; the invited user's password/MFA enrollment remains to be verified. See [deployment](docs/deployment.md).
 
 ## Development
 

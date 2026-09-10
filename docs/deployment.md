@@ -2,16 +2,18 @@
 
 ## Current development deployment
 
-On 9 September 2026, a dedicated Supabase project `edunexus-backend-dev` was created in the existing account organization, in Singapore. Project reference: `eszhhtxzrplknrmzozwr`. Migrations `0001`–`0003` were committed successfully. Hosted role, TLS, date serialization, teacher visibility, version checks, and audit behavior passed tests using synthetic fixtures that were rolled back.
+On 9 September 2026, a dedicated Supabase project `edunexus` was created in the existing account organization, in Singapore. Project reference: `eszhhtxzrplknrmzozwr`. Migrations `0001`–`0003` were committed successfully. Hosted role, TLS, date serialization, teacher visibility, version checks, and audit behavior passed tests using synthetic fixtures that were rolled back.
 
-A separate Vercel project `edunexus-backend-dev` is deployed under `joshs-projects-47d7b071` at **https://edunexus-backend-dev.vercel.app**. Current deployment ID: `dpl_6XwQLGFK3v2MiXJygJFx6cLVKsBs` (Section 1 workspace update). No existing prototype was changed. The user explicitly approved the authentication settings and restricted credential transfer after automatic approval review requested that authorization. Those operations subsequently completed successfully.
+A separate Vercel project `edunexus` is deployed under `joshs-projects-47d7b071` at **https://edunexus-balili.vercel.app**. Current deployment ID: `dpl_2qsRPiuyVpcSBSvEGf4VD9xHpU1s` (EDUNEXUS naming update). No existing prototype was changed. The user explicitly approved the authentication settings and restricted credential transfer after automatic approval review requested that authorization. Those operations subsequently completed successfully.
+
+GitHub, Supabase, and Vercel now use the project name `edunexus`. The private repository is https://github.com/bustamante-j/edunexus. The Vercel project ID and Supabase project reference are unchanged, preserving the existing database and accounts. The public address uses `edunexus-balili.vercel.app` because the shorter name is assigned to another project. The previous site address forwards to this one for existing bookmarks. API allowed origins and Supabase Auth callbacks use the new address.
 
 The user designated `bjjoshuagarciab@gmail.com` for the first development administrator invitation. After deployment and browser verification, Supabase accepted the invitation for email delivery. The returned Auth identity was bootstrapped as `Development Administrator` with the `principal` permission level; this does not represent an appointment as the school's actual principal. The school profile is initialized without an invented school ID. No learner records or synthetic test fixtures remain. Inbox receipt, password setup, and actual user MFA enrollment are not yet verified.
 
 Applied configuration:
 
 1. Public/anonymous signup disabled, minimum password length 12, TOTP MFA enrollment/verification enabled, maximum three enrolled factors, and access-token lifetime 15 minutes. The public JWKS advertises ES256 signing.
-2. Auth callback is `https://edunexus-backend-dev.vercel.app/account/setup`; allowed redirects are that exact URL and `http://127.0.0.1:3001/account/setup`.
+2. Auth callback is `https://edunexus-balili.vercel.app/account/setup`; allowed redirects are that exact URL and `http://127.0.0.1:3001/account/setup`.
 3. The seven runtime variables listed below are configured in **the production environment of the development Vercel project**. This is Vercel's stable deployment environment name; it is not the school's production rollout. Runtime MFA and verified database TLS are required.
 
 The restricted database credential is held in ignored local files and Vercel's runtime environment. The privileged migration connection and Supabase service-role key stay local. Ignored `.local/configure-cloud.mjs` has run successfully; do not rerun completed setup or invitation scripts without checking existing state.

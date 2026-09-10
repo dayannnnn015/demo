@@ -1,4 +1,4 @@
-name: Backend checks
+name: EDUNEXUS checks
 on:
   push:
   pull_request:
