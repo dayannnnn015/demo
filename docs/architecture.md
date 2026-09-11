@@ -4,7 +4,7 @@ EDUNEXUS is a modular TypeScript/Express API with PostgreSQL, Supabase Auth, and
 
 ```mermaid
 flowchart LR
-  Staff[School staff] --> UI[Future frontend]
+  Staff[School staff] --> UI[Section 1 workspace / future learner screens]
   UI --> Auth[Supabase Auth and MFA]
   UI -->|Bearer token| API[Express API on Vercel]
   API -->|Signature and live user check| Auth
@@ -82,9 +82,11 @@ Sections are unique by school year, grade, and normalized name. Kindergarten is 
 
 ## Concurrency and audit
 
+Section 2A adds `learners`, `enrollments`, `enrollment_events`, and `record_access_events`. The full model and effective-date conventions are in [learner registry](learner-registry.md). Annual state is unique by learner/year, references a section in the same year and grade, and changes only through restricted manager-checking database functions. Event rows preserve the state timeline. Teachers lose the relevant learner access on reassignment, withdrawal, staff suspension, or year closure; managers retain history. Successful learner/enrollment API reads append identifiers and request metadata to a protected read log without storing search terms or profile values.
+
 Updates require the previously read integer `version`. SQL includes that version in the update condition; a competing update returns HTTP 409 instead of overwriting another user's change. PostgreSQL constraints enforce uniqueness and relationships even if requests race. Adviser and staff changes share a transaction advisory lock; period changes lock their year row. Transactions have statement and lock timeouts and never include external Auth calls.
 
-Database triggers record writes in the same transaction, with actor, request ID, changed field names, and record ID. Values, learner names, credentials, and document contents are not copied into audit rows. Failed/rolled-back changes do not produce successful audit events. Sensitive read/export auditing belongs with the learner and document sections. Logs contain the route template, method, status, duration, and generated request ID; raw URLs, bodies, and tokens are excluded.
+Database triggers record writes in the same transaction, with actor, request ID, changed field names, and record ID. Values, learner names, credentials, and document contents are not copied into change-audit rows. Failed/rolled-back changes do not produce successful audit events. Learner read auditing is implemented in Section 2A; document/export auditing remains future work. Logs contain the route template, method, status, duration, and generated request ID; raw URLs, bodies, and tokens are excluded. Audit cursors sort the numeric database ID even though IDs are returned as strings, preserving chronological pagination beyond single-digit IDs.
 
 Rate limiting is persistent per staff user: 180 requests per minute, shared across API instances. The counter commits independently of the business transaction. Invalid-token/anonymous abuse must be handled by provider and edge controls before it reaches this per-user limit.
 

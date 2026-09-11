@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { operations, staffRole, uuid } from './modules/foundation/contracts.js';
+import { staffRole, uuid } from './modules/foundation/contracts.js';
+import { operations } from './operations.js';
+import { registryResponses } from './modules/registry/contracts.js';
 
 const timestamps = { version: z.number().int(), created_at: z.iso.datetime(), updated_at: z.iso.datetime() };
 const staff = z.object({ user_id: uuid, display_name: z.string(), role: staffRole, active: z.boolean(), ...timestamps });
@@ -11,6 +13,7 @@ const audit = z.object({ id: z.string(), occurred_at: z.iso.datetime(), actor_us
 const items = (s: z.ZodType) => z.object({ items: z.array(s) });
 const paginated = (s: z.ZodType) => z.object({ items: z.array(s), pagination: z.object({ limit: z.number(), offset: z.number(), has_more: z.boolean() }) });
 const responseSchemas: Record<string, z.ZodType> = {
+  ...registryResponses,
   me: staff.extend({ assurance_level: z.enum(['aal1', 'aal2']) }), schoolGet: school, schoolUpdate: school,
   staffList: paginated(staff), staffCreate: staff, staffUpdate: staff,
   yearList: items(year), yearCreate: year, yearTransition: year,
@@ -38,7 +41,7 @@ for (const op of operations) {
   paths[path]![op.method] = {
     operationId: op.id,
     summary: op.summary,
-    tags: ['Foundation'],
+    tags: ['module' in op ? 'Learners and enrollment' : 'Foundation'],
     description: `${'manager' in op ? 'Requires principal or administrative_officer. ' : 'Requires active staff. '}${op.method === 'patch' ? 'Supply the last-read version; refresh after HTTP 409. ' : ''}${op.id === 'staffCreate' ? 'Provision the identity in Supabase Auth first. This endpoint grants school access; it does not send an invitation. Administrative officers may only authorize teachers.' : ''}`,
     security: [{ staffBearer: [] }],
     parameters,
@@ -52,7 +55,7 @@ for (const op of operations) {
 
 export const openapi = {
   openapi: '3.1.0',
-  info: { title: 'EDUNEXUS API', version: '0.1.0', description: 'Section 1: staff authorization and school configuration. Bearer tokens come from Supabase Auth. All deployed access requires MFA. Business roles are read from the database; client metadata never grants privileges. Dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. No learner, attendance, grade, or official-form endpoints exist yet.' },
+  info: { title: 'EDUNEXUS API', version: '0.2.0', description: 'Sections 1 and 2A: school setup, learner registry, annual enrollment, and dated movement history. Managers edit learner records; teachers read only current assigned open-year rosters. Movement effective_on is the first date of the new state and must strictly follow the previous event; historical corrections and imports are not implemented. LRN may be pending (null); assigned LRNs cannot be replaced. Bearer tokens come from Supabase Auth and deployed access requires MFA. Dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. Attendance, grades, and official forms are not implemented.' },
   servers: [{ url: '/' }],
   paths,
   components: {

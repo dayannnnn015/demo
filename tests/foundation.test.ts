@@ -105,6 +105,8 @@ describe('Section 1 API and PostgreSQL authorization', () => {
   });
   it('audits the committed change without storing record values', async () => {
     const r = await request(app).get('/api/v1/audit-events?limit=100').set(header());
+    const eventIds = r.body.data.items.map((event: { id: string }) => Number(event.id));
+    expect(eventIds).toEqual([...eventIds].sort((a, b) => b - a));
     const changes = r.body.data.items.filter((e: { entity_id: string; operation: string }) => e.entity_id === sectionId && e.operation === 'UPDATE');
     expect(changes).toHaveLength(1);
     expect(changes[0].changed_fields).toEqual(['name']);

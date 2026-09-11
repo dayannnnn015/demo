@@ -7,7 +7,9 @@ import type { Logger } from 'pino';
 import type { Authenticator, Identity } from './core/auth.js';
 import { assertRuntimeRole, type Database, type Query } from './core/db.js';
 import { AppError, normalizeError } from './core/errors.js';
-import { operations, uuid } from './modules/foundation/contracts.js';
+import { uuid } from './modules/foundation/contracts.js';
+import { operations } from './operations.js';
+import { executeRegistry } from './modules/registry/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
 import { accountPage } from './account-page.js';
@@ -47,14 +49,17 @@ export function createApp(deps: Dependencies) {
     maxAge: 600,
   }));
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-1', health: '/health/live', contract: '/openapi.json' }));
+  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2a', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
       await deps.database.transaction(async tx => {
         await assertRuntimeRole(tx);
         await tx.query(`select set_config('statement_timeout','3000',true)`);
-        const [state] = await tx.query<{ ready: boolean }>('select edunexus.is_ready() as ready');
+        const [state] = await tx.query<{ ready: boolean }>(`select edunexus.is_ready()
+          and to_regclass('edunexus.learners') is not null
+          and to_regclass('edunexus.enrollment_events') is not null
+          and to_regclass('edunexus.record_access_events') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -94,7 +99,8 @@ export function createApp(deps: Dependencies) {
       const data = await withActor(deps.database, identity, res.locals.requestId, async tx => {
         const staff = await currentStaff(tx, identity);
         if ('manager' in operation && staff.role === 'teacher') throw new AppError(403, 'FORBIDDEN', 'A principal or administrative officer account is required.');
-        return executeOperation(operation.id, { tx, staff, identity }, { body, query, ...(id ? { id } : {}) });
+        const input = { body, query, ...(id ? { id } : {}) };
+        return 'module' in operation ? executeRegistry(operation.id, { tx, staff, identity }, input) : executeOperation(operation.id, { tx, staff, identity }, input);
       });
       res.status(operation.method === 'post' ? 201 : 200).json({ data, requestId: res.locals.requestId });
     });

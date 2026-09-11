@@ -5,6 +5,8 @@ export class AppError extends Error {
 export function normalizeError(error: unknown): AppError {
   if (error instanceof AppError) return error;
   const code = (error as { code?: string } | null)?.code;
+  if (code === 'P0002') return new AppError(404, 'NOT_FOUND', 'The record was not found.');
+  if (code === 'P0003') return new AppError(409, 'VERSION_CONFLICT', 'The record changed. Refresh before saving.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

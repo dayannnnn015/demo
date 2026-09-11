@@ -13,7 +13,8 @@ export const ids = {
 };
 
 export async function testDatabase() {
-  const pg = await PGlite.create();
+  // Match the production pg adapter: SQL DATE is a calendar date, not a JS timestamp.
+  const pg = await PGlite.create({ parsers: { 1082: (value: string) => value } });
   // The production migration uses Supabase's real auth.users table. Only this
   // isolated test database has the synthetic identity fixture below.
   await pg.exec(`create schema auth; create table auth.users (id uuid primary key);`);

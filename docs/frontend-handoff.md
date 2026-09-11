@@ -1,6 +1,6 @@
 # Frontend integration contract
 
-A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Only Section 1 is implemented.
+A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1 and 2A are implemented in the API; Section 2A learner screens are not yet built.
 
 ## Authentication
 
@@ -42,4 +42,4 @@ Dates are exact `YYYY-MM-DD` calendar dates in the school's Asia/Manila context.
 | Read sections | All | All | Assigned sections only |
 | Read change audit | Yes | Yes | No |
 
-Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. The roster, attendance, grades, report exports, dashboards, and invitations are not supported yet; do not build a simulated workflow and present it as connected to this API.
+Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) now supports learner profiles, annual enrollment, current roster retrieval, and dated movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRN values as strings, display a pending state for null, and never generate an LRN or silently merge matching names. Movement requests use the enrollment version and the first date of the new state. Import, corrections to assigned LRNs or historical timelines, attendance, grades, report exports, and in-app invitations remain unavailable; do not present simulated workflows as connected API features.

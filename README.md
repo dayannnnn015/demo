@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository currently implements **Section 1: staff authorization and school configuration**. Backend development remains the priority; a basic [school workspace](https://edunexus-balili.vercel.app/app) now makes the existing operations usable through forms. Full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository currently implements **Section 1: staff authorization and school configuration**, plus **Section 2A: learner registry and enrollment APIs**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -14,7 +14,15 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Version checks to prevent lost updates, transactional audit records, and persistent request limits.
 - Versioned SQL migrations, an OpenAPI contract, automated tests, CI, and Vercel configuration.
 
-Learner records, attendance, grading, promotion, and form generation are subsequent sections. No learner data has been imported. The development Supabase schema is provisioned and tested, and the backend is deployed at [edunexus-balili.vercel.app](https://edunexus-balili.vercel.app). The initial administrator invitation was accepted by Supabase for delivery, and the school/account bootstrap is complete. Live route checks pass; the invited user's password/MFA enrollment remains to be verified. See [deployment](docs/deployment.md).
+## What works in Section 2A
+
+- Minimal learner identities with unique official LRNs, pending-LRN support, and versioned profile corrections.
+- Scoped learner search and annual enrollment, with one enrollment per learner per school year.
+- Dated same-grade section reassignment, withdrawal, and reentry with immutable event history.
+- Manager-only changes and teacher visibility limited to current assigned open-year rosters.
+- Read-access auditing, atomic rollback, protected history, and current-version checks on movements.
+
+Read [the learner registry contract](docs/learner-registry.md) for date conventions, permissions, API routes, and current limits. Import preview/commit, duplicate reconciliation, LRN replacement, and enrollment timeline corrections are Section 2B. Attendance, grading, promotion, and form generation remain subsequent sections. No real learner data has been imported. The development database and deployment are described in [deployment](docs/deployment.md); a real invited-user MFA login and school acceptance remain to be verified.
 
 ## Development
 
@@ -48,6 +56,8 @@ All business endpoints are under `/api/v1` and require `Authorization: Bearer <S
 ```text
 src/core/                 Authentication, configuration, database, errors
 src/modules/foundation/   Section 1 contracts and business operations
+src/modules/registry/     Section 2A learner and enrollment operations
+src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations
 scripts/                 Migration, operator setup, API export

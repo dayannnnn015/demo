@@ -88,7 +88,7 @@ export async function executeOperation(id: OperationId, ctx: Context, input: { b
     }
     case 'auditList': {
       const q = input.query as z.infer<typeof schemas.auditQuery>;
-      const rows = await tx.query('select id::text,occurred_at,actor_user_id,request_id,operation,entity_table,entity_id,changed_fields from edunexus.audit_events where ($1::bigint is null or id < $1) order by id desc limit $2', [q.before_id ?? null, q.limit + 1]);
+      const rows = await tx.query('select id::text,occurred_at,actor_user_id,request_id,operation,entity_table,entity_id,changed_fields from edunexus.audit_events where ($1::bigint is null or id < $1) order by edunexus.audit_events.id desc limit $2', [q.before_id ?? null, q.limit + 1]);
       return { items: rows.slice(0, q.limit), pagination: { limit: q.limit, next_before_id: rows.length > q.limit ? rows[q.limit - 1]!.id : null } };
     }
   }

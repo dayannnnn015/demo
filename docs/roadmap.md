@@ -14,9 +14,11 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 ## Section 2 — Learner registry and enrollment
 
-Add a permanent learner identity, reviewed minimum profile fields, LRN validation and duplicate resolution, annual enrollment, class assignment history, movements with effective dates, and scoped retrieval. Import from a reviewed sample through a validation/preview/commit workflow. Resolve teacher class-list authority first.
+**Section 2A is implemented:** minimal permanent learner identity, unique 12-digit LRNs with pending assignment, profile corrections, scoped search, annual enrollment, dated section reassignment, withdrawal/reentry, immutable movement history, and read-access audit. The user confirmed that principals and administrative officers make changes; teachers only view assigned learners. See [the Section 2A contract](learner-registry.md) for effective-date semantics and limitations.
 
-Acceptance: duplicate detection, invalid dates, transfer and section-change history, correct adviser visibility, rejected cross-section requests, import rollback, and concurrent assignment conflicts.
+**Section 2B remains:** validation/preview/commit import from a reviewed sample, duplicate reconciliation, assigned-LRN correction, and controlled timeline corrections. Additional learner fields and class capacities require school review. No automatic duplicate merge or bulk import is available yet.
+
+Section 2A validation covers duplicate LRNs, invalid dates, transfer and section-change history, adviser visibility, rejected cross-section requests, transaction rollback, and competing versioned writes. Real Supabase tests exercise the restricted database connection and business functions with rollback-only fixtures. Import rollback and realistic multi-session API load remain later acceptance work.
 
 ## Section 3 — Attendance and monthly consolidation
 
