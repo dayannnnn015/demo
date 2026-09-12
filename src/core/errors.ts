@@ -16,6 +16,9 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0103') return new AppError(409, 'TIMELINE_UNCHANGED', 'The proposed timeline has no changes.');
   if (code === 'P0104') return new AppError(409, 'TIMELINE_REVIEW_CHANGED', 'The proposal or related records changed. Preview and review the correction again.');
   if (code === 'P0105') return new AppError(409, 'YEAR_CLOSED', 'A closed school year cannot be corrected through this workflow.');
+  if (code === 'P0200') return new AppError(409, 'IDENTITY_CONFLICT', 'Resolve the conflicts shown in the identity preview before confirming.');
+  if (code === 'P0201') return new AppError(409, 'LINKED_LEARNER_READ_ONLY', 'This profile is linked. Use the retained learner or review reversal of the identity link.');
+  if (code === 'P0202') return new AppError(409, 'IDENTITY_REVIEW_CHANGED', 'The profiles, memberships, or enrollment history changed. Preview and review again.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

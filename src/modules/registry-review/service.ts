@@ -75,9 +75,11 @@ async function planImport(tx: Query, b: ImportInput) {
   });
   const matches = await tx.query(`select x.row,l.* from jsonb_to_recordset($1::jsonb)
     as x(row integer,lrn text,first_name text,last_name text,birth_date date,use_id uuid)
-    cross join lateral (select id,lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,version from edunexus.learners
-      where id=x.use_id or (x.lrn is not null and lrn=x.lrn)
+    cross join lateral (select id,lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,version from edunexus.learners l
+      where merged_into is null and (id=x.use_id or (x.lrn is not null and lrn=x.lrn)
         or (birth_date=x.birth_date and lower(btrim(first_name))=lower(x.first_name) and lower(btrim(last_name))=lower(x.last_name))
+        or exists(select 1 from edunexus.learners a where a.merged_into=l.id and a.birth_date=x.birth_date
+          and lower(btrim(a.first_name))=lower(x.first_name) and lower(btrim(a.last_name))=lower(x.last_name)))
       order by (id=x.use_id) desc nulls last,(lrn=x.lrn) desc nulls last,id limit 6) l order by x.row,l.id`, [JSON.stringify(incoming)]);
   const candidates = new Map<number, Candidate[]>();
   for (const match of matches) {
@@ -85,7 +87,7 @@ async function planImport(tx: Query, b: ImportInput) {
     items.push(candidateSchema.parse(match)); candidates.set(row, items);
   }
   const candidateIds = matches.map(m => String(m.id));
-  const enrolled = new Set((await tx.query('select learner_id from edunexus.enrollments where academic_year_id=$1 and learner_id=any($2::uuid[])', [year.id, candidateIds])).map(e => e.learner_id));
+  const enrolled = new Set((await tx.query('select edunexus.visible_learner_identity(learner_id) as learner_id from edunexus.enrollments where academic_year_id=$1 and edunexus.visible_learner_identity(learner_id)=any($2::uuid[])', [year.id, candidateIds])).map(e => e.learner_id));
   const seenLrn = new Set<string>(), seenName = new Set<string>(), seenId = new Set<string>();
   const rows: PreviewRow[] = profiles.map((profile, index) => {
     const row = index + 1, choices = candidates.get(row) ?? [], resolution = resolutions.get(row);

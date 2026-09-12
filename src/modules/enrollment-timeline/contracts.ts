@@ -32,7 +32,7 @@ export const correctionResponse = z.object({
 export const timelineResponses: Record<string, z.ZodType> = {
   timelineGet: z.object({ enrollment_id: uuid, version: z.number().int(), entries: z.array(entry), latest_correction_id: uuid.nullable() }),
   timelinePreview: z.object({
-    enrollment_id: uuid, version: z.number().int(), learner_version: z.number().int(), actor_user_id: uuid, review_hash: reviewHash,
+    enrollment_id: uuid, version: z.number().int(), learner_version: z.number().int(), learner_id:uuid,recorded_learner_id:uuid,actor_user_id: uuid, review_hash: reviewHash,
     school_year: z.object({ id: uuid, start_year: z.number().int(), starts_on: z.iso.date(), ends_on: z.iso.date(), status: z.enum(['draft', 'active']), version: z.number().int() }),
     sections: z.array(z.object({ id: uuid, name: z.string(), adviser_user_id: uuid.nullable(), version: z.number().int() })),
     before_entries: z.array(entry), after_entries: z.array(entry), reason: z.string(), first_affected_on: z.iso.date(), previous_state: state, proposed_state: state,

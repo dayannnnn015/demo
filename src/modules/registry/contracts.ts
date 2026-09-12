@@ -11,7 +11,7 @@ export const registrySchemas = {
   learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), lrn: lrn.nullable().default(null) }),
   learnerUpdate: z.strictObject({ ...profile, version }),
   learnerLrn: z.strictObject({ version, lrn }),
-  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional() }),
+  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), include_linked: z.enum(['true','false']).default('false') }),
   enrollmentCreate: z.strictObject({ learner_id: uuid, section_id: uuid, enrolled_on: date, entry_kind: z.enum(['regular', 'transfer_in']).default('regular') }),
   enrollmentQuery: z.strictObject({ ...page, academic_year_id: uuid.optional(), section_id: uuid.optional(), learner_id: uuid.optional(), status: z.enum(['enrolled', 'withdrawn']).optional() }),
   movement: z.strictObject({ version, action: z.enum(['reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid.nullable().default(null), exit_reason: z.enum(['transfer_out', 'withdrawal', 'dropout', 'death']).nullable().default(null) }).refine(v => v.action === 'withdrawn' ? v.section_id === null && v.exit_reason !== null : v.section_id !== null && v.exit_reason === null, 'Withdrawals require exit_reason and no section; reassignment/reentry require section_id and no exit_reason.'),
@@ -35,8 +35,8 @@ export type RegistryOperationId = typeof registryOperations[number]['id'];
 
 const timestamps = { version: z.number().int(), created_at: z.iso.datetime(), updated_at: z.iso.datetime() };
 // Response schemas describe persisted values, without date-relative input refinements.
-const learner = z.object({ id: uuid, lrn: lrn.nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: date, sex: z.enum(['male', 'female']), ...timestamps });
-const enrollment = z.object({ id: uuid, learner_id: uuid, academic_year_id: uuid, grade_level: z.number().int(), section_id: uuid, enrolled_on: date, effective_on: date, status: z.enum(['enrolled', 'withdrawn']), last_reason: z.string(), ...timestamps });
+const learner = z.object({ id: uuid, lrn: lrn.nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: date, sex: z.enum(['male', 'female']), merged_into: uuid.nullable(), identity_revision:z.number().int(), ...timestamps });
+const enrollment = z.object({ id: uuid, learner_id: uuid, recorded_learner_id:uuid, academic_year_id: uuid, grade_level: z.number().int(), section_id: uuid, enrolled_on: date, effective_on: date, status: z.enum(['enrolled', 'withdrawn']), last_reason: z.string(), ...timestamps });
 const event = z.object({ id: uuid, enrollment_id: uuid, enrollment_version: z.number().int(), event_type: z.enum(['enrolled', 'reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid, reason: z.string(), actor_user_id: uuid, request_id: uuid.nullable(), recorded_at: z.iso.datetime() });
 const paginated = (schema: z.ZodType) => z.object({ items: z.array(schema), pagination: z.object({ limit: z.number(), offset: z.number(), has_more: z.boolean() }) });
 export const registryResponses: Record<string, z.ZodType> = {

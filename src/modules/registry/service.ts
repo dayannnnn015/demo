@@ -11,6 +11,8 @@ function found(rows: Row[], update = false) {
 function page(rows: Row[], limit: number, offset: number) { return { items: rows.slice(0, limit), pagination: { limit, offset, has_more: rows.length > limit } }; }
 export async function executeRegistry(id: RegistryOperationId, ctx: Context, input: { body: unknown; query: unknown; id?: string }) {
   const { tx } = ctx;
+  const enrollmentSelect = 'select e.*,e.learner_id as recorded_learner_id,edunexus.visible_learner_identity(e.learner_id) as learner_id from edunexus.enrollments e';
+  const enrollmentRow = async (id: unknown) => found(await tx.query(`${enrollmentSelect} where e.id=$1`, [id]));
   async function record(ids: unknown[]) { await tx.query('select edunexus.record_access($1,$2::uuid[])', [id, ids]); }
   switch (id) {
     case 'learnerCreate': {
@@ -33,26 +35,26 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
       const q = input.query as z.infer<typeof s.learnerQuery>;
       const rows = await tx.query(`select * from edunexus.learners where
         ($1::text is null or position(lower($1) in lower(concat_ws(' ',last_name,first_name,middle_name)))>0 or lrn=$1)
-        and ($2::date is null or birth_date=$2) and ($3::text is null or lrn=$3)
-        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [q.search ?? null, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset]);
+        and ($2::date is null or birth_date=$2) and ($3::text is null or lrn=$3) and ($6::boolean or merged_into is null)
+        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [q.search ?? null, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true']);
       const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
     }
     case 'enrollmentCreate': {
       const b = input.body as z.infer<typeof s.enrollmentCreate>;
-      return found(await tx.query('select * from edunexus.enroll_learner($1,$2,$3,$4)', [b.learner_id, b.section_id, b.enrolled_on, b.entry_kind]));
+      const row=found(await tx.query('select * from edunexus.enroll_learner($1,$2,$3,$4)', [b.learner_id, b.section_id, b.enrolled_on, b.entry_kind])); return enrollmentRow(row.id);
     }
     case 'enrollmentMove': {
       const b = input.body as z.infer<typeof s.movement>;
-      return found(await tx.query('select * from edunexus.move_enrollment($1,$2,$3,$4,$5,$6)', [input.id, b.version, b.action, b.effective_on, b.section_id, b.exit_reason]));
+      const row=found(await tx.query('select * from edunexus.move_enrollment($1,$2,$3,$4,$5,$6)', [input.id, b.version, b.action, b.effective_on, b.section_id, b.exit_reason])); return enrollmentRow(row.id);
     }
     case 'enrollmentGet': {
-      const row = found(await tx.query('select * from edunexus.enrollments where id=$1', [input.id])); await record([row.id]); return row;
+      const row = await enrollmentRow(input.id); await record([row.id]); return row;
     }
     case 'enrollmentList': {
       const q = input.query as z.infer<typeof s.enrollmentQuery>;
-      const rows = await tx.query(`select * from edunexus.enrollments where ($1::uuid is null or academic_year_id=$1)
-        and ($2::uuid is null or section_id=$2) and ($3::uuid is null or learner_id=$3) and ($4::text is null or status=$4)
-        order by id limit $5 offset $6`, [q.academic_year_id ?? null, q.section_id ?? null, q.learner_id ?? null, q.status ?? null, q.limit + 1, q.offset]);
+      const rows = await tx.query(`${enrollmentSelect} where ($1::uuid is null or academic_year_id=$1)
+        and ($2::uuid is null or section_id=$2) and ($3::uuid is null or e.learner_id=$3 or edunexus.visible_learner_identity(e.learner_id)=$3) and ($4::text is null or status=$4)
+        order by e.id limit $5 offset $6`, [q.academic_year_id ?? null, q.section_id ?? null, q.learner_id ?? null, q.status ?? null, q.limit + 1, q.offset]);
       const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
     }
     case 'enrollmentHistory': {

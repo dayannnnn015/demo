@@ -1,6 +1,6 @@
 # Section 2B.1: roster import and reviewed LRN corrections
 
-Principals and administrative officers can import a class roster and correct an incorrectly recorded LRN. Teachers cannot preview/commit imports, inspect receipts, or read LRN correction history. Teacher roster boundaries still apply after import. This is a development contract for school review, using the existing minimum fields, not an arbitrary spreadsheet or official LIS importer. [Enrollment timeline corrections](enrollment-timeline.md) are implemented separately in Section 2B.2; existing-record merges remain future work.
+Principals and administrative officers can import a class roster and correct an incorrectly recorded LRN. Teachers cannot preview/commit imports, inspect receipts, or read LRN correction history. Teacher roster boundaries still apply after import. This is a development contract for school review, using the existing minimum fields, not an arbitrary spreadsheet or official LIS importer. [Enrollment timeline corrections](enrollment-timeline.md) are implemented separately in Section 2B.2; [reviewed duplicate links](learner-identity.md) are implemented in Section 2B.3 without deleting or reparenting original records.
 
 ## CSV review
 
@@ -53,4 +53,4 @@ The ordinary LRN update guard remains in place. Only a restricted correction int
 
 Tests cover parsing/input limits, explicit duplicates, preview ownership/expiry/tampering, retries, competing requests, changed records, a 50-row batch, a later-row database rejection, closed years, LRN conflicts, and protected history/bypass attempts. Hosted results are in [deployment](deployment.md).
 
-Section 2B.2 now adds [enrollment timeline corrections](enrollment-timeline.md). Import/correction frontend screens, reconciliation of existing duplicate identities, and school-approved sample mappings remain. Additional fields, realistic authenticated load tests, UAT, and restore-tested backups require further work before real-data rollout.
+Section 2B.2 now adds [enrollment timeline corrections](enrollment-timeline.md). Section 2B.3 adds [reviewed identity links](learner-identity.md). Imports match linked names to the retained candidate and detect annual enrollment across linked profiles; CSV values must still match the retained profile. Historical receipts keep their original IDs. Import/correction frontend screens, overlapping annual-record resolution, and school-approved sample mappings remain. Additional fields, realistic authenticated load tests, UAT, and restore-tested backups require further work before real-data rollout.
