@@ -1,6 +1,6 @@
 {
   "name": "edunexus",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -22,6 +22,7 @@
     "@supabase/supabase-js": "2.116.0",
     "@vercel/functions": "3.9.6",
     "cors": "2.8.6",
+    "csv-parse": "7.0.2",
     "express": "5.2.1",
     "helmet": "8.3.0",
     "jose": "6.2.12",

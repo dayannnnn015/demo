@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository currently implements **Section 1: staff authorization and school configuration**, plus **Section 2A: learner registry and enrollment APIs**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository implements **Section 1: staff authorization and school configuration**, **Section 2A: learner registry and enrollment APIs**, and **Section 2B.1: reviewed roster imports and LRN corrections**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -22,7 +22,14 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Manager-only changes and teacher visibility limited to current assigned open-year rosters.
 - Read-access auditing, atomic rollback, protected history, and current-version checks on movements.
 
-Read [the learner registry contract](docs/learner-registry.md) for date conventions, permissions, API routes, and current limits. Import preview/commit, duplicate reconciliation, LRN replacement, and enrollment timeline corrections are Section 2B. Attendance, grading, promotion, and form generation remain subsequent sections. No real learner data has been imported. The development database and deployment are described in [deployment](docs/deployment.md); a real invited-user MFA login and school acceptance remain to be verified.
+## What works in Section 2B.1
+
+- Bounded class-roster CSV validation and preview with explicit duplicate resolution.
+- Confirmation bound to the reviewed file and record versions, atomic import, and safe retry receipts.
+- Reviewed assigned-LRN correction preserving previous values, reason, actor, and request metadata.
+- Database/API restrictions on preview ownership and protected correction history.
+
+Read [the learner registry contract](docs/learner-registry.md) and [registry review contract](docs/registry-review.md) for API workflows and limits. Enrollment timeline corrections, reconciliation of existing duplicate identities, and school-reviewed sample mappings remain in Section 2B. Attendance, grading, promotion, and form generation remain subsequent sections. No real learner data has been imported. The development database and deployment are described in [deployment](docs/deployment.md); a real invited-user MFA login and school acceptance remain to be verified.
 
 ## Development
 
@@ -57,6 +64,7 @@ All business endpoints are under `/api/v1` and require `Authorization: Bearer <S
 src/core/                 Authentication, configuration, database, errors
 src/modules/foundation/   Section 1 contracts and business operations
 src/modules/registry/     Section 2A learner and enrollment operations
+src/modules/registry-review/ Roster import review and LRN corrections
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

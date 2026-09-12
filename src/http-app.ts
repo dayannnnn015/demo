@@ -10,6 +10,7 @@ import { AppError, normalizeError } from './core/errors.js';
 import { uuid } from './modules/foundation/contracts.js';
 import { operations } from './operations.js';
 import { executeRegistry } from './modules/registry/service.js';
+import { executeReview } from './modules/registry-review/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
 import { accountPage } from './account-page.js';
@@ -49,7 +50,7 @@ export function createApp(deps: Dependencies) {
     maxAge: 600,
   }));
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2a', health: '/health/live', contract: '/openapi.json' }));
+  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2b1', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
@@ -59,7 +60,9 @@ export function createApp(deps: Dependencies) {
         const [state] = await tx.query<{ ready: boolean }>(`select edunexus.is_ready()
           and to_regclass('edunexus.learners') is not null
           and to_regclass('edunexus.enrollment_events') is not null
-          and to_regclass('edunexus.record_access_events') is not null as ready`);
+          and to_regclass('edunexus.record_access_events') is not null
+          and to_regclass('edunexus.import_previews') is not null
+          and to_regclass('edunexus.lrn_corrections') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -100,7 +103,9 @@ export function createApp(deps: Dependencies) {
         const staff = await currentStaff(tx, identity);
         if ('manager' in operation && staff.role === 'teacher') throw new AppError(403, 'FORBIDDEN', 'A principal or administrative officer account is required.');
         const input = { body, query, ...(id ? { id } : {}) };
-        return 'module' in operation ? executeRegistry(operation.id, { tx, staff, identity }, input) : executeOperation(operation.id, { tx, staff, identity }, input);
+        const context = { tx, staff, identity };
+        if (!('module' in operation)) return executeOperation(operation.id, context, input);
+        return operation.module === 'registry' ? executeRegistry(operation.id, context, input) : executeReview(operation.id, context, input);
       });
       res.status(operation.method === 'post' ? 201 : 200).json({ data, requestId: res.locals.requestId });
     });

@@ -16,9 +16,11 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 **Section 2A is implemented:** minimal permanent learner identity, unique 12-digit LRNs with pending assignment, profile corrections, scoped search, annual enrollment, dated section reassignment, withdrawal/reentry, immutable movement history, and read-access audit. The user confirmed that principals and administrative officers make changes; teachers only view assigned learners. See [the Section 2A contract](learner-registry.md) for effective-date semantics and limitations.
 
-**Section 2B remains:** validation/preview/commit import from a reviewed sample, duplicate reconciliation, assigned-LRN correction, and controlled timeline corrections. Additional learner fields and class capacities require school review. No automatic duplicate merge or bulk import is available yet.
+**Section 2B.1 is implemented:** minimal-template CSV preview/confirmation/atomic commit, explicit resolution of import duplicates, safe retries, and assigned-LRN corrections with protected history. See [registry review](registry-review.md). Batches contain up to 50 learners in one section and stage no CSV copies.
 
-Section 2A validation covers duplicate LRNs, invalid dates, transfer and section-change history, adviser visibility, rejected cross-section requests, transaction rollback, and competing versioned writes. Real Supabase tests exercise the restricted database connection and business functions with rollback-only fixtures. Import rollback and realistic multi-session API load remain later acceptance work.
+**Section 2B.2 remains:** controlled enrollment timeline corrections, reconciliation of duplicate identities that already have history, and school-reviewed sample mappings. Additional learner fields and class capacities require school review. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
+
+Section 2 validation covers duplicate LRNs, invalid dates, movement history, adviser visibility, transaction rollback, competing versioned writes, reviewed import/retry, changed previews, a 50-row batch, and later-row import failure. Real Supabase checks use rollback-only fixtures. Realistic multi-session API load and school acceptance remain later work.
 
 ## Section 3 — Attendance and monthly consolidation
 

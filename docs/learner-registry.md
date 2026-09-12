@@ -8,7 +8,7 @@ One internal learner UUID persists across school years. The profile contains fir
 
 An LRN is a 12-digit **string**, preserving leading zeroes. It is unique when supplied. `null` means the official LRN is pending; EDUNEXUS does not generate one. An assigned LRN cannot be cleared or replaced through these endpoints. A dedicated assignment endpoint fills a pending LRN once, using the current record version. DepEd identifies the LRN as a permanent identifier maintained across transfers and school levels. [DO 22, s. 2012](https://www.deped.gov.ph/2012/03/20/do-22-s-2012-adoption-of-the-unique-learner-reference-number/).
 
-Duplicate LRNs produce HTTP 409. Name and birth-date search helps a manager inspect possible duplicate profiles; matching names do not prove the records belong to the same child. Automatic merges and corrections to an already assigned LRN are deliberately unavailable until a reviewed correction workflow exists. Basic identity fields correspond to DepEd's enrollment form, but this increment does not implement or claim completeness against the entire form. [Basic Education Enrollment Form, DM 032, s. 2024](https://www.deped.gov.ph/wp-content/uploads/DM_s2024_032.pdf).
+Duplicate LRNs produce HTTP 409. Name and birth-date search helps a manager inspect possible duplicate profiles; matching names do not prove the records belong to the same child. Automatic merges remain unavailable. Section 2B.1 adds a separate [reviewed LRN correction workflow](registry-review.md), preserving the previous value and review reason. Basic identity fields correspond to DepEd's enrollment form, but this increment does not implement or claim completeness against the entire form. [Basic Education Enrollment Form, DM 032, s. 2024](https://www.deped.gov.ph/wp-content/uploads/DM_s2024_032.pdf).
 
 ## Annual enrollment and date semantics
 
@@ -64,4 +64,4 @@ On HTTP 409, fetch the current record and reconcile the intended change. Do not 
 
 ## Next increment
 
-Section 2B will cover import validation/preview/commit, school-reviewed sample fields, duplicate reconciliation, LRN correction, and controlled enrollment timeline corrections. Class capacities and additional learner fields need school input. No CSV/XLSX import, learner-management frontend, attendance, grades, promotion, or official-form generation is included in 2A. Existing Section 1 screens continue to work.
+Section 2B.1 now adds [minimal-template CSV import review/commit and LRN corrections](registry-review.md). These corrections use a separate protected workflow; the ordinary endpoints described above retain their restrictions. Timeline corrections, reconciliation of existing duplicate identities, and school-reviewed sample mappings remain next. Class capacities and additional fields need school input. Learner-management screens, arbitrary XLSX/LIS import, attendance, grades, promotion, and forms remain unimplemented.
