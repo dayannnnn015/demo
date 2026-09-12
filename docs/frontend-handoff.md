@@ -1,6 +1,6 @@
 # Frontend integration contract
 
-A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3 and 2B.4 are implemented in the API; learner, import, and correction screens are not yet built.
+A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API; learner, import, and correction screens are not yet built.
 
 ## Authentication
 
@@ -56,7 +56,7 @@ For LRN correction, show the current LRN and version, collect the corrected valu
 
 Read `/api/v1/enrollments/:id/timeline` for effective history. The older `/history` route is an original-movement audit and now labels its interpretation; it must not be used alone for attendance/report calculations after corrections. Display correction history separately, using the `before_version` cursor and at most ten snapshots per page.
 
-Managers edit the complete effective sequence, then POST its current version, entries, and correction reason to `/timeline/preview`. Show the returned before/after entries, sections/advisers, earliest affected date, and previous/proposed latest state. Confirmation sends `after_entries` as `entries`, the unchanged reason/version/hash, and `reviewed=true` to `/timeline/corrections`. Only these two POST routes accept up to 256 KiB/1000 entries. Preserve dates as calendar strings.
+Managers edit the complete effective sequence, then POST its current version, entries, and correction reason to `/timeline/preview`. Show the returned before/after entries, sections/advisers, earliest affected date, and previous/proposed latest state. Confirmation sends `after_entries` as `entries`, the unchanged reason/version/hash, and `reviewed=true` to `/timeline/corrections`. These two POST routes and the placement preview/correction routes accept up to 256 KiB/1000 entries. Preserve dates as calendar strings.
 
 Refresh and require new review after conflicts. If a response was lost, inspect history for the submitted `review_hash` and actor before attempting another change; correction commits use version conflicts rather than import-style retry receipts. Clear timeline snapshots on sign-out and render all record/reason text safely. Closed years, annual-record cancellation, and grade/year changes are not editable through this workflow.
 
@@ -71,3 +71,9 @@ Enrollment `learner_id` now identifies the retained profile; `recorded_learner_i
 [Section 2B.4](enrollment-records.md) adds manager-only preview, confirmation, and history for void/restoration. Show validity separately from enrolled/withdrawn status. Display both timelines and profiles for duplicate cases, the retained enrollment, all blocking issues, and an explicit reason before confirmation. Record-review snapshot enrollment IDs preserve original ownership; use its separate `learner`/`recorded_learner` objects to distinguish retained and original profiles.
 
 Enrollment lists default to valid records. Managers can request `record_state=voided` or `all`; teachers remain restricted. Show voided timeline/history as evidence with `usable_for_reporting=false`, and disable movement/timeline edits until restored. A historical import receipt does not prove current record validity. Use current versions and unchanged review hashes; inspect history on a lost response. Clear all protected snapshots on sign-out. These screens remain unimplemented.
+
+## Grade-placement review screens to build
+
+[Section 2B.5](grade-placement.md) adds manager-only whole-year grade correction. Read the current effective timeline, select the verified target grade, and map every entry to a section in that grade and year. Dates, types, and reasons stay unchanged. Show old/new grades, before/after sections and advisers, and the reason before submitting the unchanged version/hash with `reviewed=true`. This is not a promotion action.
+
+Unified timeline correction history now includes `correction_kind`, `previous_grade_level`, and `corrected_grade_level`; legacy null grades mean unknown, not Kindergarten. The placement history endpoint filters to placement revisions. Current timeline responses include grade/year; original history can reference sections from the previously recorded grade. Refresh rosters and versions after confirmation, require new review after conflicts, and inspect history on lost responses. No new frontend screens were added.

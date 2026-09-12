@@ -22,6 +22,8 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0300') return new AppError(409, 'ENROLLMENT_RECORD_CONFLICT', 'Resolve the conflicts shown in the enrollment record preview before confirming.');
   if (code === 'P0301') return new AppError(409, 'VOIDED_ENROLLMENT_READ_ONLY', 'This enrollment was voided. Review restoration before editing its timeline or recording movements.');
   if (code === 'P0302') return new AppError(409, 'ENROLLMENT_RECORD_REVIEW_CHANGED', 'The enrollment, related records, or review changed. Preview and review again.');
+  if (code === 'P0400') return new AppError(409, 'PLACEMENT_UNCHANGED', 'The grade is unchanged. Use timeline review for a correction within the same grade.');
+  if (code === 'P0401') return new AppError(409, 'PLACEMENT_HISTORY_CHANGED', 'Grade-placement corrections preserve every date, movement type, and reason. Review only the grade and replacement sections.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

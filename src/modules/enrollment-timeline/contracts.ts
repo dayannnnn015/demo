@@ -28,15 +28,18 @@ const state = z.object({ enrolled_on: z.iso.date(), effective_on: z.iso.date(), 
 export const correctionResponse = z.object({
   id: uuid, enrollment_id: uuid, enrollment_version: z.number().int(), before_entries: z.array(entry), after_entries: z.array(entry),
   first_affected_on: z.iso.date(), reason: z.string(), review_hash: reviewHash, actor_user_id: uuid, request_id: uuid, recorded_at: z.iso.datetime(),
+  correction_kind: z.enum(['timeline', 'placement']), previous_grade_level: z.number().int().nullable(), corrected_grade_level: z.number().int().nullable(),
+});
+export const revisionPreviewResponse = z.object({
+  enrollment_id: uuid, version: z.number().int(), learner_version: z.number().int(), learner_id:uuid,recorded_learner_id:uuid,actor_user_id: uuid, review_hash: reviewHash,
+  correction_kind: z.enum(['timeline', 'placement']), previous_grade_level: z.number().int(), corrected_grade_level: z.number().int(),
+  school_year: z.object({ id: uuid, start_year: z.number().int(), starts_on: z.iso.date(), ends_on: z.iso.date(), status: z.enum(['draft', 'active']), version: z.number().int() }),
+  sections: z.array(z.object({ id: uuid, name: z.string(), academic_year_id: uuid, grade_level: z.number().int(), adviser_user_id: uuid.nullable(), version: z.number().int() })),
+  before_entries: z.array(entry), after_entries: z.array(entry), reason: z.string(), first_affected_on: z.iso.date(), previous_state: state, proposed_state: state,
 });
 export const timelineResponses: Record<string, z.ZodType> = {
-  timelineGet: z.object({ enrollment_id: uuid, version: z.number().int(), entries: z.array(entry), latest_correction_id: uuid.nullable(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean() }),
-  timelinePreview: z.object({
-    enrollment_id: uuid, version: z.number().int(), learner_version: z.number().int(), learner_id:uuid,recorded_learner_id:uuid,actor_user_id: uuid, review_hash: reviewHash,
-    school_year: z.object({ id: uuid, start_year: z.number().int(), starts_on: z.iso.date(), ends_on: z.iso.date(), status: z.enum(['draft', 'active']), version: z.number().int() }),
-    sections: z.array(z.object({ id: uuid, name: z.string(), adviser_user_id: uuid.nullable(), version: z.number().int() })),
-    before_entries: z.array(entry), after_entries: z.array(entry), reason: z.string(), first_affected_on: z.iso.date(), previous_state: state, proposed_state: state,
-  }),
+  timelineGet: z.object({ enrollment_id: uuid, academic_year_id: uuid, grade_level: z.number().int(), version: z.number().int(), entries: z.array(entry), latest_correction_id: uuid.nullable(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean() }),
+  timelinePreview: revisionPreviewResponse,
   timelineCorrect: correctionResponse,
   timelineCorrectionHistory: z.object({ items: z.array(correctionResponse), pagination: z.object({ limit: z.number().int(), next_before_version: z.number().int().nullable() }) }),
 };

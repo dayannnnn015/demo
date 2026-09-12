@@ -3,7 +3,7 @@ import type { Context } from '../foundation/service.js';
 import { AppError } from '../../core/errors.js';
 import { timelineSchemas as s, type TimelineOperationId } from './contracts.js';
 
-const correctionColumns = 'id,enrollment_id,enrollment_version,before_entries,after_entries,first_affected_on,reason,review_hash,actor_user_id,request_id,recorded_at';
+export const correctionColumns = 'id,enrollment_id,enrollment_version,before_entries,after_entries,first_affected_on,reason,review_hash,actor_user_id,request_id,recorded_at,correction_kind,previous_grade_level,corrected_grade_level';
 export async function executeTimeline(id: TimelineOperationId, ctx: Context, input: { body: unknown; query: unknown; id?: string }) {
   const { tx } = ctx;
   async function record() { await tx.query('select edunexus.record_access($1,$2::uuid[])', [id, [input.id]]); }

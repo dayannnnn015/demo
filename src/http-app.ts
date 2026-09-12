@@ -14,6 +14,7 @@ import { executeReview } from './modules/registry-review/service.js';
 import { executeTimeline } from './modules/enrollment-timeline/service.js';
 import { executeIdentity } from './modules/learner-identity/service.js';
 import { executeEnrollmentRecord } from './modules/enrollment-records/service.js';
+import { executePlacement } from './modules/grade-placement/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
 import { accountPage } from './account-page.js';
@@ -58,7 +59,7 @@ export function createApp(deps: Dependencies) {
     if ('bodyLimit' in operation) app[operation.method](operation.path, express.json({ limit: operation.bodyLimit, strict: true, inflate: false }));
   }
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2b4', health: '/health/live', contract: '/openapi.json' }));
+  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2b5', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
@@ -74,7 +75,8 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.enrollment_corrections') is not null
           and to_regprocedure('edunexus.get_enrollment_timeline(uuid)') is not null
           and to_regclass('edunexus.learner_identity_events') is not null
-          and to_regclass('edunexus.enrollment_record_events') is not null as ready`);
+          and to_regclass('edunexus.enrollment_record_events') is not null
+          and to_regprocedure('edunexus.preview_enrollment_placement(uuid,integer,integer,jsonb,text)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -120,7 +122,8 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'registry') return executeRegistry(operation.id, context, input);
         if (operation.module === 'registry-review') return executeReview(operation.id, context, input);
         if (operation.module === 'enrollment-timeline') return executeTimeline(operation.id, context, input);
-        return operation.module === 'learner-identity' ? executeIdentity(operation.id, context, input) : executeEnrollmentRecord(operation.id, context, input);
+        if (operation.module === 'learner-identity') return executeIdentity(operation.id, context, input);
+        return operation.module === 'enrollment-records' ? executeEnrollmentRecord(operation.id, context, input) : executePlacement(operation.id, context, input);
       });
       res.status(operation.method === 'post' ? 201 : 200).json({ data, requestId: res.locals.requestId });
     });

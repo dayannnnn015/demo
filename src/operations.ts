@@ -4,4 +4,5 @@ import { reviewOperations } from './modules/registry-review/contracts.js';
 import { timelineOperations } from './modules/enrollment-timeline/contracts.js';
 import { identityOperations } from './modules/learner-identity/contracts.js';
 import { enrollmentRecordOperations } from './modules/enrollment-records/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations];
+import { placementOperations } from './modules/grade-placement/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations];

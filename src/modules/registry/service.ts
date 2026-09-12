@@ -58,10 +58,10 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
       const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
     }
     case 'enrollmentHistory': {
-      const state = found(await tx.query('select edunexus.get_enrollment_timeline($1) as timeline', [input.id])).timeline as { version: number; latest_correction_id: string | null; record_state: string; usable_for_reporting: boolean };
+      const state = found(await tx.query('select edunexus.get_enrollment_timeline($1) as timeline', [input.id])).timeline as { version: number; latest_correction_id: string | null; record_state: string; usable_for_reporting: boolean; grade_level: number; academic_year_id: string };
       const q = input.query as z.infer<typeof s.historyQuery>;
       const result = page(await tx.query('select * from edunexus.enrollment_events where enrollment_id=$1 order by enrollment_version limit $2 offset $3', [input.id, q.limit + 1, q.offset]), q.limit, q.offset);
-      await record([input.id]); return { ...result, interpretation: 'original_movements', timeline_version: state.version, has_corrections: state.latest_correction_id !== null, record_state: state.record_state, usable_for_reporting: state.usable_for_reporting };
+      await record([input.id]); return { ...result, interpretation: 'original_movements', timeline_version: state.version, has_corrections: state.latest_correction_id !== null, record_state: state.record_state, usable_for_reporting: state.usable_for_reporting, current_grade_level: state.grade_level, academic_year_id: state.academic_year_id };
     }
     case 'recordAccessList': {
       const q = input.query as z.infer<typeof s.accessQuery>;

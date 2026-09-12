@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, and **Section 2B.4: reviewed enrollment void/restoration**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, and **Section 2B.5: reviewed grade-placement corrections**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -47,7 +47,13 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Explicit retained-record references for duplicates and conflict protection on restoration.
 - Roster/import/identity integration, with voided records excluded from valid annual enrollment.
 
-Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. Dedicated grade-placement corrections and school-reviewed sample mappings remain in Section 2. Attendance, grading, promotion, and forms remain subsequent sections. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
+## What works in Section 2B.5
+
+- Reviewed whole-year grade correction with explicit replacement sections across the effective timeline.
+- Preserved original movements, dates, reasons, and enrollment identity, with immutable old/new grade evidence.
+- Updated teacher roster access and compatibility with later movements, timeline corrections, and reviewed reversal.
+
+Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. [Grade-placement corrections](docs/grade-placement.md) are implemented. School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain. Attendance, grading, promotion, and forms remain subsequent sections. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
 
 ## Development
 
@@ -86,6 +92,7 @@ src/modules/registry-review/ Roster import review and LRN corrections
 src/modules/enrollment-timeline/ Effective timelines and reviewed corrections
 src/modules/learner-identity/ Reviewed duplicate links and reversals
 src/modules/enrollment-records/ Reviewed annual-record void and restoration
+src/modules/grade-placement/ Reviewed whole-year grade corrections
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

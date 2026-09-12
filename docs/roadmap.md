@@ -24,7 +24,9 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 **Section 2B.4 is implemented:** reviewed annual-record void/restoration, explicit retained-record references for duplicates, immutable evidence, roster exclusion, and identity/import/timeline integration. See [enrollment record review](enrollment-records.md).
 
-**Section 2B.5 remains:** dedicated grade-placement corrections and school-reviewed sample mappings. Additional learner fields and class capacities need further review. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
+**Section 2B.5 is implemented:** reviewed whole-year grade-placement correction with explicit full-timeline section mapping, immutable grade/timeline evidence, teacher access updates, and reviewed reversal. See [grade placement](grade-placement.md).
+
+School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain for registry acceptance/refinement. The next independent backend increment is the instructional-calendar foundation for Section 3 attendance. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
 
 Section 2 validation covers duplicate LRNs, invalid dates, movement history, adviser visibility, transaction rollback, competing versioned writes, reviewed import/retry, changed previews, a 50-row batch, and later-row import failure. Real Supabase checks use rollback-only fixtures. Realistic multi-session API load and school acceptance remain later work.
 

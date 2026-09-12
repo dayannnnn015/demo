@@ -42,6 +42,6 @@ const paginated = (schema: z.ZodType) => z.object({ items: z.array(schema), pagi
 export const registryResponses: Record<string, z.ZodType> = {
   learnerList: paginated(learner), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
   enrollmentList: paginated(enrollment), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
-  enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean() }),
+  enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean(), current_grade_level: z.number().int(), academic_year_id: uuid }),
   recordAccessList: z.object({ items: z.array(z.object({ id: z.string(), occurred_at: z.iso.datetime(), actor_user_id: uuid, request_id: uuid, resource: z.string(), record_ids: z.array(uuid) })), pagination: z.object({ limit: z.number(), next_before_id: z.string().nullable() }) }),
 };
