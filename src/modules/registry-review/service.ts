@@ -87,7 +87,7 @@ async function planImport(tx: Query, b: ImportInput) {
     items.push(candidateSchema.parse(match)); candidates.set(row, items);
   }
   const candidateIds = matches.map(m => String(m.id));
-  const enrolled = new Set((await tx.query('select edunexus.visible_learner_identity(learner_id) as learner_id from edunexus.enrollments where academic_year_id=$1 and edunexus.visible_learner_identity(learner_id)=any($2::uuid[])', [year.id, candidateIds])).map(e => e.learner_id));
+  const enrolled = new Set((await tx.query('select edunexus.visible_learner_identity(learner_id) as learner_id from edunexus.enrollments where record_state=\'valid\' and academic_year_id=$1 and edunexus.visible_learner_identity(learner_id)=any($2::uuid[])', [year.id, candidateIds])).map(e => e.learner_id));
   const seenLrn = new Set<string>(), seenName = new Set<string>(), seenId = new Set<string>();
   const rows: PreviewRow[] = profiles.map((profile, index) => {
     const row = index + 1, choices = candidates.get(row) ?? [], resolution = resolutions.get(row);

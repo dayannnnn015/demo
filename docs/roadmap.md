@@ -22,7 +22,9 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 **Section 2B.3 is implemented:** reviewed, reversible duplicate identity links preserving original profiles and enrollment histories, with conflict checks and retained-identity roster/import/timeline integration. See [learner identity](learner-identity.md).
 
-**Section 2B.4 remains:** overlapping annual-record resolution and school-reviewed sample mappings. Additional learner fields, class capacities, annual enrollment cancellation, and grade-placement corrections need further review. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
+**Section 2B.4 is implemented:** reviewed annual-record void/restoration, explicit retained-record references for duplicates, immutable evidence, roster exclusion, and identity/import/timeline integration. See [enrollment record review](enrollment-records.md).
+
+**Section 2B.5 remains:** dedicated grade-placement corrections and school-reviewed sample mappings. Additional learner fields and class capacities need further review. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
 
 Section 2 validation covers duplicate LRNs, invalid dates, movement history, adviser visibility, transaction rollback, competing versioned writes, reviewed import/retry, changed previews, a 50-row batch, and later-row import failure. Real Supabase checks use rollback-only fixtures. Realistic multi-session API load and school acceptance remain later work.
 

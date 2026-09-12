@@ -19,6 +19,9 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0200') return new AppError(409, 'IDENTITY_CONFLICT', 'Resolve the conflicts shown in the identity preview before confirming.');
   if (code === 'P0201') return new AppError(409, 'LINKED_LEARNER_READ_ONLY', 'This profile is linked. Use the retained learner or review reversal of the identity link.');
   if (code === 'P0202') return new AppError(409, 'IDENTITY_REVIEW_CHANGED', 'The profiles, memberships, or enrollment history changed. Preview and review again.');
+  if (code === 'P0300') return new AppError(409, 'ENROLLMENT_RECORD_CONFLICT', 'Resolve the conflicts shown in the enrollment record preview before confirming.');
+  if (code === 'P0301') return new AppError(409, 'VOIDED_ENROLLMENT_READ_ONLY', 'This enrollment was voided. Review restoration before editing its timeline or recording movements.');
+  if (code === 'P0302') return new AppError(409, 'ENROLLMENT_RECORD_REVIEW_CHANGED', 'The enrollment, related records, or review changed. Preview and review again.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

@@ -4,6 +4,7 @@ import { operations } from './operations.js';
 import { registryResponses } from './modules/registry/contracts.js';
 import { reviewResponses } from './modules/registry-review/contracts.js';
 import { timelineResponses } from './modules/enrollment-timeline/contracts.js';
+import { enrollmentRecordResponses } from './modules/enrollment-records/contracts.js';
 import { identityResponses } from './modules/learner-identity/contracts.js';
 
 const timestamps = { version: z.number().int(), created_at: z.iso.datetime(), updated_at: z.iso.datetime() };
@@ -20,6 +21,7 @@ const responseSchemas: Record<string, z.ZodType> = {
   ...reviewResponses,
   ...timelineResponses,
   ...identityResponses,
+  ...enrollmentRecordResponses,
   me: staff.extend({ assurance_level: z.enum(['aal1', 'aal2']) }), schoolGet: school, schoolUpdate: school,
   staffList: paginated(staff), staffCreate: staff, staffUpdate: staff,
   yearList: items(year), yearCreate: year, yearTransition: year,
@@ -47,7 +49,7 @@ for (const op of operations) {
   paths[path]![op.method] = {
     operationId: op.id,
     summary: op.summary,
-    tags: ['module' in op ? op.module === 'registry-review' ? 'Registry review and import' : op.module === 'enrollment-timeline' ? 'Enrollment timeline review' : op.module==='learner-identity' ? 'Learner identity review' : 'Learners and enrollment' : 'Foundation'],
+    tags: ['module' in op ? op.module === 'registry-review' ? 'Registry review and import' : op.module === 'enrollment-timeline' ? 'Enrollment timeline review' : op.module==='enrollment-records' ? 'Enrollment record review' : op.module==='learner-identity' ? 'Learner identity review' : 'Learners and enrollment' : 'Foundation'],
     description: `${'manager' in op ? 'Requires principal or administrative_officer. ' : 'Requires active staff. '}${op.method === 'patch' ? 'Supply the last-read version; refresh after HTTP 409. ' : ''}${op.id === 'staffCreate' ? 'Provision the identity in Supabase Auth first. This endpoint grants school access; it does not send an invitation. Administrative officers may only authorize teachers.' : ''}`,
     security: [{ staffBearer: [] }],
     parameters,
@@ -61,7 +63,7 @@ for (const op of operations) {
 
 export const openapi = {
   openapi: '3.1.0',
-  info: { title: 'EDUNEXUS API', version: '0.5.0', description: 'Sections 1 through 2B.3: staff/school setup, learner registry/enrollment, roster imports, LRN and timeline corrections, and reviewed reversible identity links. Managers make changes; teachers read current assigned learners only. Linked profiles remain manager-readable but frozen; normal lists return retained profiles. Enrollment learner_id identifies the retained profile, while recorded_learner_id preserves original ownership. Identity links never reparent or delete enrollment history; assigned source LRNs and overlapping enrollment years block reconciliation. Effective timelines include corrections, while /history explicitly returns original movements. All review commits require current versions, unchanged context, a reason and explicit confirmation. Closed-year enrollment dates/state remain immutable. Imports use the EDUNEXUS template with stored preview/commit receipts. Attendance, grades, promotion, official forms, enrollment cancellation and conflicting-year reconciliation remain unimplemented. Supabase bearer authentication and deployed MFA are required. Calendar dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. JSON bodies are limited to 32 KiB, except timeline preview/correction POST routes (256 KiB/1000 entries).' },
+  info: { title: 'EDUNEXUS API', version: '0.6.0', description: 'Sections 1 through 2B.4: staff/school setup, learner registry/enrollment, roster imports, LRN and timeline corrections, reviewed reversible identity links, and reviewed enrollment void/restoration. Managers make changes; teachers read current assigned learners only. Linked profiles remain manager-readable but frozen; normal lists return retained profiles. Enrollment learner_id identifies the retained profile, while recorded_learner_id preserves original ownership. Identity links never reparent or delete enrollment history; assigned source LRNs and overlapping enrollment years block reconciliation. Effective timelines include corrections, while /history explicitly returns original movements. All review commits require current versions, unchanged context, a reason and explicit confirmation. Closed-year enrollment dates/state remain immutable. Imports use the EDUNEXUS template with stored preview/commit receipts. Enrollment record_state is valid or voided; voided records retain their histories but are excluded from default enrollment lists, teacher access, and annual uniqueness. Timeline/history responses label record_state and usable_for_reporting. Duplicate voids identify a retained same-year enrollment. Restore is blocked by annual conflicts. Attendance, grades, promotion, official forms, grade-placement corrections and closed-year record correction remain unimplemented. Supabase bearer authentication and deployed MFA are required. Calendar dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. JSON bodies are limited to 32 KiB, except timeline preview/correction POST routes (256 KiB/1000 entries).' },
   servers: [{ url: '/' }],
   paths,
   components: {

@@ -1,6 +1,6 @@
 # Frontend integration contract
 
-A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2 and 2B.3 are implemented in the API; learner, import, and correction screens are not yet built.
+A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3 and 2B.4 are implemented in the API; learner, import, and correction screens are not yet built.
 
 ## Authentication
 
@@ -65,3 +65,9 @@ Refresh and require new review after conflicts. If a response was lost, inspect 
 [Section 2B.3](learner-identity.md) provides manager-only preview, confirmation, and history for duplicate links and reversal. Show both profiles and affected annual records, require a reason, display every blocking issue, and confirm only the unchanged preview with `reviewed=true`. Refresh both profile versions and rosters afterward. Inspect history on a lost response before retrying.
 
 Enrollment `learner_id` now identifies the retained profile; `recorded_learner_id` preserves original ownership. Use the retained ID for current profile display. Linked profiles are read-only and hidden from normal lists; managers can use `include_linked=true` for reconciliation work. Clear all snapshots on sign-out. No learner or reconciliation UI was added in this release.
+
+## Annual enrollment record review screens to build
+
+[Section 2B.4](enrollment-records.md) adds manager-only preview, confirmation, and history for void/restoration. Show validity separately from enrolled/withdrawn status. Display both timelines and profiles for duplicate cases, the retained enrollment, all blocking issues, and an explicit reason before confirmation. Record-review snapshot enrollment IDs preserve original ownership; use its separate `learner`/`recorded_learner` objects to distinguish retained and original profiles.
+
+Enrollment lists default to valid records. Managers can request `record_state=voided` or `all`; teachers remain restricted. Show voided timeline/history as evidence with `usable_for_reporting=false`, and disable movement/timeline edits until restored. A historical import receipt does not prove current record validity. Use current versions and unchanged review hashes; inspect history on a lost response. Clear all protected snapshots on sign-out. These screens remain unimplemented.

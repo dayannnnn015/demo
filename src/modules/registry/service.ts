@@ -54,14 +54,14 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
       const q = input.query as z.infer<typeof s.enrollmentQuery>;
       const rows = await tx.query(`${enrollmentSelect} where ($1::uuid is null or academic_year_id=$1)
         and ($2::uuid is null or section_id=$2) and ($3::uuid is null or e.learner_id=$3 or edunexus.visible_learner_identity(e.learner_id)=$3) and ($4::text is null or status=$4)
-        order by e.id limit $5 offset $6`, [q.academic_year_id ?? null, q.section_id ?? null, q.learner_id ?? null, q.status ?? null, q.limit + 1, q.offset]);
+        and ($7::text='all' or e.record_state=$7) order by e.id limit $5 offset $6`, [q.academic_year_id ?? null, q.section_id ?? null, q.learner_id ?? null, q.status ?? null, q.limit + 1, q.offset, q.record_state]);
       const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
     }
     case 'enrollmentHistory': {
-      const state = found(await tx.query('select edunexus.get_enrollment_timeline($1) as timeline', [input.id])).timeline as { version: number; latest_correction_id: string | null };
+      const state = found(await tx.query('select edunexus.get_enrollment_timeline($1) as timeline', [input.id])).timeline as { version: number; latest_correction_id: string | null; record_state: string; usable_for_reporting: boolean };
       const q = input.query as z.infer<typeof s.historyQuery>;
       const result = page(await tx.query('select * from edunexus.enrollment_events where enrollment_id=$1 order by enrollment_version limit $2 offset $3', [input.id, q.limit + 1, q.offset]), q.limit, q.offset);
-      await record([input.id]); return { ...result, interpretation: 'original_movements', timeline_version: state.version, has_corrections: state.latest_correction_id !== null };
+      await record([input.id]); return { ...result, interpretation: 'original_movements', timeline_version: state.version, has_corrections: state.latest_correction_id !== null, record_state: state.record_state, usable_for_reporting: state.usable_for_reporting };
     }
     case 'recordAccessList': {
       const q = input.query as z.infer<typeof s.accessQuery>;

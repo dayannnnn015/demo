@@ -25,14 +25,14 @@ The database generates the SHA-256 hash over the proposal, actor, both profiles,
 |---|---|
 | `SOURCE_HAS_LRN` | The duplicate must have no assigned LRN. Retain the correctly identified LRN-bearing profile where appropriate; separately verify conflicting assigned LRNs. This workflow never clears one. |
 | `IDENTITY_FIELDS_DIFFER` | Verify and separately correct birth date or sex before linking. Name variations remain visible for manager review. |
-| `OVERLAPPING_ENROLLMENT_YEARS` | Resolve conflicting annual records first. Even a withdrawn enrollment counts; annual cancellation/resolution is a later increment. |
+| `OVERLAPPING_ENROLLMENT_YEARS` | Resolve conflicting valid annual records through [reviewed voiding](enrollment-records.md) when entered in error. A valid withdrawn enrollment still counts; a voided record does not. |
 | `TARGET_IS_LINKED`, `SOURCE_IS_LINKED`, `SOURCE_HAS_LINKS` | Resolve existing associations first. Chains and cycles are prohibited; a retained profile can have multiple linked duplicates. |
 | `LINK_NOT_FOUND` | Reload the current association before reversal. |
 | `BIRTH_DATE_CONFLICT` | Correct the verified date/history conflict before proceeding. |
 
 Reversal uses `action: "unlink"`, naming the current retained profile and its linked duplicate. It restores the original separate identity without deleting the link event or undoing later profile edits, enrollment movements, or timeline corrections. If a later correction used the retained birth date to place enrollment before the frozen duplicate's birth date, reversal is blocked until that conflict is resolved.
 
-Closed-year enrollments can be associated because their rows and timelines do not change. They remain closed to movements and timeline corrections. Linking/unlinking or changing the retained profile invalidates affected timeline reviews; timeline validation uses the retained learner's birth date. The one-enrollment-per-year constraint covers the entire linked group.
+Closed-year enrollments can be associated because their rows and timelines do not change. They remain closed to movements and timeline corrections. Linking/unlinking or changing the retained profile invalidates affected timeline reviews; timeline validation uses the retained learner's birth date. The one-valid-enrollment-per-year constraint covers the entire linked group. Preview enrollment summaries include `record_state`; voided records remain in the preview and hash but do not block identity links through annual/date conflicts. Restoration rechecks the full identity group.
 
 Roster import matching checks linked names but returns the retained profile as the candidate. Existing-profile CSV data must still match the retained values. Old linked IDs cannot be selected as an existing learner, and enrollment checks include the group's original records. Previously committed import receipts and correction snapshots remain historical records with their original IDs.
 
