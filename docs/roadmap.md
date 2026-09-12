@@ -18,7 +18,9 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 **Section 2B.1 is implemented:** minimal-template CSV preview/confirmation/atomic commit, explicit resolution of import duplicates, safe retries, and assigned-LRN corrections with protected history. See [registry review](registry-review.md). Batches contain up to 50 learners in one section and stage no CSV copies.
 
-**Section 2B.2 remains:** controlled enrollment timeline corrections, reconciliation of duplicate identities that already have history, and school-reviewed sample mappings. Additional learner fields and class capacities require school review. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
+**Section 2B.2 is implemented:** reviewed enrollment timeline corrections with before/after preview, context/version checks, immutable correction snapshots, updated roster visibility, and resolution of later ordinary movements. Original movement history is retained and explicitly labeled. See [enrollment timeline](enrollment-timeline.md).
+
+**Section 2B.3 remains:** reconciliation of duplicate identities that already have history and school-reviewed sample mappings. Additional learner fields, class capacities, annual enrollment cancellation, and grade-placement corrections need further review. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
 
 Section 2 validation covers duplicate LRNs, invalid dates, movement history, adviser visibility, transaction rollback, competing versioned writes, reviewed import/retry, changed previews, a 50-row batch, and later-row import failure. Real Supabase checks use rollback-only fixtures. Realistic multi-session API load and school acceptance remain later work.
 

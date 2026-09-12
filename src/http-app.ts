@@ -11,6 +11,7 @@ import { uuid } from './modules/foundation/contracts.js';
 import { operations } from './operations.js';
 import { executeRegistry } from './modules/registry/service.js';
 import { executeReview } from './modules/registry-review/service.js';
+import { executeTimeline } from './modules/enrollment-timeline/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
 import { accountPage } from './account-page.js';
@@ -49,8 +50,13 @@ export function createApp(deps: Dependencies) {
     credentials: false,
     maxAge: 600,
   }));
+  // Register the two larger, bounded timeline parsers before the default one.
+  // Express skips a parsed body, preserving the 32 KiB limit everywhere else.
+  for (const operation of operations) {
+    if ('bodyLimit' in operation) app[operation.method](operation.path, express.json({ limit: operation.bodyLimit, strict: true, inflate: false }));
+  }
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2b1', health: '/health/live', contract: '/openapi.json' }));
+  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-2b2', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
@@ -62,7 +68,9 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.enrollment_events') is not null
           and to_regclass('edunexus.record_access_events') is not null
           and to_regclass('edunexus.import_previews') is not null
-          and to_regclass('edunexus.lrn_corrections') is not null as ready`);
+          and to_regclass('edunexus.lrn_corrections') is not null
+          and to_regclass('edunexus.enrollment_corrections') is not null
+          and to_regprocedure('edunexus.get_enrollment_timeline(uuid)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -105,7 +113,8 @@ export function createApp(deps: Dependencies) {
         const input = { body, query, ...(id ? { id } : {}) };
         const context = { tx, staff, identity };
         if (!('module' in operation)) return executeOperation(operation.id, context, input);
-        return operation.module === 'registry' ? executeRegistry(operation.id, context, input) : executeReview(operation.id, context, input);
+        if (operation.module === 'registry') return executeRegistry(operation.id, context, input);
+        return operation.module === 'registry-review' ? executeReview(operation.id, context, input) : executeTimeline(operation.id, context, input);
       });
       res.status(operation.method === 'post' ? 201 : 200).json({ data, requestId: res.locals.requestId });
     });

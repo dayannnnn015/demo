@@ -10,8 +10,14 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0004') return new AppError(409, 'PREVIEW_EXPIRED', 'The import preview expired. Create and review a new preview.');
   if (code === 'P0005') return new AppError(409, 'PREVIEW_CHANGED', 'The import differs from the reviewed preview. Create and review a new preview.');
   if (code === 'P0006') return new AppError(409, 'PREVIEW_LIMIT', 'You have ten pending previews. Complete one or wait for a preview to expire.');
+  if (code === 'P0100') return new AppError(409, 'TIMELINE_DATES', 'Use increasing dates within the school year and after birth. Movements cannot be future-dated.');
+  if (code === 'P0101') return new AppError(409, 'TIMELINE_TRANSITION', 'Start with enrollment, then use valid reassignment, withdrawal, and reentry transitions and reasons.');
+  if (code === 'P0102') return new AppError(409, 'TIMELINE_SECTION', 'Every section must match the enrollment school year and grade.');
+  if (code === 'P0103') return new AppError(409, 'TIMELINE_UNCHANGED', 'The proposed timeline has no changes.');
+  if (code === 'P0104') return new AppError(409, 'TIMELINE_REVIEW_CHANGED', 'The proposal or related records changed. Preview and review the correction again.');
+  if (code === 'P0105') return new AppError(409, 'YEAR_CLOSED', 'A closed school year cannot be corrected through this workflow.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
-  if (code === '23503') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
+  if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');
   if (code === '42501') return new AppError(403, 'FORBIDDEN', 'You do not have permission for this operation.');
   if (code === '40001' || code === '40P01' || code === '55P03') return new AppError(409, 'RETRY_REQUIRED', 'Another change is in progress. Refresh the record and try again.');

@@ -1,6 +1,6 @@
 # Section 2B.1: roster import and reviewed LRN corrections
 
-Principals and administrative officers can now import a class roster and correct an incorrectly recorded LRN. Teachers cannot preview/commit imports, inspect receipts, or read LRN correction history. Teacher roster boundaries still apply after import. This is a development contract for school review, using the existing minimum learner fields. It is not an arbitrary spreadsheet or official LIS importer. Existing-record merges and enrollment timeline corrections remain separate increments.
+Principals and administrative officers can import a class roster and correct an incorrectly recorded LRN. Teachers cannot preview/commit imports, inspect receipts, or read LRN correction history. Teacher roster boundaries still apply after import. This is a development contract for school review, using the existing minimum fields, not an arbitrary spreadsheet or official LIS importer. [Enrollment timeline corrections](enrollment-timeline.md) are implemented separately in Section 2B.2; existing-record merges remain future work.
 
 ## CSV review
 
@@ -53,4 +53,4 @@ The ordinary LRN update guard remains in place. Only a restricted correction int
 
 Tests cover parsing/input limits, explicit duplicates, preview ownership/expiry/tampering, retries, competing requests, changed records, a 50-row batch, a later-row database rejection, closed years, LRN conflicts, and protected history/bypass attempts. Hosted results are in [deployment](deployment.md).
 
-Import/correction frontend screens, enrollment timeline corrections, reconciliation of existing duplicate identities, and school-approved sample mappings remain. Additional fields, realistic authenticated load tests, UAT, and restore-tested backups require further work before real-data rollout.
+Section 2B.2 now adds [enrollment timeline corrections](enrollment-timeline.md). Import/correction frontend screens, reconciliation of existing duplicate identities, and school-approved sample mappings remain. Additional fields, realistic authenticated load tests, UAT, and restore-tested backups require further work before real-data rollout.

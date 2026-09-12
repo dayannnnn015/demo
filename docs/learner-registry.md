@@ -18,10 +18,10 @@ Duplicate LRNs produce HTTP 409. Name and birth-date search helps a manager insp
 - Withdrawals record one of `transfer_out`, `withdrawal`, `dropout`, or `death`. These are recorded staff decisions, not classifications calculated from attendance.
 - Reentry resumes the same annual enrollment; it does not create a second enrollment row. A withdrawal recorded as death cannot be reentered through the ordinary workflow.
 - A movement's `effective_on` is the **first day of the new state**. The previous state applies up to the preceding day. For example, transfer-out on September 10 means the learner is no longer enrolled from September 10 onward.
-- Movements must strictly follow the previous event, remain within the school year, and not be future-dated in Asia/Manila. Same-day edits, inserted backdated history, and timeline corrections require a later explicit correction workflow. This is an implementation convention for school review, not a claim about the final SF4 counting policy.
+- Ordinary movements must strictly follow the previous effective event, remain within the year, and not be future-dated in Asia/Manila. [Section 2B.2](enrollment-timeline.md) now provides reviewed same-day repairs and inserted/removed historical movements, while preserving the original records. These date conventions need school review before final SF4 arithmetic is implemented.
 - Closing a year leaves all enrollment events available to managers and prevents further movements. It does not automatically mark learners promoted, withdrawn, or graduated.
 
-The enrollment row is the latest recorded state. Events retain every preceding section, state transition, effective date, version, actor, and request ID. Future attendance calculations must use the timeline for the date being reported, rather than the latest row alone.
+The enrollment row is the latest effective state. Original events preserve recorded movements and actor/request metadata. After a correction, effective history comes from the latest correction snapshot plus subsequent movements. Future attendance calculations must use the resolved `/timeline` for the report date; neither the latest row alone nor original events alone account for all historical corrections.
 
 ## Access and concurrency
 
@@ -64,4 +64,4 @@ On HTTP 409, fetch the current record and reconcile the intended change. Do not 
 
 ## Next increment
 
-Section 2B.1 now adds [minimal-template CSV import review/commit and LRN corrections](registry-review.md). These corrections use a separate protected workflow; the ordinary endpoints described above retain their restrictions. Timeline corrections, reconciliation of existing duplicate identities, and school-reviewed sample mappings remain next. Class capacities and additional fields need school input. Learner-management screens, arbitrary XLSX/LIS import, attendance, grades, promotion, and forms remain unimplemented.
+Section 2B.1 adds [CSV import review/commit and LRN corrections](registry-review.md); Section 2B.2 adds [enrollment timeline review](enrollment-timeline.md). The ordinary mutation endpoints retain their restrictions. Original `/history` responses now include `interpretation`, `timeline_version`, and `has_corrections`; use `/timeline` for effective dates and states. Existing duplicate reconciliation and school-reviewed sample mappings remain next. Class capacities, additional fields, and broader enrollment cancellation/placement corrections need further work. Learner screens, arbitrary XLSX/LIS import, attendance, grades, promotion, and forms remain unimplemented.

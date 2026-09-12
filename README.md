@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. This repository implements **Section 1: staff authorization and school configuration**, **Section 2A: learner registry and enrollment APIs**, and **Section 2B.1: reviewed roster imports and LRN corrections**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN corrections, and **Section 2B.2: controlled enrollment timeline corrections**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -29,7 +29,13 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Reviewed assigned-LRN correction preserving previous values, reason, actor, and request metadata.
 - Database/API restrictions on preview ownership and protected correction history.
 
-Read [the learner registry contract](docs/learner-registry.md) and [registry review contract](docs/registry-review.md) for API workflows and limits. Enrollment timeline corrections, reconciliation of existing duplicate identities, and school-reviewed sample mappings remain in Section 2B. Attendance, grading, promotion, and form generation remain subsequent sections. No real learner data has been imported. The development database and deployment are described in [deployment](docs/deployment.md); a real invited-user MFA login and school acceptance remain to be verified.
+## What works in Section 2B.2
+
+- Enrollment timeline preview and manager confirmation with version/context checks.
+- Repair of dates, initial assignment, missed movements, and mistaken movements with immutable before/after snapshots.
+- Effective timeline resolution alongside preserved original movement records, with updated teacher roster access.
+
+Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Reconciliation of existing duplicate identities and school-reviewed sample mappings remain in Section 2. Attendance, grading, promotion, and forms remain subsequent sections. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
 
 ## Development
 
@@ -65,6 +71,7 @@ src/core/                 Authentication, configuration, database, errors
 src/modules/foundation/   Section 1 contracts and business operations
 src/modules/registry/     Section 2A learner and enrollment operations
 src/modules/registry-review/ Roster import review and LRN corrections
+src/modules/enrollment-timeline/ Effective timelines and reviewed corrections
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

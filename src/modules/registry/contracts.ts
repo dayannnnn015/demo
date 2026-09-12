@@ -28,7 +28,7 @@ export const registryOperations = ([
   { id: 'enrollmentCreate', method: 'post', path: '/api/v1/enrollments', summary: 'Enroll a learner once in a school year and assign a section', body: registrySchemas.enrollmentCreate, manager: true },
   { id: 'enrollmentGet', method: 'get', path: '/api/v1/enrollments/:id', summary: 'Read a visible annual enrollment' },
   { id: 'enrollmentMove', method: 'post', path: '/api/v1/enrollments/:id/movements', summary: 'Append a dated section change, withdrawal, or reentry; supply the current enrollment version', body: registrySchemas.movement, manager: true },
-  { id: 'enrollmentHistory', method: 'get', path: '/api/v1/enrollments/:id/history', summary: 'Read immutable enrollment history in chronological order', query: registrySchemas.historyQuery, manager: true },
+  { id: 'enrollmentHistory', method: 'get', path: '/api/v1/enrollments/:id/history', summary: 'Read original movement records, which may be superseded by corrections; use /timeline for effective history', query: registrySchemas.historyQuery, manager: true },
   { id: 'recordAccessList', method: 'get', path: '/api/v1/record-access-events', summary: 'Review access to learner and enrollment records without raw search terms or profile values', query: registrySchemas.accessQuery, manager: true },
 ] as const).map(operation => ({ ...operation, module: 'registry' as const }));
 export type RegistryOperationId = typeof registryOperations[number]['id'];
@@ -41,6 +41,7 @@ const event = z.object({ id: uuid, enrollment_id: uuid, enrollment_version: z.nu
 const paginated = (schema: z.ZodType) => z.object({ items: z.array(schema), pagination: z.object({ limit: z.number(), offset: z.number(), has_more: z.boolean() }) });
 export const registryResponses: Record<string, z.ZodType> = {
   learnerList: paginated(learner), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
-  enrollmentList: paginated(enrollment), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment, enrollmentHistory: paginated(event),
+  enrollmentList: paginated(enrollment), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
+  enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean() }),
   recordAccessList: z.object({ items: z.array(z.object({ id: z.string(), occurred_at: z.iso.datetime(), actor_user_id: uuid, request_id: uuid, resource: z.string(), record_ids: z.array(uuid) })), pagination: z.object({ limit: z.number(), next_before_id: z.string().nullable() }) }),
 };

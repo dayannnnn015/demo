@@ -3,6 +3,7 @@ import { staffRole, uuid } from './modules/foundation/contracts.js';
 import { operations } from './operations.js';
 import { registryResponses } from './modules/registry/contracts.js';
 import { reviewResponses } from './modules/registry-review/contracts.js';
+import { timelineResponses } from './modules/enrollment-timeline/contracts.js';
 
 const timestamps = { version: z.number().int(), created_at: z.iso.datetime(), updated_at: z.iso.datetime() };
 const staff = z.object({ user_id: uuid, display_name: z.string(), role: staffRole, active: z.boolean(), ...timestamps });
@@ -16,6 +17,7 @@ const paginated = (s: z.ZodType) => z.object({ items: z.array(s), pagination: z.
 const responseSchemas: Record<string, z.ZodType> = {
   ...registryResponses,
   ...reviewResponses,
+  ...timelineResponses,
   me: staff.extend({ assurance_level: z.enum(['aal1', 'aal2']) }), schoolGet: school, schoolUpdate: school,
   staffList: paginated(staff), staffCreate: staff, staffUpdate: staff,
   yearList: items(year), yearCreate: year, yearTransition: year,
@@ -43,7 +45,7 @@ for (const op of operations) {
   paths[path]![op.method] = {
     operationId: op.id,
     summary: op.summary,
-    tags: ['module' in op ? op.module === 'registry-review' ? 'Registry review and import' : 'Learners and enrollment' : 'Foundation'],
+    tags: ['module' in op ? op.module === 'registry-review' ? 'Registry review and import' : op.module === 'enrollment-timeline' ? 'Enrollment timeline review' : 'Learners and enrollment' : 'Foundation'],
     description: `${'manager' in op ? 'Requires principal or administrative_officer. ' : 'Requires active staff. '}${op.method === 'patch' ? 'Supply the last-read version; refresh after HTTP 409. ' : ''}${op.id === 'staffCreate' ? 'Provision the identity in Supabase Auth first. This endpoint grants school access; it does not send an invitation. Administrative officers may only authorize teachers.' : ''}`,
     security: [{ staffBearer: [] }],
     parameters,
@@ -57,7 +59,7 @@ for (const op of operations) {
 
 export const openapi = {
   openapi: '3.1.0',
-  info: { title: 'EDUNEXUS API', version: '0.3.0', description: 'Sections 1, 2A, and 2B.1: school setup, learner registry, annual enrollment, dated movement history, reviewed LRN corrections, and class-roster CSV preview/commit. Managers edit learner records; teachers read only current assigned open-year rosters. Imports require an explicit confirmation by the same manager within 30 minutes, identical input, and unchanged relevant records; retries return the original committed receipt. CSV imports use an EDUNEXUS template, not a LIS file format. Assigned LRNs can change only through the reviewed correction endpoint. Movement effective_on must strictly follow the previous event; enrollment timeline corrections and existing-record merges remain unimplemented. Bearer tokens come from Supabase Auth and deployed access requires MFA. Dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. Attendance, grades, and official forms are not implemented.' },
+  info: { title: 'EDUNEXUS API', version: '0.4.0', description: 'Sections 1, 2A, 2B.1 and 2B.2: school setup, learner registry, enrollment, roster imports, reviewed LRN corrections, and reviewed enrollment timeline corrections. Managers make changes; teachers read only current assigned open-year rosters. GET enrollment /timeline is the effective history after corrections; /history preserves original movements and explicitly labels them. Timeline corrections require the current enrollment version, a preview review_hash, an unchanged proposal/context, a reason and reviewed=true. Closed years remain immutable. Ordinary movements append to the corrected timeline. CSV imports use an EDUNEXUS template, require same-manager confirmation within 30 minutes, and return the original receipt on identical retries. Existing-record merges, attendance, grades and official forms remain unimplemented. Bearer tokens come from Supabase Auth and deployed access requires MFA. Dates are YYYY-MM-DD in Asia/Manila; timestamps are UTC. JSON bodies are limited to 32 KiB except the two timeline review POST routes, which accept up to 256 KiB and 1000 entries.' },
   servers: [{ url: '/' }],
   paths,
   components: {
