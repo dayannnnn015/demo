@@ -72,6 +72,12 @@ Enrollment `learner_id` now identifies the retained profile; `recorded_learner_i
 
 Enrollment lists default to valid records. Managers can request `record_state=voided` or `all`; teachers remain restricted. Show voided timeline/history as evidence with `usable_for_reporting=false`, and disable movement/timeline edits until restored. A historical import receipt does not prove current record validity. Use current versions and unchanged review hashes; inspect history on a lost response. Clear all protected snapshots on sign-out. These screens remain unimplemented.
 
+## Calendar screens to build
+
+[Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.
+
+Use the returned `calendar_version` as mutation `version`, including `0` for an uninitialized calendar. Preview up to 62 distinct date sets/clears for one scope, show raw and effective before/after states, reason and conflicts, then submit the unchanged proposal/hash with `reviewed=true`. Clearing a section date restores inheritance. School changes with configured overrides are blocked: explicitly review/clear those overrides before changing the baseline. These are separate visible transactions. Use all-scope history and its `before_version` cursor to inspect a lost response. Refresh and re-review after conflicts; never auto-confirm a new hash. Render labels/reasons as text and clear protected review state on sign-out. Calendar UI and attendance marking UI remain unimplemented.
+
 ## Grade-placement review screens to build
 
 [Section 2B.5](grade-placement.md) adds manager-only whole-year grade correction. Read the current effective timeline, select the verified target grade, and map every entry to a section in that grade and year. Dates, types, and reasons stay unchanged. Show old/new grades, before/after sections and advisers, and the reason before submitting the unchanged version/hash with `reviewed=true`. This is not a promotion action.

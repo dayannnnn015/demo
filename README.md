@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, and **Section 2B.5: reviewed grade-placement corrections**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner-management screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, and **Section 3A: reviewed instructional calendars**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner and calendar screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -55,6 +55,15 @@ The manuscript has been analyzed and the work is divided into reviewable section
 
 Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. [Grade-placement corrections](docs/grade-placement.md) are implemented. School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain. Attendance, grading, promotion, and forms remain subsequent sections. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
 
+## What works in Section 3A
+
+- Explicit AM/PM schedules with classroom, alternative-delivery, no-class and suspended modes.
+- School baselines and section overrides, with unknown dates kept unconfigured.
+- Manager preview/confirmation, conflict protection, immutable review history and atomic batches.
+- Effective schedule reads for assigned teachers, bounded requests and shared calendar version checks.
+
+Read [instructional calendars](docs/instructional-calendar.md). The next increment is daily attendance recording; official totals and submission/locking remain later work.
+
 ## Development
 
 Requirements: Node.js 24, npm, and a dedicated Supabase development project. Automated database tests use PGlite and do not need Docker or cloud credentials.
@@ -93,6 +102,7 @@ src/modules/enrollment-timeline/ Effective timelines and reviewed corrections
 src/modules/learner-identity/ Reviewed duplicate links and reversals
 src/modules/enrollment-records/ Reviewed annual-record void and restoration
 src/modules/grade-placement/ Reviewed whole-year grade corrections
+src/modules/calendar/    Reviewed school/section instructional schedules
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

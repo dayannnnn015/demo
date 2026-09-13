@@ -24,6 +24,10 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0302') return new AppError(409, 'ENROLLMENT_RECORD_REVIEW_CHANGED', 'The enrollment, related records, or review changed. Preview and review again.');
   if (code === 'P0400') return new AppError(409, 'PLACEMENT_UNCHANGED', 'The grade is unchanged. Use timeline review for a correction within the same grade.');
   if (code === 'P0401') return new AppError(409, 'PLACEMENT_HISTORY_CHANGED', 'Grade-placement corrections preserve every date, movement type, and reason. Review only the grade and replacement sections.');
+  if (code === 'P0500') return new AppError(409, 'CALENDAR_DATES', 'Use distinct dates inside the school year and read at most 62 dates at a time.');
+  if (code === 'P0501') return new AppError(409, 'CALENDAR_UNCHANGED', 'The calendar proposal has no changes.');
+  if (code === 'P0502') return new AppError(409, 'CALENDAR_CONFLICT', 'Resolve the base-day or section-override conflicts shown in the calendar preview.');
+  if (code === 'P0503') return new AppError(409, 'CALENDAR_REVIEW_CHANGED', 'The calendar proposal or related school records changed. Preview and review again.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

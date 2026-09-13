@@ -26,13 +26,15 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 **Section 2B.5 is implemented:** reviewed whole-year grade-placement correction with explicit full-timeline section mapping, immutable grade/timeline evidence, teacher access updates, and reviewed reversal. See [grade placement](grade-placement.md).
 
-School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain for registry acceptance/refinement. The next independent backend increment is the instructional-calendar foundation for Section 3 attendance. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
+School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain for registry acceptance/refinement. Section 3A now supplies the instructional-calendar foundation. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
 
 Section 2 validation covers duplicate LRNs, invalid dates, movement history, adviser visibility, transaction rollback, competing versioned writes, reviewed import/retry, changed previews, a 50-row batch, and later-row import failure. Real Supabase checks use rollback-only fixtures. Realistic multi-session API load and school acceptance remain later work.
 
 ## Section 3 — Attendance and monthly consolidation
 
-Add instructional calendars, holidays and suspensions, AM/PM attendance, bulk transactions, missing-mark handling, correction history, consecutive absence alerts, submission/review/lock workflow, and SF2/SF4 data models. Confirm attendance arithmetic from approved templates before coding it.
+**Section 3A is implemented:** explicit AM/PM school calendars and section overrides, distinct classroom/alternative-delivery/no-class/suspended sessions, unconfigured-date handling, reviewed atomic changes, shared versions and protected history. See [instructional calendar](instructional-calendar.md). No official dates are seeded and no attendance credits are computed.
+
+**Next: Section 3B daily attendance.** Integrate date-effective valid enrollment and schedules, authorized AM/PM marking, bounded bulk transactions, missing-mark handling and correction history. Calendar and enrollment changes must account for existing marks before enabling them together. Consecutive absence alerts, submission/review/lock workflow and SF2/SF4 models remain subsequent increments. Confirm attendance arithmetic from approved templates before coding official totals.
 
 Acceptance: school-approved fixtures match all daily/monthly totals, partial attendance and movement dates are correct, unmarked sessions remain visible, late corrections are controlled, and concurrent saves do not lose marks.
 

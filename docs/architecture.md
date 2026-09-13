@@ -90,6 +90,12 @@ Database triggers record writes in the same transaction, with actor, request ID,
 
 Rate limiting is persistent per staff user: 180 requests per minute, shared across API instances. The counter commits independently of the business transaction. Invalid-token/anonymous abuse must be handled by provider and edge controls before it reaches this per-user limit.
 
+## Instructional calendars
+
+Section 3A adds `instructional_calendars` (one shared version per year), `instructional_days` (school baseline or whole-day section override), and immutable `calendar_review_events`. Partial unique indexes enforce one row per scope/date, including cleared tombstones. Composite section/year foreign keys prevent cross-year exceptions. Runtime privileges are read-only with RLS; manager-checking functions validate and commit reviewed schedules. Private effective-day resolvers are not runtime-callable.
+
+Writers acquire the existing registry advisory lock then the academic-year row lock; readers hold a shared year lock so lazy initialization and multi-date reads are coherent. Commit rebuilds a context-bound hash and writes the root, journal, dates and audit atomically. Missing dates remain unconfigured, section sets require a base date, and school changes are blocked while configured overrides exist. See [calendar semantics](instructional-calendar.md), especially the future integration needed for attendance marks and finalized periods.
+
 ## Hosting and connections
 
 Section 2B.2 adds append-only `enrollment_corrections` and FK-backed `enrollment_correction_sections`. A private resolver combines the latest corrected sequence with subsequent ordinary movements. Manager-only functions expose a consistent effective timeline, validate previews, compare a hash of the proposal/context, and atomically snapshot corrections with a projection update. Original movement events are never rewritten; only a transaction-bound correction intent suppresses a fictional movement on projection repair. Original-history responses are explicitly labeled. See [timeline semantics](enrollment-timeline.md) before implementing attendance or reports. Snapshot history is paginated at at most ten revisions per response; only two timeline POST routes raise the JSON body limit from 32 to 256 KiB.
