@@ -6,4 +6,5 @@ import { identityOperations } from './modules/learner-identity/contracts.js';
 import { enrollmentRecordOperations } from './modules/enrollment-records/contracts.js';
 import { placementOperations } from './modules/grade-placement/contracts.js';
 import { calendarOperations } from './modules/calendar/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations];
+import { attendanceOperations } from './modules/attendance/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations];

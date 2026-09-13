@@ -48,7 +48,7 @@ Unlike stored roster-import previews, timeline review is stateless and has no se
 - `withdrawn` keeps the preceding section and requires enrolled status with reason `transfer_out`, `withdrawal`, `dropout`, or `death`.
 - `reentered` requires withdrawn status, a same-year/grade section, and reason `return_to_school`. Reentry after a death record is invalid; correct an incorrectly recorded death through review first.
 - Removing a mistaken movement or adding a missed historical movement is permitted only when the entire resulting sequence remains valid. Unchanged proposals are rejected.
-- Closed years remain immutable. Future finalized attendance, grades, or issued forms will need explicit dependency checks and correction/release rules before these operations may affect them. Those modules do not exist yet.
+- Closed years remain immutable. [Classroom attendance](daily-attendance.md) now blocks a committed timeline change that would invalidate existing non-null marks. Review and clear affected marks before repair and re-recording; preview can succeed before this constraint rejects confirmation. Finalized attendance, grades and issued forms still need their own dependency and release rules.
 
 Date conventions remain subject to school review before official-form arithmetic is implemented. These rules do not claim to replace DepEd reporting policy.
 

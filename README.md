@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, and **Section 3A: reviewed instructional calendars**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner and calendar screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.1: reviewed classroom AM/PM attendance**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -53,7 +53,7 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Preserved original movements, dates, reasons, and enrollment identity, with immutable old/new grade evidence.
 - Updated teacher roster access and compatibility with later movements, timeline corrections, and reviewed reversal.
 
-Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. [Grade-placement corrections](docs/grade-placement.md) are implemented. School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain. Attendance, grading, promotion, and forms remain subsequent sections. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
+Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. [Grade-placement corrections](docs/grade-placement.md) are implemented. School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain. Attendance consolidation, grading, promotion, and forms remain subsequent work. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
 
 ## What works in Section 3A
 
@@ -62,7 +62,16 @@ Read [learner registry](docs/learner-registry.md), [registry review](docs/regist
 - Manager preview/confirmation, conflict protection, immutable review history and atomic batches.
 - Effective schedule reads for assigned teachers, bounded requests and shared calendar version checks.
 
-Read [instructional calendars](docs/instructional-calendar.md). The next increment is daily attendance recording; official totals and submission/locking remain later work.
+Read [instructional calendars](docs/instructional-calendar.md).
+
+## What works in Section 3B.1
+
+- Dated sheets using effective enrollment history and current teacher access restrictions.
+- Reviewed classroom AM/PM present/absent marks in atomic batches of up to 100 learners.
+- Explicit unknown marks, corrections/clearing, protected history and stale-review checks.
+- Calendar/enrollment guards preventing existing attendance from being silently invalidated.
+
+Read [daily attendance](docs/daily-attendance.md). Alternative-delivery conversion, official totals, monthly review/submission/locking and absence alerts remain later work.
 
 ## Development
 
@@ -103,6 +112,7 @@ src/modules/learner-identity/ Reviewed duplicate links and reversals
 src/modules/enrollment-records/ Reviewed annual-record void and restoration
 src/modules/grade-placement/ Reviewed whole-year grade corrections
 src/modules/calendar/    Reviewed school/section instructional schedules
+src/modules/attendance/  Dated sheets and reviewed classroom AM/PM marks
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

@@ -28,6 +28,13 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0501') return new AppError(409, 'CALENDAR_UNCHANGED', 'The calendar proposal has no changes.');
   if (code === 'P0502') return new AppError(409, 'CALENDAR_CONFLICT', 'Resolve the base-day or section-override conflicts shown in the calendar preview.');
   if (code === 'P0503') return new AppError(409, 'CALENDAR_REVIEW_CHANGED', 'The calendar proposal or related school records changed. Preview and review again.');
+  if (code === 'P0600') return new AppError(409, 'ATTENDANCE_DATE', 'Select a date inside the section school year.');
+  if (code === 'P0601') return new AppError(409, 'ATTENDANCE_YEAR', 'Record attendance only in an active year and on or before today.');
+  if (code === 'P0602') return new AppError(409, 'ATTENDANCE_ENROLLMENT', 'The learner was not enrolled in this section on that date. Refresh the dated roster.');
+  if (code === 'P0603') return new AppError(409, 'ATTENDANCE_SESSION', 'These marks require a configured classroom session. Alternative-delivery recording is not available yet.');
+  if (code === 'P0604') return new AppError(409, 'ATTENDANCE_UNCHANGED', 'The attendance proposal has no changes.');
+  if (code === 'P0605') return new AppError(409, 'ATTENDANCE_REVIEW_CHANGED', 'The attendance proposal or related records changed. Preview and review again.');
+  if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

@@ -1,6 +1,6 @@
 # Section 3A: instructional calendar
 
-The calendar defines the expected AM and PM schedule before attendance is recorded. Principals and administrative officers configure it through reviewed changes. Active teachers can read the school schedule and the effective schedule of sections they currently advise. This increment is API-only; daily attendance, monthly submissions and attendance arithmetic remain unimplemented.
+The calendar defines the expected AM and PM schedule before attendance is recorded. Principals and administrative officers configure it through reviewed changes. Active teachers can read the school schedule and the effective schedule of sections they currently advise. This module is API-only. [Section 3B.1](daily-attendance.md) now records classroom AM/PM attendance; monthly submissions and official attendance arithmetic remain unimplemented.
 
 ## Explicit dates and session modes
 
@@ -67,4 +67,4 @@ Migration `0010` adds one version root per configured year, scope/date rows with
 
 Preview and commit acquire the existing registry advisory lock followed by the school-year row lock. Reads hold a shared year lock, so a response cannot mix dates across a calendar commit, including the first lazy initialization. Commit rebuilds and hashes the proposal, then writes the root, journal, changed dates and generic audit in one transaction. Failures roll back the entire batch. API calendar access logs contain the academic-year ID and operation, without copying schedule labels or reasons into generic logs.
 
-Before daily attendance is enabled, integrate the effective enrollment timeline and valid-record state with these schedules. Before submission/locking or released reports are enabled, define controls for calendar changes that affect existing marks or finalized periods, preserve reproducible totals, and review dependent enrollment/identity/placement corrections. This release has no attendance marks to protect. It does not certify official attendance arithmetic or replace school acceptance and operational recovery testing.
+Section 3B.1 integrates effective valid enrollment with the schedule and rejects calendar changes that would leave existing marks in non-classroom sessions. Review and clear affected marks before such a change; confirmation can reject a calendar preview with `ATTENDANCE_DEPENDENCY`. Before submission/locking or released reports are enabled, extend dependency controls to finalized periods and preserve reproducible totals. This does not certify official attendance arithmetic or replace school acceptance and operational recovery testing.

@@ -34,7 +34,9 @@ Section 2 validation covers duplicate LRNs, invalid dates, movement history, adv
 
 **Section 3A is implemented:** explicit AM/PM school calendars and section overrides, distinct classroom/alternative-delivery/no-class/suspended sessions, unconfigured-date handling, reviewed atomic changes, shared versions and protected history. See [instructional calendar](instructional-calendar.md). No official dates are seeded and no attendance credits are computed.
 
-**Next: Section 3B daily attendance.** Integrate date-effective valid enrollment and schedules, authorized AM/PM marking, bounded bulk transactions, missing-mark handling and correction history. Calendar and enrollment changes must account for existing marks before enabling them together. Consecutive absence alerts, submission/review/lock workflow and SF2/SF4 models remain subsequent increments. Confirm attendance arithmetic from approved templates before coding official totals.
+**Section 3B.1 is implemented:** date-effective sheets, reviewed classroom AM/PM marks in 100-learner atomic batches, explicit unknowns, version/hash checks, and protected history. Teachers retain current learner-access restrictions; managers can view historical rosters. Calendar, timeline, placement and void corrections are rejected if they invalidate existing non-null marks. See [daily attendance](daily-attendance.md).
+
+**Next: Section 3B.2 monthly attendance review and workflow.** Add completeness checks and reviewed submission/locking with explicit dependency controls. Alternative-delivery participation/conversion, consecutive absence alerts and SF2/SF4 arithmetic remain later work. Obtain school-approved mark meanings, conversion rules and templates before implementing official totals; the current classroom marks do not assign half-day credits.
 
 Acceptance: school-approved fixtures match all daily/monthly totals, partial attendance and movement dates are correct, unmarked sessions remain visible, late corrections are controlled, and concurrent saves do not lose marks.
 

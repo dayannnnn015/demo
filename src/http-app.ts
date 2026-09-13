@@ -16,6 +16,7 @@ import { executeIdentity } from './modules/learner-identity/service.js';
 import { executeEnrollmentRecord } from './modules/enrollment-records/service.js';
 import { executePlacement } from './modules/grade-placement/service.js';
 import { executeCalendar } from './modules/calendar/service.js';
+import { executeAttendance } from './modules/attendance/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
 import { accountPage } from './account-page.js';
@@ -60,7 +61,7 @@ export function createApp(deps: Dependencies) {
     if ('bodyLimit' in operation) app[operation.method](operation.path, express.json({ limit: operation.bodyLimit, strict: true, inflate: false }));
   }
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-3a', health: '/health/live', contract: '/openapi.json' }));
+  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-3b1', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
@@ -78,7 +79,8 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.learner_identity_events') is not null
           and to_regclass('edunexus.enrollment_record_events') is not null
           and to_regprocedure('edunexus.preview_enrollment_placement(uuid,integer,integer,jsonb,text)') is not null
-          and to_regclass('edunexus.calendar_review_events') is not null as ready`);
+          and to_regclass('edunexus.calendar_review_events') is not null
+          and to_regclass('edunexus.attendance_review_events') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -126,7 +128,8 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'enrollment-timeline') return executeTimeline(operation.id, context, input);
         if (operation.module === 'learner-identity') return executeIdentity(operation.id, context, input);
         if (operation.module === 'enrollment-records') return executeEnrollmentRecord(operation.id, context, input);
-        return operation.module === 'grade-placement' ? executePlacement(operation.id, context, input) : executeCalendar(operation.id, context, input);
+        if (operation.module === 'grade-placement') return executePlacement(operation.id, context, input);
+        return operation.module === 'calendar' ? executeCalendar(operation.id, context, input) : executeAttendance(operation.id, context, input);
       });
       res.status(operation.method === 'post' ? 201 : 200).json({ data, requestId: res.locals.requestId });
     });

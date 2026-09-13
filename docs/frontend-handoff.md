@@ -42,7 +42,7 @@ Dates are exact `YYYY-MM-DD` calendar dates in the school's Asia/Manila context.
 | Read sections | All | All | Assigned sections only |
 | Read change audit | Yes | Yes | No |
 
-Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) supports learner profiles, annual enrollment, current rosters, and movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRNs as strings, display pending for null, and never generate identifiers or silently merge matching names. Movement requests use the enrollment version and first date of the new state. [Section 2B.2](enrollment-timeline.md) supports reviewed historical corrections; attendance, grades, report exports, and in-app invitations remain unavailable.
+Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) supports learner profiles, annual enrollment, current rosters, and movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRNs as strings, display pending for null, and never generate identifiers or silently merge matching names. Movement requests use the enrollment version and first date of the new state. [Section 2B.2](enrollment-timeline.md) supports reviewed historical corrections; classroom attendance is now available through the Section 3B.1 API, while grades, report exports, and in-app invitations remain unavailable.
 
 ## Import and LRN review screens to build
 
@@ -71,6 +71,12 @@ Enrollment `learner_id` now identifies the retained profile; `recorded_learner_i
 [Section 2B.4](enrollment-records.md) adds manager-only preview, confirmation, and history for void/restoration. Show validity separately from enrolled/withdrawn status. Display both timelines and profiles for duplicate cases, the retained enrollment, all blocking issues, and an explicit reason before confirmation. Record-review snapshot enrollment IDs preserve original ownership; use its separate `learner`/`recorded_learner` objects to distinguish retained and original profiles.
 
 Enrollment lists default to valid records. Managers can request `record_state=voided` or `all`; teachers remain restricted. Show voided timeline/history as evidence with `usable_for_reporting=false`, and disable movement/timeline edits until restored. A historical import receipt does not prove current record validity. Use current versions and unchanged review hashes; inspect history on a lost response. Clear all protected snapshots on sign-out. These screens remain unimplemented.
+
+## Daily attendance screens to build
+
+[Section 3B.1](daily-attendance.md) exposes dated sheets and reviewed classroom marks under `/api/v1/sections/:id/attendance`. Select `day_on` and page by `after_id` (maximum 100). Display the effective AM/PM schedule and keep null marks visibly unmarked. Teacher sheets are labeled `current_access_only` and exclude formerly accessible learners; do not present them as complete historical reports. Managers retain historical roster access. ADM, suspended, no-class and unconfigured sessions cannot receive classroom marks.
+
+Each preview row supplies the enrollment ID and both nullable `am`/`pm` values. Preserve the other session when editing one: each row replaces the pair. Preview 1–100 learners with the sheet version and reason, show before/after values, then confirm the unchanged proposal/hash with `reviewed=true`. Omitted learners remain unchanged. Refresh on conflicts; never assume unmarked learners were present. Manager-only history can verify lost responses. Attendance dependencies can reject calendar/enrollment confirmation: explicitly review/clear affected marks, repair the underlying record, then review re-recording. These are separate transactions with preserved evidence. Clear names/reviews on sign-out and render text safely. No attendance screens or monthly totals were added in this release.
 
 ## Calendar screens to build
 
