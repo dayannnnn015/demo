@@ -14,6 +14,17 @@ describe('Section 3B.1 reviewed classroom attendance', () => {
   const post = (url: string, body: object, actor = ids.principal) => request(app).post(url).set('Authorization', `Bearer ${actor}`).send(body);
   const get = (url: string, actor = ids.principal) => request(app).get(url).set('Authorization', `Bearer ${actor}`);
   const read = (section = a, actor = ids.principal, extra = '') => get(route(section) + `?day_on=${day()}${extra}`, actor);
+  const findOnSheet = async (enrollmentId: string, actor = ids.principal) => {
+    let cursor: string | null = null;
+    do {
+      const r = await read(a, actor, `&limit=50${cursor ? '&after_id=' + cursor : ''}`);
+      expect(r.status, JSON.stringify(r.body)).toBe(200);
+      const found = r.body.data.items.find((v: any) => v.enrollment_id === enrollmentId);
+      if (found) return found;
+      cursor = r.body.data.pagination.next_after_id;
+    } while (cursor);
+    return undefined;
+  };
   const make = async (section = a, enrolled = day(1)) => {
     const learner = randomUUID(); await db.pg.query("insert into edunexus.learners(id,first_name,last_name,birth_date,sex) values($1,'Synthetic',$2,'2017-01-01','female')", [learner, learner]);
     const rows = await db.asUser(ids.principal, async tx => { await tx.query("select set_config('edunexus.request_id',$1,true)", [randomUUID()]); return tx.query("select * from edunexus.enroll_learner($1,$2,$3,'regular')", [learner, section, enrolled]); });
@@ -178,7 +189,7 @@ describe('Section 3B.1 reviewed classroom attendance', () => {
     await db.pg.query("insert into edunexus.learners(id,first_name,last_name,birth_date,sex) values($1,'Retained','Synthetic','2017-01-01','female')", [canonical]);
     const body = { canonical_id: canonical, duplicate_id: e.learner, canonical_version: 1, duplicate_version: 1, action: 'link', reason };
     const p = await post('/api/v1/learner-reconciliations/preview', body); expect((await post('/api/v1/learner-reconciliations', { ...body, review_hash: p.body.data.review_hash, reviewed: true })).status).toBe(201);
-    expect((await read(a, ids.teacher)).body.data.items.find((v: any) => v.enrollment_id === e.id)).toMatchObject({ learner_id: canonical, recorded_learner_id: e.learner, am: 'present' });
+    expect(await findOnSheet(e.id, ids.teacher)).toMatchObject({ learner_id: canonical, recorded_learner_id: e.learner, am: 'present' });
     expect((await get(route() + `/corrections?day_on=${day()}`)).body.data.items[0].review_snapshot.changes[0].learner_id).toBe(e.learner);
   });
   it('resolves withdrawal and reentry boundaries without creating marks during the gap', async () => {
