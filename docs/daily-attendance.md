@@ -51,7 +51,7 @@ An enrollment update is checked against all its non-null dated marks after its e
 
 Calendar and enrollment preview endpoints can still return a review before this downstream check; confirmation may reject it with `ATTENDANCE_DEPENDENCY`. Review and clear the affected marks through the attendance workflow, perform the calendar/enrollment correction, then review any re-recording against the corrected context. These are separate transactions and must be explicit to staff. Mark history and original enrollment ownership survive the process. A cleared mark can be recorded in the corrected section without creating a second mark for the same enrollment/date.
 
-This release has no submitted or locked months. Before adding those states, extend calendar, enrollment, identity, staff access and attendance workflows to preserve reproducible finalized results. Current identity links preserve original mark ownership and old review snapshots while current display resolves the retained profile. They do not generate a released report snapshot.
+Section 3B.2 adds [submitted and locked months](monthly-attendance.md). Both states block daily writes and affected calendar, membership and identity changes until a manager returns or reopens the month. Reads now include `month_status` and `month_version`, and frozen sheets have `recording_available=false`. These context fields are optional in saved journal contracts because pre-0012 history lacks them. The month version also invalidates a daily preview across submission and return. Frozen monthly snapshots preserve historical names/membership; daily sheets still use current display and teacher access. Official released forms remain later work.
 
 ## Database and verification
 

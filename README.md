@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.1: reviewed classroom AM/PM attendance**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.2: monthly attendance review, snapshots and locks**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -71,7 +71,16 @@ Read [instructional calendars](docs/instructional-calendar.md).
 - Explicit unknown marks, corrections/clearing, protected history and stale-review checks.
 - Calendar/enrollment guards preventing existing attendance from being silently invalidated.
 
-Read [daily attendance](docs/daily-attendance.md). Alternative-delivery conversion, official totals, monthly review/submission/locking and absence alerts remain later work.
+Read [daily attendance](docs/daily-attendance.md).
+
+## What works in Section 3B.2
+
+- Monthly readiness with complete date-effective membership, explicit unknowns and raw classroom session counts.
+- Manager-reviewed submission, return, locking and reopening with immutable submission snapshots.
+- Frozen-month guards for daily marks, calendars, enrollment and identity corrections.
+- Teacher status-only access, manager snapshot/history pagination and atomic version/hash checks.
+
+Read [monthly attendance](docs/monthly-attendance.md). Alternative-delivery conversion, official totals and absence alerts remain later work. Monthly workflows are API-only.
 
 ## Development
 
@@ -113,6 +122,7 @@ src/modules/enrollment-records/ Reviewed annual-record void and restoration
 src/modules/grade-placement/ Reviewed whole-year grade corrections
 src/modules/calendar/    Reviewed school/section instructional schedules
 src/modules/attendance/  Dated sheets and reviewed classroom AM/PM marks
+src/modules/attendance-months/ Monthly completeness, snapshots and locks
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

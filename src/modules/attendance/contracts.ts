@@ -25,6 +25,7 @@ const context = z.object({
   section: z.object({ id: uuid, academic_year_id: uuid, grade_level: z.number().int(), name: z.string(), adviser_user_id: uuid.nullable(), version: z.number().int() }),
   school_year: z.object({ id: uuid, start_year: z.number().int(), starts_on: date, ends_on: date, status: z.enum(['draft', 'active', 'closed']), version: z.number().int() }),
   day_on: date, version: z.number().int(), calendar_version: z.number().int(), visibility: z.enum(['full_historical_roster', 'current_access_only']),
+  month_status: z.enum(['draft', 'submitted', 'locked']).optional(), month_version: z.number().int().optional(),
   schedule: z.object({ day_on: date, source: z.enum(['school', 'section', 'unconfigured']), configured: z.boolean(), am: mode, pm: mode, day_type: z.string().nullable(), label: z.string().nullable() }),
 });
 const snapshot = context.extend({ changes: z.array(z.object({ enrollment_id: uuid, enrollment_version: z.number().int(), learner_id: uuid, learner_version: z.number().int(), recorded_learner_id: uuid, first_name: z.string(), last_name: z.string(), before: state, after: state, changed: z.boolean() })), changed_count: z.number().int(), reason: z.string(), actor_user_id: uuid });

@@ -7,4 +7,5 @@ import { enrollmentRecordOperations } from './modules/enrollment-records/contrac
 import { placementOperations } from './modules/grade-placement/contracts.js';
 import { calendarOperations } from './modules/calendar/contracts.js';
 import { attendanceOperations } from './modules/attendance/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations];
+import { monthOperations } from './modules/attendance-months/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations];

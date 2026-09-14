@@ -43,3 +43,7 @@ The runtime cannot directly change identity pointers/revisions or insert, modify
 Automated API/PostgreSQL tests cover authorization, preserved history, roster visibility, conflicts, imports, stale/competing requests, reversal, timeline interactions, closed years, and forced rollback. Hosted release evidence is recorded in [deployment](deployment.md). School acceptance, real MFA-authenticated workflows, concurrent hosted load, and restore testing remain outstanding. These endpoints are API-only; learner/reconciliation screens are still to be built.
 
 Code predating API 0.5.0 does not understand retained identity mappings. After links exist, deploy a compatible release for rollback; never delete identity events or rewrite the original enrollment ownership to simulate rollback.
+
+## Frozen monthly attendance
+
+[Section 3B.2](monthly-attendance.md) rejects link/reversal if either profile is an original or retained member of any submitted/locked snapshot. Return or reopen all affected months before reconciliation, then review and resubmit. Confirmation can encounter this dependency after an otherwise valid preview. Ordinary displayed-name corrections remain allowed and do not rewrite frozen names or original ownership.

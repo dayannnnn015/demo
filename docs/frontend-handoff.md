@@ -78,6 +78,14 @@ Enrollment lists default to valid records. Managers can request `record_state=vo
 
 Each preview row supplies the enrollment ID and both nullable `am`/`pm` values. Preserve the other session when editing one: each row replaces the pair. Preview 1–100 learners with the sheet version and reason, show before/after values, then confirm the unchanged proposal/hash with `reviewed=true`. Omitted learners remain unchanged. Refresh on conflicts; never assume unmarked learners were present. Manager-only history can verify lost responses. Attendance dependencies can reject calendar/enrollment confirmation: explicitly review/clear affected marks, repair the underlying record, then review re-recording. These are separate transactions with preserved evidence. Clear names/reviews on sign-out and render text safely. No attendance screens or monthly totals were added in this release.
 
+## Monthly attendance screens to build
+
+[Section 3B.2](monthly-attendance.md) supplies `/api/v1/sections/:id/attendance/months`: manager review/members, transition preview/confirmation, immutable history and old snapshots. Teachers can use `/status` only; it deliberately excludes historical learner details and counts. Send the first-of-month `month_on` and display the clipped school-year range.
+
+Show completeness issues, explicit unknowns, raw AM/PM session counts and complete membership before a manager submits. Never label these counts as official days or rates. Page `/members` by `after_id` (maximum 100); compare live `data_hash` values and refresh on change. Pass a historical `snapshot_id` explicitly after return/reopening when frozen evidence is intended. The outer scope is current; captured section/year metadata lives inside `review`.
+
+Preview an allowed `submit`, `return`, `lock` or `reopen` with version and reason, then confirm the identical proposal/hash with `reviewed=true`. This is acting-manager review, not required two-person approval. Both submitted and locked months disable daily editing. Surface dependency errors on underlying record repairs; return/reopen before correcting, retain old evidence and resubmit afterward. Inspect manager history on a lost response rather than silently retrying. Finish reviews before year closure, which prevents further transitions. Clear protected snapshots on sign-out. No monthly screens were added.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.

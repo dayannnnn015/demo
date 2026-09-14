@@ -35,6 +35,14 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0604') return new AppError(409, 'ATTENDANCE_UNCHANGED', 'The attendance proposal has no changes.');
   if (code === 'P0605') return new AppError(409, 'ATTENDANCE_REVIEW_CHANGED', 'The attendance proposal or related records changed. Preview and review again.');
   if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
+  if (code === 'P0700') return new AppError(409, 'MONTH_RANGE', 'Use the first day of a month that overlaps the school year.');
+  if (code === 'P0701') return new AppError(409, 'MONTH_YEAR', 'Monthly transitions require an active school year.');
+  if (code === 'P0702') return new AppError(409, 'MONTH_TRANSITION', 'This action is not available in the current month status.');
+  if (code === 'P0703') return new AppError(409, 'MONTH_INCOMPLETE', 'Resolve the monthly calendar, attendance or date issues before submitting.');
+  if (code === 'P0704') return new AppError(409, 'MONTH_REVIEW_CHANGED', 'The monthly data or review changed. Refresh and review again.');
+  if (code === 'P0707') return new AppError(409, 'MONTH_FROZEN', 'A manager must return or reopen the affected attendance month before editing.');
+  if (code === 'P0708') return new AppError(409, 'MONTH_DEPENDENCY', 'This change affects a submitted or locked month. Return or reopen the affected months first.');
+  if (code === 'P0709') return new AppError(409, 'MONTH_SIZE', 'Monthly review currently supports at most 1000 distinct enrollments per section.');
   if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
   if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');

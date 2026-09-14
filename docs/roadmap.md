@@ -36,7 +36,9 @@ Section 2 validation covers duplicate LRNs, invalid dates, movement history, adv
 
 **Section 3B.1 is implemented:** date-effective sheets, reviewed classroom AM/PM marks in 100-learner atomic batches, explicit unknowns, version/hash checks, and protected history. Teachers retain current learner-access restrictions; managers can view historical rosters. Calendar, timeline, placement and void corrections are rejected if they invalidate existing non-null marks. See [daily attendance](daily-attendance.md).
 
-**Next: Section 3B.2 monthly attendance review and workflow.** Add completeness checks and reviewed submission/locking with explicit dependency controls. Alternative-delivery participation/conversion, consecutive absence alerts and SF2/SF4 arithmetic remain later work. Obtain school-approved mark meanings, conversion rules and templates before implementing official totals; the current classroom marks do not assign half-day credits.
+**Section 3B.2 is implemented:** monthly completeness review, manager submission/return/lock/reopen, immutable historical snapshots and frozen-month dependency guards. Teachers can read assigned-section status without historical learner details. See [monthly attendance](monthly-attendance.md). Counts are raw classroom sessions, not official attendance credits.
+
+**Next: bounded classroom absence monitoring.** Keep observed absences and unknown sessions distinct and preserve current teacher access. Alternative-delivery participation/conversion and SF2/SF4 arithmetic remain later work. Obtain school-approved alert thresholds, mark meanings, conversion rules and templates before presenting official classifications or totals. The current classroom marks do not assign half-day credits.
 
 Acceptance: school-approved fixtures match all daily/monthly totals, partial attendance and movement dates are correct, unmarked sessions remain visible, late corrections are controlled, and concurrent saves do not lose marks.
 
