@@ -108,6 +108,10 @@ Section 3B.2 adds `attendance_months` (section/month version and state), immutab
 
 Submission, return, locking and reopening use the registry advisory lock and shared year lock. Snapshots/root/events/audits are atomic. Submitted and locked months reject daily/calendar mutations; a deferred enrollment trigger compares final membership against frozen dates, including no-class days without marks. Identity changes involving frozen members are blocked; profile/adviser edits leave frozen evidence intact. Daily context now binds month state/version. See [monthly attendance](monthly-attendance.md) for correction order, history, closed-year limits and rollback compatibility.
 
+## Classroom absence monitoring
+
+Section 3B.3 adds the read-only `read_attendance_monitor` function, access-log resource and API module. The function validates assigned-section/current-learner scope, date and page bounds, uses the existing registry/year locks, materializes effective timelines and date cells, filters before pagination, and returns only bounded evidence. The API deterministically derives classifications and raw session/date-run counts. No domain tables or background jobs are added. Monitoring stays live; frozen monthly submissions remain separate immutable evidence. See [monitor semantics](attendance-monitor.md).
+
 ## Hosting and connections
 
 Section 2B.2 adds append-only `enrollment_corrections` and FK-backed `enrollment_correction_sections`. A private resolver combines the latest corrected sequence with subsequent ordinary movements. Manager-only functions expose a consistent effective timeline, validate previews, compare a hash of the proposal/context, and atomically snapshot corrections with a projection update. Original movement events are never rewritten; only a transaction-bound correction intent suppresses a fictional movement on projection repair. Original-history responses are explicitly labeled. See [timeline semantics](enrollment-timeline.md) before implementing attendance or reports. Snapshot history is paginated at at most ten revisions per response; only two timeline POST routes raise the JSON body limit from 32 to 256 KiB.

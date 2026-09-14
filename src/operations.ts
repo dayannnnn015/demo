@@ -8,4 +8,5 @@ import { placementOperations } from './modules/grade-placement/contracts.js';
 import { calendarOperations } from './modules/calendar/contracts.js';
 import { attendanceOperations } from './modules/attendance/contracts.js';
 import { monthOperations } from './modules/attendance-months/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations];
+import { monitorOperations } from './modules/attendance-monitor/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations];

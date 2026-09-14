@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.2: monthly attendance review, snapshots and locks**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.3: classroom absence monitoring**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -82,6 +82,15 @@ Read [daily attendance](docs/daily-attendance.md).
 
 Read [monthly attendance](docs/monthly-attendance.md). Alternative-delivery conversion, official totals and absence alerts remain later work. Monthly workflows are API-only.
 
+## What works in Section 3B.3
+
+- Read-only classroom absence monitoring over 1–31 dates, with filtered 100-learner pages.
+- Raw session observations, missing/unsupported data and within-range absence runs.
+- Current teacher access, historical manager access and returned-record auditing.
+- Live correction refresh and monthly freeze status without changing saved snapshots.
+
+Read [absence monitoring](docs/attendance-monitor.md). School alert policies, follow-up case management and notifications remain later work; this increment is API-only.
+
 ## Development
 
 Requirements: Node.js 24, npm, and a dedicated Supabase development project. Automated database tests use PGlite and do not need Docker or cloud credentials.
@@ -123,6 +132,7 @@ src/modules/grade-placement/ Reviewed whole-year grade corrections
 src/modules/calendar/    Reviewed school/section instructional schedules
 src/modules/attendance/  Dated sheets and reviewed classroom AM/PM marks
 src/modules/attendance-months/ Monthly completeness, snapshots and locks
+src/modules/attendance-monitor/ Scoped absence and completion evidence
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

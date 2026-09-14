@@ -86,6 +86,12 @@ Show completeness issues, explicit unknowns, raw AM/PM session counts and comple
 
 Preview an allowed `submit`, `return`, `lock` or `reopen` with version and reason, then confirm the identical proposal/hash with `reviewed=true`. This is acting-manager review, not required two-person approval. Both submitted and locked months disable daily editing. Surface dependency errors on underlying record repairs; return/reopen before correcting, retain old evidence and resubmit afterward. Inspect manager history on a lost response rather than silently retrying. Finish reviews before year closure, which prevents further transitions. Clear protected snapshots on sign-out. No monthly screens were added.
 
+## Classroom absence monitor to build
+
+[Section 3B.3](attendance-monitor.md) adds `GET /api/v1/sections/:id/attendance/monitor` with required `from`/`to` (1–31 nonfuture dates), `view=all|with_absences|incomplete`, `limit` (50 default, 100 maximum) and `after_id`. Display filters, date-window limits, current/historical visibility, raw session counts, completion gaps and dated evidence. Show that consecutive-absence counts are limited to this window; never label them as an official school threshold or dropout determination.
+
+Filters run before pagination. Keep nulls unknown, distinguish ADM from classroom marks and display monthly workflow status. Monitoring is live, including current display names; use the separate monthly snapshot API for historical submissions. Refresh after corrections or roster changes. Clear protected data on sign-out. This increment sends no messages and has no case-management or notification UI.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.
