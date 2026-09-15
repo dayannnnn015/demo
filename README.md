@@ -100,6 +100,14 @@ Read [absence monitoring](docs/attendance-monitor.md). School alert policies and
 
 Read [attendance follow-up](docs/attendance-followups.md). The school has no approved automatic-alert rule, so automation and messages remain disabled. Cases are API-only.
 
+## What works in Section 4A.1
+
+- Explicit subject catalog with stable codes, learning-area/domain kind and grade applicability.
+- Versioned metadata changes, archival and protected before/after history.
+- Staff metadata reads, manager-only changes and no seeded curriculum or grading formula.
+
+Read [subject catalog](docs/subject-catalog.md). This increment is API-only.
+
 ## Development
 
 Requirements: Node.js 24, npm, and a dedicated Supabase development project. Automated database tests use PGlite and do not need Docker or cloud credentials.
@@ -143,6 +151,7 @@ src/modules/attendance/  Dated sheets and reviewed classroom AM/PM marks
 src/modules/attendance-months/ Monthly completeness, snapshots and locks
 src/modules/attendance-monitor/ Scoped absence and completion evidence
 src/modules/attendance-followups/ Manual managerial cases and evidence history
+src/modules/subjects/    Explicit subject metadata and revision history
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

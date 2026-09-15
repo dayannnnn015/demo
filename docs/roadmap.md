@@ -48,6 +48,10 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 ## Section 4 — Academic records and grading
 
+**Section 4A.1 is implemented:** explicit subject codes/names/kinds/grade applicability, archival, versioned changes and protected history. No official curriculum or grading formula is seeded. See [subject catalog](subject-catalog.md).
+
+**Next: Section 4A.2 section subject offerings.** Pin the subject details used by each section and retain current adviser access without expanding learner permissions.
+
 Implement versioned grade-band policies, subjects, reporting periods, assessment components, score constraints, decimal arithmetic, reproducible computations, missing-score handling, summaries, and reviewed finalization. Independently verify the current DepEd enclosure and school ECR examples; preserve policies for historical years.
 
 Acceptance: boundary and rounding fixtures match the approved ECR/manual calculation; changing a policy cannot retroactively change finalized grades; only assigned staff can enter results; Kindergarten behavior is explicit.

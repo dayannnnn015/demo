@@ -35,6 +35,7 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0604') return new AppError(409, 'ATTENDANCE_UNCHANGED', 'The attendance proposal has no changes.');
   if (code === 'P0605') return new AppError(409, 'ATTENDANCE_REVIEW_CHANGED', 'The attendance proposal or related records changed. Preview and review again.');
   if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
+  if (code === 'P1000') return new AppError(409, 'SUBJECT_UNCHANGED', 'The subject proposal has no changes.');
   if (code === 'P0900') return new AppError(409, 'FOLLOWUP_ASSIGNEE', 'Assign an active principal or administrative officer.');
   if (code === 'P0901') return new AppError(409, 'FOLLOWUP_DUE_DATE', 'Use a current or future new due date, and clear it when closing the case.');
   if (code === 'P0902') return new AppError(409, 'FOLLOWUP_BLOCKED', 'Resolve the issues shown in the follow-up review.');
