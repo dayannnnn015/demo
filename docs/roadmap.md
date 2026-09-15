@@ -52,7 +52,9 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.2 is implemented:** [section subject offerings](section-subjects.md) pin catalog details, support draft-only explicit refresh and preserve retirement/history. Teachers retain current adviser access without expanded learner permissions.
 
-**Next: versioned assessment-policy foundations.** Establish explicit school-reviewed grading behavior before score entry or calculations; do not infer official weights or numeric Kindergarten grading from catalog metadata.
+**Section 4A.3 is implemented:** [managerial assessment-policy drafts](assessment-policy-drafts.md) retain explicit Grades 1–6 applicability, source references and internally consistent component weights with versioned history. Draft and archived states are non-operational; no policy is approved, bound to offerings or used for calculations.
+
+**Next: reviewed immutable policy adoption and offering binding.** Establish current school-reviewed grading behavior before score entry or calculations; do not infer official weights or numeric Kindergarten grading from catalog metadata. Draft weights alone are not a complete grading policy.
 
 Implement versioned grade-band policies, subjects, reporting periods, assessment components, score constraints, decimal arithmetic, reproducible computations, missing-score handling, summaries, and reviewed finalization. Independently verify the current DepEd enclosure and school ECR examples; preserve policies for historical years.
 

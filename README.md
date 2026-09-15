@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, and **Section 4A.2: subject catalog and section offerings**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.3: assessment-policy drafts**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -115,7 +115,15 @@ Read [subject catalog](docs/subject-catalog.md). This increment is API-only.
 - Grade applicability, stale-version, archival and closed-year checks.
 - Manager-only changes and current-adviser reads without expanded learner permissions.
 
-Read [section offerings](docs/section-subjects.md). Grading policies and assessment entry remain subsequent work.
+Read [section offerings](docs/section-subjects.md). Operational grading policies and assessment entry remain subsequent work.
+
+## What works in Section 4A.3
+
+- Manager-only assessment drafts with source references and explicit Grades 1–6 applicability.
+- Validated component weights stored as integer basis points totaling 100%.
+- Versioned revisions, archival/restoration and protected before/after history.
+
+Read [assessment-policy drafts](docs/assessment-policy-drafts.md). Drafts are non-operational: no approval, offering binding, score entry or grade calculation is enabled.
 
 ## Development
 
@@ -162,6 +170,7 @@ src/modules/attendance-monitor/ Scoped absence and completion evidence
 src/modules/attendance-followups/ Manual managerial cases and evidence history
 src/modules/subjects/    Explicit subject metadata and revision history
 src/modules/section-subjects/ Pinned section offerings and revision history
+src/modules/assessment-policies/ Non-operational managerial assessment drafts
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

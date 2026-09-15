@@ -104,6 +104,12 @@ Show immutable opening evidence beside current evidence, including `evidence_cha
 
 Managers select active, applicable subjects using the current catalog version. Display offering `subject_snapshot` as the preserved selection, separately from current catalog metadata. Refresh is explicit and draft-year only. Save the current offering version and reason; send a null subject version unless refreshing. Retired offerings remain available through the active filter. Closed years are read-only for managers and unavailable to teachers. Teachers see only their current advised open-year sections. Pagination is UUID-based; sort collected results by display order, then code/id. Inspect history after lost responses and require a new decision after conflicts. No grading controls should be inferred from these metadata endpoints.
 
+## Assessment-policy draft screens to build
+
+[Section 4A.3](assessment-policy-drafts.md) is manager-only and API-only. Label every record as an unapproved draft, including archived records. Allow explicit source references, Grades 1–6 applicability and 1–10 named components. Component weights use integer basis points totaling 10000 (100%); show a total and reject missing/duplicate components. No default weights, approval buttons, section binding, calculations or Kindergarten numeric forms are available.
+
+Save all editable metadata with the current version and a reason. Canonical sorting does not represent component display priority. Archive preserves history; restore returns a record to the default draft list. Refresh on conflicts and inspect history after lost responses. Render source references and reasons as text, not executable markup; a supplied reference does not verify school approval. Teachers have no draft access.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.

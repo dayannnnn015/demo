@@ -17,6 +17,7 @@ import { executeEnrollmentRecord } from './modules/enrollment-records/service.js
 import { executePlacement } from './modules/grade-placement/service.js';
 import { executeCalendar } from './modules/calendar/service.js';
 import { executeAttendance } from './modules/attendance/service.js';
+import { executePolicy } from './modules/assessment-policies/service.js';
 import { executeOffering } from './modules/section-subjects/service.js';
 import { executeSubject } from './modules/subjects/service.js';
 import { executeFollowup } from './modules/attendance-followups/service.js';
@@ -66,7 +67,7 @@ export function createApp(deps: Dependencies) {
     if ('bodyLimit' in operation) app[operation.method](operation.path, express.json({ limit: operation.bodyLimit, strict: true, inflate: false }));
   }
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-4a2', health: '/health/live', contract: '/openapi.json' }));
+  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-4a3', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
@@ -90,7 +91,8 @@ export function createApp(deps: Dependencies) {
           and to_regprocedure('edunexus.read_attendance_monitor(uuid,date,date,text,integer,uuid)') is not null
           and to_regclass('edunexus.attendance_followup_events') is not null
           and to_regclass('edunexus.subject_events') is not null
-          and to_regclass('edunexus.section_subject_events') is not null as ready`);
+          and to_regclass('edunexus.section_subject_events') is not null
+          and to_regclass('edunexus.assessment_policy_draft_events') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -139,6 +141,7 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'learner-identity') return executeIdentity(operation.id, context, input);
         if (operation.module === 'enrollment-records') return executeEnrollmentRecord(operation.id, context, input);
         if (operation.module === 'grade-placement') return executePlacement(operation.id, context, input);
+        if (operation.module === 'assessment-policies') return executePolicy(operation.id, context, input);
         if (operation.module === 'section-subjects') return executeOffering(operation.id, context, input);
         if (operation.module === 'subjects') return executeSubject(operation.id, context, input);
         if (operation.module === 'attendance-followups') return executeFollowup(operation.id, context, input);
