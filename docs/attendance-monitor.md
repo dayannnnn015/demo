@@ -34,7 +34,7 @@ Summary fields count eligible dates, expected/present/absent/missing classroom s
 
 Monitoring recomputes after reviewed attendance, calendar, enrollment or identity changes and uses current display names. It is not a frozen report or immutable page set. Reload pages after changes; do not combine different requests into a claimed point-in-time official report. A submitted/locked month's existing guards remain in force. Its workflow state is displayed, but historical captured names and evidence must be read through the separate [monthly snapshot API](monthly-attendance.md).
 
-There are no new write endpoints, cases, acknowledgments or notification jobs. A staff member reviews the evidence and uses existing reviewed correction workflows when a record is wrong. Schools must agree on alert thresholds, ownership, authorized follow-up and retention before automated case management is introduced.
+Monitoring itself has no write endpoints or notification jobs. [Section 3B.4](attendance-followups.md) separately adds manual manager-reviewed cases while retaining these read-only monitoring semantics. Staff use existing reviewed correction workflows when a record is wrong. The school has no approved automatic-alert rule; automated case creation and messaging remain disabled.
 
 ## Database and verification
 

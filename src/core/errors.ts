@@ -35,6 +35,11 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0604') return new AppError(409, 'ATTENDANCE_UNCHANGED', 'The attendance proposal has no changes.');
   if (code === 'P0605') return new AppError(409, 'ATTENDANCE_REVIEW_CHANGED', 'The attendance proposal or related records changed. Preview and review again.');
   if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
+  if (code === 'P0900') return new AppError(409, 'FOLLOWUP_ASSIGNEE', 'Assign an active principal or administrative officer.');
+  if (code === 'P0901') return new AppError(409, 'FOLLOWUP_DUE_DATE', 'Use a current or future new due date, and clear it when closing the case.');
+  if (code === 'P0902') return new AppError(409, 'FOLLOWUP_BLOCKED', 'Resolve the issues shown in the follow-up review.');
+  if (code === 'P0903') return new AppError(409, 'FOLLOWUP_REVIEW_CHANGED', 'The follow-up, evidence or proposal changed. Refresh and review again.');
+  if (code === 'P0904') return new AppError(409, 'FOLLOWUP_TRANSITION', 'This action is not available in the current follow-up state.');
   if (code === 'P0800') return new AppError(409, 'MONITOR_RANGE', 'Choose 1 to 31 nonfuture dates within the section school year.');
   if (code === 'P0700') return new AppError(409, 'MONTH_RANGE', 'Use the first day of a month that overlaps the school year.');
   if (code === 'P0701') return new AppError(409, 'MONTH_YEAR', 'Monthly transitions require an active school year.');

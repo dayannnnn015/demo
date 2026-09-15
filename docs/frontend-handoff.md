@@ -92,6 +92,12 @@ Preview an allowed `submit`, `return`, `lock` or `reopen` with version and reaso
 
 Filters run before pagination. Keep nulls unknown, distinguish ADM from classroom marks and display monthly workflow status. Monitoring is live, including current display names; use the separate monthly snapshot API for historical submissions. Refresh after corrections or roster changes. Clear protected data on sign-out. This increment sends no messages and has no case-management or notification UI.
 
+## Attendance follow-up screens to build
+
+[Section 3B.4](attendance-followups.md) provides manager-only queues, evidence, reviewed creation/actions and history. Teachers receive no case/notes/history access. From a selected annual enrollment, preview a 1–31 date window and `absence` or `recording_gap` category; show the exact member, source versions and counts. Choose an active managerial assignee, nullable due date and reason, then confirm the unchanged hash with `reviewed=true`. There is no automatic-alert rule or messaging action.
+
+Show immutable opening evidence beside current evidence, including `evidence_changed` and unavailable membership after corrections. The queue is live and supports year, status, original section, owner, overdue and UUID pagination filters. Read details and history separately; the list omits evidence/reasons. Case notes use the `update` action even when owner/date stay the same. Resolve/cancel with a null due date; reopen only when no newer case is open. Each action requires current-version review and explicit confirmation. Existing cases remain manageable after year closure. Inspect history after a lost response, clear protected data on sign-out and render names/reasons as text. No case screens were added.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.

@@ -40,7 +40,9 @@ Section 2 validation covers duplicate LRNs, invalid dates, movement history, adv
 
 **Section 3B.3 is implemented:** [bounded classroom absence monitoring](attendance-monitor.md), filtered cursor pages, raw session observations, missing/unsupported data and within-range classroom-absence runs. Current teacher privacy and monthly freeze controls remain intact. No alert threshold or automated follow-up is assigned.
 
-**Next: attendance follow-up workflow and policy configuration.** Establish school-approved thresholds and responsibilities before activating automated alert classifications. Alternative-delivery participation/conversion and SF2/SF4 arithmetic remain later work. Obtain approved mark meanings, conversion rules and templates before presenting official totals. The current classroom marks do not assign half-day credits.
+**Section 3B.4 is implemented:** [manual managerial follow-up](attendance-followups.md), reviewed opening from matching evidence, one open case per annual record, assignment/due dates, notes, resolution/cancellation/reopening, immutable history and current-evidence comparisons. Cases survive source corrections and school-year closure without altering attendance.
+
+**Next: policy configuration and school acceptance of attendance workflows.** The user confirmed that the school has no approved automatic-alert threshold; automation stays disabled. Alternative-delivery participation/conversion and SF2/SF4 arithmetic remain later work. Obtain approved mark meanings, conversion rules and templates before presenting official totals. The current classroom marks do not assign half-day credits. Academic subject/curriculum foundations can proceed while school policy decisions remain outstanding.
 
 Acceptance: school-approved fixtures match all daily/monthly totals, partial attendance and movement dates are correct, unmarked sessions remain visible, late corrections are controlled, and concurrent saves do not lose marks.
 

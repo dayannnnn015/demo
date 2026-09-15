@@ -112,6 +112,12 @@ Submission, return, locking and reopening use the registry advisory lock and sha
 
 Section 3B.3 adds the read-only `read_attendance_monitor` function, access-log resource and API module. The function validates assigned-section/current-learner scope, date and page bounds, uses the existing registry/year locks, materializes effective timelines and date cells, filters before pagination, and returns only bounded evidence. The API deterministically derives classifications and raw session/date-run counts. No domain tables or background jobs are added. Monitoring stays live; frozen monthly submissions remain separate immutable evidence. See [monitor semantics](attendance-monitor.md).
 
+## Manual attendance follow-up
+
+Section 3B.4 adds `attendance_followups` and immutable `attendance_followup_events`. A partial unique index permits one open case per annual enrollment; composite FKs preserve enrollment/section year scope. Manager-only RLS and SELECT-only runtime grants protect reasons and snapshots. Validated commands own opening and lifecycle mutations, bind actor/owner/source versions into review hashes, and atomically write cases, events and audits under existing locks.
+
+The monitoring query now lives in a private helper with an optional exact enrollment parameter; the public monitor wrapper preserves its existing behavior. Cases store versioned opening evidence and compare it to fresh scoped evidence. Source corrections do not rewrite history or block case resolution, and case work remains independent of monthly locks/year closure. No policy thresholds, automation or messages are enabled. See [follow-up semantics](attendance-followups.md).
+
 ## Hosting and connections
 
 Section 2B.2 adds append-only `enrollment_corrections` and FK-backed `enrollment_correction_sections`. A private resolver combines the latest corrected sequence with subsequent ordinary movements. Manager-only functions expose a consistent effective timeline, validate previews, compare a hash of the proposal/context, and atomically snapshot corrections with a projection update. Original movement events are never rewritten; only a transaction-bound correction intent suppresses a fictional movement on projection repair. Original-history responses are explicitly labeled. See [timeline semantics](enrollment-timeline.md) before implementing attendance or reports. Snapshot history is paginated at at most ten revisions per response; only two timeline POST routes raise the JSON body limit from 32 to 256 KiB.

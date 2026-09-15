@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.3: classroom absence monitoring**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.4: manual attendance follow-up**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -89,7 +89,16 @@ Read [monthly attendance](docs/monthly-attendance.md). Alternative-delivery conv
 - Current teacher access, historical manager access and returned-record auditing.
 - Live correction refresh and monthly freeze status without changing saved snapshots.
 
-Read [absence monitoring](docs/attendance-monitor.md). School alert policies, follow-up case management and notifications remain later work; this increment is API-only.
+Read [absence monitoring](docs/attendance-monitor.md). School alert policies and notifications remain later work; this increment is API-only.
+
+## What works in Section 3B.4
+
+- Manager-reviewed follow-up cases for recorded absences or gaps in recording.
+- Assigned managerial responsibility, due dates, notes, resolution, cancellation and reopening.
+- Immutable opening evidence and action history, with current-evidence comparisons.
+- Duplicate-open-case protection, filtered queues and post-closure case resolution.
+
+Read [attendance follow-up](docs/attendance-followups.md). The school has no approved automatic-alert rule, so automation and messages remain disabled. Cases are API-only.
 
 ## Development
 
@@ -133,6 +142,7 @@ src/modules/calendar/    Reviewed school/section instructional schedules
 src/modules/attendance/  Dated sheets and reviewed classroom AM/PM marks
 src/modules/attendance-months/ Monthly completeness, snapshots and locks
 src/modules/attendance-monitor/ Scoped absence and completion evidence
+src/modules/attendance-followups/ Manual managerial cases and evidence history
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations
