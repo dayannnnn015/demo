@@ -11,4 +11,5 @@ import { monthOperations } from './modules/attendance-months/contracts.js';
 import { monitorOperations } from './modules/attendance-monitor/contracts.js';
 import { followupOperations } from './modules/attendance-followups/contracts.js';
 import { subjectOperations } from './modules/subjects/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations, ...followupOperations, ...subjectOperations];
+import { offeringOperations } from './modules/section-subjects/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations, ...followupOperations, ...subjectOperations, ...offeringOperations];

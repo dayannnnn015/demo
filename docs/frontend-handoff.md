@@ -98,6 +98,12 @@ Filters run before pagination. Keep nulls unknown, distinguish ADM from classroo
 
 Show immutable opening evidence beside current evidence, including `evidence_changed` and unavailable membership after corrections. The queue is live and supports year, status, original section, owner, overdue and UUID pagination filters. Read details and history separately; the list omits evidence/reasons. Case notes use the `update` action even when owner/date stay the same. Resolve/cancel with a null due date; reopen only when no newer case is open. Each action requires current-version review and explicit confirmation. Existing cases remain manageable after year closure. Inspect history after a lost response, clear protected data on sign-out and render names/reasons as text. No case screens were added.
 
+## Academic setup screens to build
+
+[Subject catalog](subject-catalog.md) and [section offerings](section-subjects.md) are API-only. Staff can read catalog metadata; managers maintain it and read history. Show subject code, kind, grade applicability, active state and version. Grade 0 means Kindergarten, not a numeric grading policy. Catalog archival preserves existing offerings.
+
+Managers select active, applicable subjects using the current catalog version. Display offering `subject_snapshot` as the preserved selection, separately from current catalog metadata. Refresh is explicit and draft-year only. Save the current offering version and reason; send a null subject version unless refreshing. Retired offerings remain available through the active filter. Closed years are read-only for managers and unavailable to teachers. Teachers see only their current advised open-year sections. Pagination is UUID-based; sort collected results by display order, then code/id. Inspect history after lost responses and require a new decision after conflicts. No grading controls should be inferred from these metadata endpoints.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.

@@ -50,7 +50,9 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.1 is implemented:** explicit subject codes/names/kinds/grade applicability, archival, versioned changes and protected history. No official curriculum or grading formula is seeded. See [subject catalog](subject-catalog.md).
 
-**Next: Section 4A.2 section subject offerings.** Pin the subject details used by each section and retain current adviser access without expanding learner permissions.
+**Section 4A.2 is implemented:** [section subject offerings](section-subjects.md) pin catalog details, support draft-only explicit refresh and preserve retirement/history. Teachers retain current adviser access without expanded learner permissions.
+
+**Next: versioned assessment-policy foundations.** Establish explicit school-reviewed grading behavior before score entry or calculations; do not infer official weights or numeric Kindergarten grading from catalog metadata.
 
 Implement versioned grade-band policies, subjects, reporting periods, assessment components, score constraints, decimal arithmetic, reproducible computations, missing-score handling, summaries, and reviewed finalization. Independently verify the current DepEd enclosure and school ECR examples; preserve policies for historical years.
 

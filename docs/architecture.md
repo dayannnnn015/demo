@@ -118,6 +118,12 @@ Section 3B.4 adds `attendance_followups` and immutable `attendance_followup_even
 
 The monitoring query now lives in a private helper with an optional exact enrollment parameter; the public monitor wrapper preserves its existing behavior. Cases store versioned opening evidence and compare it to fresh scoped evidence. Source corrections do not rewrite history or block case resolution, and case work remains independent of monthly locks/year closure. No policy thresholds, automation or messages are enabled. See [follow-up semantics](attendance-followups.md).
 
+## Academic setup
+
+Sections 4A.1 and 4A.2 add catalog subjects and section offerings with immutable before/after journals. Subject codes are immutable; names, kinds and applicable grades are explicit versioned metadata. Offerings retain the selected catalog snapshot and use composite section/year references, FK indexes and per-section subject uniqueness. Catalog edits never rewrite pinned selections. Only draft years permit explicit refresh; closed years block offering changes.
+
+Validated commands share the registry advisory lock and acquire the school-year lock before offering writes. Runtime tables have SELECT-only grants and RLS; private helpers are not executable by the runtime role. Managers write and read history; teachers read the catalog and their current advised open-year offerings. No learner permissions, assessment policies or formulas are added. See [catalog](subject-catalog.md) and [offerings](section-subjects.md).
+
 ## Hosting and connections
 
 Section 2B.2 adds append-only `enrollment_corrections` and FK-backed `enrollment_correction_sections`. A private resolver combines the latest corrected sequence with subsequent ordinary movements. Manager-only functions expose a consistent effective timeline, validate previews, compare a hash of the proposal/context, and atomically snapshot corrections with a projection update. Original movement events are never rewritten; only a transaction-bound correction intent suppresses a fictional movement on projection repair. Original-history responses are explicitly labeled. See [timeline semantics](enrollment-timeline.md) before implementing attendance or reports. Snapshot history is paginated at at most ten revisions per response; only two timeline POST routes raise the JSON body limit from 32 to 256 KiB.

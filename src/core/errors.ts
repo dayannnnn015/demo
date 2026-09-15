@@ -35,6 +35,10 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0604') return new AppError(409, 'ATTENDANCE_UNCHANGED', 'The attendance proposal has no changes.');
   if (code === 'P0605') return new AppError(409, 'ATTENDANCE_REVIEW_CHANGED', 'The attendance proposal or related records changed. Preview and review again.');
   if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
+  if (code === 'P1100') return new AppError(409, 'OFFERING_YEAR_CLOSED', 'Closed-year subject offerings are read only.');
+  if (code === 'P1101') return new AppError(409, 'OFFERING_SUBJECT', 'Use an active subject applicable to the section grade.');
+  if (code === 'P1102') return new AppError(409, 'OFFERING_REFRESH_LOCKED', 'Subject details can only be refreshed while the school year is draft.');
+  if (code === 'P1103') return new AppError(409, 'OFFERING_UNCHANGED', 'The subject offering proposal has no changes.');
   if (code === 'P1000') return new AppError(409, 'SUBJECT_UNCHANGED', 'The subject proposal has no changes.');
   if (code === 'P0900') return new AppError(409, 'FOLLOWUP_ASSIGNEE', 'Assign an active principal or administrative officer.');
   if (code === 'P0901') return new AppError(409, 'FOLLOWUP_DUE_DATE', 'Use a current or future new due date, and clear it when closing the case.');

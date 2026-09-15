@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, and **Section 3B.4: manual attendance follow-up**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; learner, calendar and attendance screens and full frontend design are deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, and **Section 4A.2: subject catalog and section offerings**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -108,6 +108,15 @@ Read [attendance follow-up](docs/attendance-followups.md). The school has no app
 
 Read [subject catalog](docs/subject-catalog.md). This increment is API-only.
 
+## What works in Section 4A.2
+
+- Per-section subject selections preserve the selected catalog revision.
+- Explicit draft-year refresh, retirement/reactivation, display order and protected history.
+- Grade applicability, stale-version, archival and closed-year checks.
+- Manager-only changes and current-adviser reads without expanded learner permissions.
+
+Read [section offerings](docs/section-subjects.md). Grading policies and assessment entry remain subsequent work.
+
 ## Development
 
 Requirements: Node.js 24, npm, and a dedicated Supabase development project. Automated database tests use PGlite and do not need Docker or cloud credentials.
@@ -152,6 +161,7 @@ src/modules/attendance-months/ Monthly completeness, snapshots and locks
 src/modules/attendance-monitor/ Scoped absence and completion evidence
 src/modules/attendance-followups/ Manual managerial cases and evidence history
 src/modules/subjects/    Explicit subject metadata and revision history
+src/modules/section-subjects/ Pinned section offerings and revision history
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations
