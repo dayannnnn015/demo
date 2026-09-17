@@ -2,6 +2,8 @@
 
 Build and review one section at a time. The user wants sustained backend refinement before frontend handoff. Do not implement later sections merely to fill out an interface.
 
+Read [standing rules, gates and settled decisions](constraints.md) first. It lists what must never be built and what is blocked on a school decision. Where this roadmap and that file disagree, that file wins and this one is wrong. Every **Next:** line below names the gate it waits on, or states that it has none.
+
 ## Section 1 — Staff authorization and school setup
 
 Implemented locally: managed-token authentication, MFA enforcement on deployments, database-backed roles, existing Auth-user authorization, account suspension, school profile, academic years, flexible periods, sections/advisers, audit events, version checks, request limits, migrations, OpenAPI, and automated tests.
@@ -42,7 +44,7 @@ Section 2 validation covers duplicate LRNs, invalid dates, movement history, adv
 
 **Section 3B.4 is implemented:** [manual managerial follow-up](attendance-followups.md), reviewed opening from matching evidence, one open case per annual record, assignment/due dates, notes, resolution/cancellation/reopening, immutable history and current-evidence comparisons. Cases survive source corrections and school-year closure without altering attendance.
 
-**Next: policy configuration and school acceptance of attendance workflows.** The user confirmed that the school has no approved automatic-alert threshold; automation stays disabled. Alternative-delivery participation/conversion and SF2/SF4 arithmetic remain later work. Obtain approved mark meanings, conversion rules and templates before presenting official totals. The current classroom marks do not assign half-day credits. Academic subject/curriculum foundations can proceed while school policy decisions remain outstanding.
+**Next: policy configuration and school acceptance of attendance workflows.** Gates: **mark meanings and conversion rules**, and **absence-alert rule**. Both are closed, so official totals, half-day credits, alternative-delivery participation/conversion and any automatic alerting stay unbuilt. The school has confirmed it has no approved alert threshold. Obtain approved mark meanings, conversion rules and templates before presenting official totals. The current classroom marks do not assign half-day credits. Academic subject/curriculum foundations can proceed while school policy decisions remain outstanding.
 
 Acceptance: school-approved fixtures match all daily/monthly totals, partial attendance and movement dates are correct, unmarked sessions remain visible, late corrections are controlled, and concurrent saves do not lose marks.
 
@@ -56,7 +58,9 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.4 is implemented:** [reviewed assessment-policy adoption](assessment-policy-adoptions.md) records that the school adopted one exact unarchived draft revision for one school year, freezing that revision, an in-year adoption date and the school record reference carrying the decision. Later draft revisions never change a frozen snapshot, an adopted draft cannot be archived, one standing adoption exists per school year and policy, and withdrawal is a reviewed one-way action that preserves evidence.
 
-**Next: offering binding.** Record which section subject offerings an adopted revision governs, still without computing anything. Establish current school-reviewed grading behavior before score entry or calculations; do not infer official weights or numeric Kindergarten grading from catalog metadata. Draft weights alone are not a complete grading policy, and an adoption reference is not proof that the content is correct.
+**Next: offering binding.** Gate: **none**. Record which section subject offerings an adopted revision governs, still without computing anything, using records the school already supplied.
+
+Everything after binding waits on the **grading enclosure and ECR examples** gate, and Kindergarten additionally on the **Kindergarten assessment policy** gate. Do not infer official weights, rounding, transmutation or numeric Kindergarten grading from catalog metadata. Draft weights alone are not a complete grading policy, and an adoption reference is not proof that the content is correct.
 
 Implement versioned grade-band policies, subjects, reporting periods, assessment components, score constraints, decimal arithmetic, reproducible computations, missing-score handling, summaries, and reviewed finalization. Independently verify the current DepEd enclosure and school ECR examples; preserve policies for historical years.
 
@@ -64,18 +68,18 @@ Acceptance: boundary and rounding fixtures match the approved ECR/manual calcula
 
 ## Section 5 — Promotion and next-year assignment
 
-Add reviewed promotion/remediation decisions and reproducible randomization with recorded seed, constraints, capacity, preview, approval, and transactional commit. Preserve source-year enrollment and academic records. Randomization never decides promotion eligibility.
+Gates: **grading enclosure and ECR examples** (promotion decisions depend on final grades) and **learner fields and class capacity**. Add reviewed promotion/remediation decisions and reproducible randomization with recorded seed, constraints, capacity, preview, approval, and transactional commit. Preserve source-year enrollment and academic records. Randomization never decides promotion eligibility.
 
 Acceptance: no duplicated or lost learners, capacities respected, repeatable preview, safe retries, conflict protection, and full history.
 
 ## Section 6 — Official forms and private documents
 
-Render school-approved SF2/SF4/SF9/SF10 templates from validated data, create immutable release snapshots, record signatories/template versions, and deliver through private storage and short-lived authorized downloads. Document export/read access without leaking document contents into logs.
+Gate: **official form templates**, and for SF2/SF4 also **mark meanings and conversion rules**. Render school-approved SF2/SF4/SF9/SF10 templates from validated data, create immutable release snapshots, record signatories/template versions, and deliver through private storage and short-lived authorized downloads. Document export/read access without leaking document contents into logs.
 
 Acceptance: school staff reconcile representative exported forms with their approved examples; dates, calculations, layouts, signatures, release versions, and historical values match.
 
 ## Section 7 — Operational acceptance and turnover
 
-Test the hosted API with at least 27 concurrent teacher sessions and preferably the complete expected staff cohort. Establish latency/error targets with the client. Exercise backup restoration into an isolated project, privilege revocation, incident recovery, deployment rollback, migrations, data retention, and private document recovery. Complete UAT, TAM evaluation, operational runbooks, and staff training.
+Gates: **load and recovery verification**, **real staff MFA login and school acceptance**, and, before any real learner data is imported, **privacy owner and approved purposes**. Test the hosted API with at least 27 concurrent teacher sessions and preferably the complete expected staff cohort. Establish latency/error targets with the client. Exercise backup restoration into an isolated project, privilege revocation, incident recovery, deployment rollback, migrations, data retention, and private document recovery. Complete UAT, TAM evaluation, operational runbooks, and staff training.
 
 Automated tests check isolation and version behavior on embedded PostgreSQL. A separate hosted smoke check also verified the real Supabase runtime role, date parsing, 27 concurrent transaction contexts, teacher isolation, version checks, and audit writes, then rolled back every synthetic fixture. These checks do not establish full API throughput, realistic multi-session authentication load, every concurrent locking race, or backup recoverability.
