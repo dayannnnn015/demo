@@ -76,7 +76,10 @@ export function createApp(deps: Dependencies) {
     if ('bodyLimit' in operation) app[operation.method](operation.path, express.json({ limit: operation.bodyLimit, strict: true, inflate: false }));
   }
   app.use(express.json({ limit: '32kb', strict: true, inflate: false }));
-  app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', stage: 'section-4a3', health: '/health/live', contract: '/openapi.json' }));
+  // With no public auth configuration there is no workspace to serve, so the
+  // root stays a machine-readable descriptor. Otherwise it opens the workspace,
+  // because a person typing the bare address expects the app, not JSON.
+  if (!deps.publicAuth) app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', health: '/health/live', contract: '/openapi.json' }));
   app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
   app.get('/health/ready', async (_req, res) => {
     try {
@@ -114,7 +117,7 @@ export function createApp(deps: Dependencies) {
   });
   app.get('/openapi.json', (_req, res) => res.json(openapi));
   if (deps.publicAuth) {
-    app.get(['/account/setup', '/app'], (_req, res) => {
+    app.get(['/', '/account/setup', '/app'], (_req, res) => {
       // The bundle is hashed and same-origin; styles ship as a file, and the
       // authenticator QR code arrives as a data URL.
       res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
