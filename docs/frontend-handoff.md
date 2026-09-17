@@ -1,6 +1,6 @@
 # Frontend integration contract
 
-A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API; learner, import, and correction screens are not yet built.
+A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API. The workspace now also reads the Section 2A learner registry; import and correction screens are not yet built.
 
 ## Authentication
 
@@ -41,8 +41,19 @@ Dates are exact `YYYY-MM-DD` calendar dates in the school's Asia/Manila context.
 | Create/reassign sections | Yes | Yes | No |
 | Read sections | All | All | Assigned sections only |
 | Read change audit | Yes | Yes | No |
+| Read learner profiles | All | All | Currently assigned learners only |
+| Read annual enrollment records | All | All | Currently assigned learners only |
+| Register learners and record movements | Yes | Yes | No |
 
 Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) supports learner profiles, annual enrollment, current rosters, and movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRNs as strings, display pending for null, and never generate identifiers or silently merge matching names. Movement requests use the enrollment version and first date of the new state. [Section 2B.2](enrollment-timeline.md) supports reviewed historical corrections; classroom attendance is now available through the Section 3B.1 API, while grades, report exports, and in-app invitations remain unavailable.
+
+## Learner registry screens
+
+The workspace has a read-only **Learners** tab for every role, built on [Section 2A](learner-registry.md). It searches `GET /learners` with the documented `search`, `lrn` and `birth_date` filters, pages 25 rows at a time by `offset`, and loads a learner's `GET /enrollments?learner_id=` records only when a staff member opens that row, because every successful read appends a record-access event.
+
+The tab is deliberately read-only. Registration, LRN assignment, enrollment, movements and every reviewed correction stay API-only until their review screens exist; do not add a mutation button that skips the version and reason a workflow requires. A teacher who opens the tab receives only their currently assigned learners from the API, and the page says so rather than implying the registry is empty. Render pending LRNs as `Pending` instead of a blank cell, show Kindergarten by name rather than grade `0`, and keep `record_state=voided` rows labeled as unusable for reporting. Managers request `record_state=all` to see voided evidence; teachers must not.
+
+Section and school-year names are resolved from `/sections` and `/academic-years` for display only. A missing entry means the row is outside the reader's scope, so it shows as unavailable rather than as a database identifier. Learner names, LRNs and birth dates are rendered as text and cleared on sign-out with the rest of the workspace.
 
 ## Import and LRN review screens to build
 

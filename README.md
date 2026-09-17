@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.3: assessment-policy drafts**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.3: assessment-policy drafts**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -125,6 +125,21 @@ Read [section offerings](docs/section-subjects.md). Operational grading policies
 
 Read [assessment-policy drafts](docs/assessment-policy-drafts.md). Drafts are non-operational: no approval, offering binding, score entry or grade calculation is enabled.
 
+## What works in the school workspace
+
+The workspace at `/app` is a usability aid for backend review, not the final frontend. It covers:
+
+- **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
+- **Section 2A learner registry, read-only**: scoped search by name, exact LRN or birth date, with each learner's annual enrollment records loaded on request.
+
+Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Registration, enrollment, movements, reviewed corrections, attendance, calendars and academic setup stay API-only. Sessions are held in memory, so a refresh requires signing in again.
+
+Read [frontend integration](docs/frontend-handoff.md) before extending it.
+
+## Release history
+
+[CHANGELOG.md](CHANGELOG.md) lists every released increment, its manuscript section and its database migration. The current release is **0.16.0**.
+
 ## Development
 
 Requirements: Node.js 24, npm, and a dedicated Supabase development project. Automated database tests use PGlite and do not need Docker or cloud credentials.
@@ -150,7 +165,7 @@ The local API listens on `http://127.0.0.1:3001`. `npm run build` compiles the b
 
 The machine-readable contract is [docs/openapi.json](docs/openapi.json) and is served at `/openapi.json`. [Frontend integration](docs/frontend-handoff.md) explains authentication, response envelopes, dates, pagination, and version conflicts.
 
-All business endpoints are under `/api/v1` and require `Authorization: Bearer <Supabase access token>`. `/`, `/health/live`, `/health/ready`, `/openapi.json`, `/app`, and the account setup/configuration endpoints are public and return no personal records. `/app` and `/account/setup` share password/MFA sign-in and open the Section 1 workspace after authentication. The workspace supports school profile edits, staff authorization/access updates, school years, reporting periods, sections/advisers, and activity history. Sessions remain in memory, so refreshing requires signing in again. Readiness checks the database, restricted runtime role, school bootstrap, and rate-limit function; it does not certify an end-to-end Supabase login.
+All business endpoints are under `/api/v1` and require `Authorization: Bearer <Supabase access token>`. `/`, `/health/live`, `/health/ready`, `/openapi.json`, `/app`, and the account setup/configuration endpoints are public and return no personal records. `/app` and `/account/setup` share password/MFA sign-in and open the workspace described above after authentication. Readiness checks the database, restricted runtime role, school bootstrap, and rate-limit function; it does not certify an end-to-end Supabase login.
 
 ## Repository layout
 
@@ -177,6 +192,7 @@ database/migrations/     Ordered, immutable SQL migrations
 scripts/                 Migration, operator setup, API export
 tests/                   PostgreSQL, API, and signed-token tests
 docs/                    Requirements, decisions, deployment, API handoff
+CHANGELOG.md             Released increments, sections and migrations
 ```
 
 Passwords, tokens, database URLs, and manuscript extracts belong only in ignored `.env`/`.local` files. The manuscript remains in its original location and is not committed into this repository.

@@ -1,13 +1,17 @@
 type Row = Record<string, unknown>;
 type Result = { items: Row[]; pagination?: { has_more?: boolean; next_before_id?: string | null } };
 export type Api = <T>(path: string, method?: string, body?: Row) => Promise<T>;
-type Field = { key: string; label: string; type?: string; optional?: boolean; options?: [string, string][]; min?: number; max?: number; maxLength?: number; pattern?: string };
+type Field = { key: string; label: string; type?: string; optional?: boolean; options?: [string, string][]; min?: number; max?: number; minLength?: number; maxLength?: number; pattern?: string };
 const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '') => {
   const el = document.createElement(tag); el.textContent = text; return el;
 };
 const roles: [string, string][] = [['teacher', 'Teacher'], ['administrative_officer', 'Administrative officer'], ['principal', 'Principal']];
 const value = (row: Row, key: string) => row[key] == null ? '' : String(row[key]);
 const yearName = (row: Row) => `${row.start_year}–${Number(row.start_year) + 1}`;
+const sentence = (text: string) => text ? text[0]!.toUpperCase() + text.slice(1).replaceAll('_', ' ') : '';
+const gradeName = (grade: unknown) => Number(grade) === 0 ? 'Kindergarten' : `Grade ${Number(grade)}`;
+// Family name first, matching how school forms list learners.
+const learnerName = (row: Row) => [value(row, 'last_name'), [value(row, 'first_name'), value(row, 'middle_name'), value(row, 'name_extension')].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
 export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
   root.replaceChildren();
@@ -16,6 +20,7 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
   let offset = 0;
   let yearId = '';
   let before = '';
+  let filters: Row = {};
   let generation = 0;
   let disposed = false;
   let fieldNumber = 0;
@@ -23,7 +28,7 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
   const status = node('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
   const content = node('section'); content.setAttribute('aria-label', 'Workspace content');
   root.append(nav, status, content);
-  const tabs = manager ? ['School', 'School years', 'Reporting periods', 'Sections', 'Staff', 'Activity'] : ['School', 'School years', 'Reporting periods', 'Sections'];
+  const tabs = manager ? ['School', 'School years', 'Reporting periods', 'Sections', 'Learners', 'Staff', 'Activity'] : ['School', 'School years', 'Reporting periods', 'Sections', 'Learners'];
   function button(label: string, action: () => void | Promise<void>) {
     const el = node('button', label); el.type = 'button';
     el.addEventListener('click', () => {
@@ -37,9 +42,11 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
     status.textContent = error instanceof Error ? error.message : 'The request failed. Please try again.';
     status.className = 'error';
   }
-  for (const tab of tabs) nav.append(button(tab, async () => { page = tab; offset = 0; before = ''; await render(); }));
-  function editor(parent: HTMLElement, title: string, fields: Field[], initial: Row, save: (data: Row) => Promise<unknown>) {
-    const form = node('form'); form.className = 'editor'; form.append(node('h3', title));
+  for (const tab of tabs) nav.append(button(tab, async () => { page = tab; offset = 0; before = ''; filters = {}; await render(); }));
+  // Builds the labelled inputs shared by save forms and search forms, and
+  // returns a reader for the values currently entered.
+  function controls(form: HTMLFormElement, title: string, fields: Field[], initial: Row) {
+    form.className = 'editor'; form.append(node('h3', title));
     const inputs: { field: Field; input: HTMLInputElement | HTMLSelectElement }[] = [];
     for (const field of fields) {
       const label = node('label', field.label);
@@ -51,6 +58,7 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
         input.type = field.type ?? 'text';
         if (field.min !== undefined) input.min = String(field.min);
         if (field.max !== undefined) input.max = String(field.max);
+        if (field.minLength) input.minLength = field.minLength;
         if (field.maxLength) input.maxLength = field.maxLength;
         if (field.pattern) input.pattern = field.pattern;
       }
@@ -58,11 +66,18 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
       input.id = `workspace-field-${++fieldNumber}`; label.htmlFor = input.id;
       form.append(label, input); inputs.push({ field, input });
     }
+    return () => {
+      const data: Row = {};
+      for (const { field, input } of inputs) data[field.key] = field.type === 'number' ? Number(input.value) : input.value.trim() || null;
+      return data;
+    };
+  }
+  function editor(parent: HTMLElement, title: string, fields: Field[], initial: Row, save: (data: Row) => Promise<unknown>) {
+    const form = node('form'); const collect = controls(form, title, fields, initial);
     const submit = node('button', 'Save'); submit.type = 'submit'; form.append(submit);
     form.addEventListener('submit', event => {
       event.preventDefault();
-      const data: Row = {};
-      for (const { field, input } of inputs) data[field.key] = field.type === 'number' ? Number(input.value) : input.value.trim() || null;
+      const data = collect();
       const current = generation;
       submit.disabled = true;
       void save(data).then(async () => {
@@ -73,18 +88,26 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
     });
     parent.append(form);
   }
-  function table(parent: HTMLElement, rows: Row[], columns: [string, (row: Row) => string][], edit?: (parent: HTMLElement, row: Row) => void) {
-    if (!rows.length) { parent.append(node('p', 'No records yet.')); return; }
+  // Same inputs as an editor, but the values only narrow the current list.
+  function finder(parent: HTMLElement, title: string, fields: Field[], initial: Row, apply: (data: Row) => void) {
+    const form = node('form'); const collect = controls(form, title, fields, initial);
+    const submit = node('button', 'Search'); submit.type = 'submit'; form.append(submit);
+    form.addEventListener('submit', event => { event.preventDefault(); apply(collect()); void render().catch(failure); });
+    parent.append(form);
+  }
+  function table(parent: HTMLElement, rows: Row[], columns: [string, (row: Row) => string][], edit?: (parent: HTMLElement, row: Row) => void, extra: { labels?: [string, string]; empty?: string } = {}) {
+    const labels = extra.labels ?? ['Actions', 'Edit'];
+    if (!rows.length) { parent.append(node('p', extra.empty ?? 'No records yet.')); return; }
     const wrap = node('div'); wrap.className = 'table-wrap';
     const table = node('table'); const head = node('thead'); const tr = node('tr');
     for (const [title] of columns) { const th = node('th', title); th.scope = 'col'; tr.append(th); }
-    if (edit) tr.append(node('th', 'Actions'));
+    if (edit) tr.append(node('th', labels[0]));
     head.append(tr); table.append(head); const body = node('tbody');
     for (const row of rows) {
       const tr = node('tr');
       for (const [, show] of columns) tr.append(node('td', show(row)));
       if (edit) {
-        const td = node('td'); const details = node('details'); details.append(node('summary', 'Edit')); edit(details, row); td.append(details); tr.append(td);
+        const td = node('td'); const details = node('details'); details.append(node('summary', labels[1])); edit(details, row); td.append(details); tr.append(td);
       }
       body.append(tr);
     }
@@ -97,15 +120,16 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
     if (result.pagination?.has_more) controls.append(button('Next', async () => { offset += 25; await render(); }));
     parent.append(controls);
   }
-  async function teachers() {
-    const all: Row[] = []; let skip = 0;
+  async function all(path: string) {
+    const items: Row[] = []; let skip = 0;
     while (true) {
-      const result = await api<Result>(`/staff?role=teacher&limit=100&offset=${skip}`);
-      all.push(...result.items.filter(row => row.active));
-      if (!result.pagination?.has_more) return all;
+      const result = await api<Result>(`${path}${path.includes('?') ? '&' : '?'}limit=100&offset=${skip}`);
+      items.push(...result.items);
+      if (!result.pagination?.has_more) return items;
       skip += 100;
     }
   }
+  const teachers = async () => (await all('/staff?role=teacher')).filter(row => row.active);
   async function render() {
     const current = ++generation;
     status.className = ''; status.textContent = 'Loading…'; content.replaceChildren();
@@ -134,6 +158,41 @@ export function mountWorkspace(root: HTMLElement, api: Api, me: Row) {
         });
         pager(view, result);
         editor(view, 'Authorize an existing account', [{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}' }, name, { key: 'role', label: 'Role', options: allowedRoles }], {}, data => api('/staff', 'POST', data));
+      } else if (page === 'Learners') {
+        // Read-only Section 2A registry. The API decides what each staff member
+        // may see, so a teacher reaching this tab simply receives fewer rows.
+        const query = new URLSearchParams({ limit: '25', offset: String(offset) });
+        for (const key of ['search', 'lrn', 'birth_date']) if (filters[key]) query.set(key, String(filters[key]));
+        const [result, years, sections] = await Promise.all([api<Result>(`/learners?${query}`), api<Result>('/academic-years'), all('/sections')]);
+        const yearLabel = (id: unknown) => { const year = years.items.find(row => row.id === id); return year ? yearName(year) : 'Unavailable school year'; };
+        const sectionLabel = (id: unknown) => String(sections.find(row => row.id === id)?.name ?? 'Unavailable section');
+        view.append(node('p', manager
+          ? 'Search the permanent learner registry. This screen is read-only: registration, enrollment changes, corrections and roster import are still API-only.'
+          : 'This list holds only the learners currently enrolled in the sections you advise in an open school year. It is read-only.'));
+        finder(view, 'Find learners', [
+          { key: 'search', label: 'Name or LRN (at least two characters)', optional: true, minLength: 2, maxLength: 100 },
+          { key: 'lrn', label: 'Exact LRN (twelve digits)', optional: true, pattern: '[0-9]{12}', maxLength: 12 },
+          { key: 'birth_date', label: 'Birth date', type: 'date', optional: true },
+        ], filters, data => { filters = data; offset = 0; });
+        table(view, result.items, [['Learner', learnerName], ['LRN', r => r.lrn == null ? 'Pending' : value(r, 'lrn')], ['Birth date', r => value(r, 'birth_date')], ['Sex', r => sentence(value(r, 'sex'))]], (parent, row) => {
+          // Fetched on demand so opening the list does not read every learner's
+          // enrollment records, each of which the API logs as an access event.
+          parent.append(button('Load enrollment records', async () => {
+            const enrolled = await api<Result>(`/enrollments?learner_id=${row.id}&limit=100${manager ? '&record_state=all' : ''}`);
+            const panel = node('div');
+            table(panel, enrolled.items, [
+              ['School year', r => yearLabel(r.academic_year_id)],
+              ['Grade', r => gradeName(r.grade_level)],
+              ['Section', r => sectionLabel(r.section_id)],
+              ['Status', r => sentence(value(r, 'status'))],
+              ['Enrolled on', r => value(r, 'enrolled_on')],
+              ['Latest recorded change', r => `${value(r, 'effective_on')} — ${sentence(value(r, 'last_reason'))}`],
+              ['Record', r => r.record_state === 'voided' ? 'Voided — not usable for reporting' : 'Valid'],
+            ], undefined, { empty: 'No school-year records for this learner.' });
+            parent.replaceChildren(panel);
+          }));
+        }, { labels: ['Enrollment records', 'Open'], empty: 'No learners match this search.' });
+        pager(view, result);
       } else if (page === 'Activity') {
         const result = await api<Result>(`/audit-events?limit=25${before ? `&before_id=${before}` : ''}`);
         view.append(node('p', 'Changes are recorded automatically. This log cannot be edited.'));
