@@ -54,7 +54,9 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.3 is implemented:** [managerial assessment-policy drafts](assessment-policy-drafts.md) retain explicit Grades 1–6 applicability, source references and internally consistent component weights with versioned history. Draft and archived states are non-operational; no policy is approved, bound to offerings or used for calculations.
 
-**Next: reviewed immutable policy adoption and offering binding.** Establish current school-reviewed grading behavior before score entry or calculations; do not infer official weights or numeric Kindergarten grading from catalog metadata. Draft weights alone are not a complete grading policy.
+**Section 4A.4 is implemented:** [reviewed assessment-policy adoption](assessment-policy-adoptions.md) records that the school adopted one exact unarchived draft revision for one school year, freezing that revision, an in-year adoption date and the school record reference carrying the decision. Later draft revisions never change a frozen snapshot, an adopted draft cannot be archived, one standing adoption exists per school year and policy, and withdrawal is a reviewed one-way action that preserves evidence.
+
+**Next: offering binding.** Record which section subject offerings an adopted revision governs, still without computing anything. Establish current school-reviewed grading behavior before score entry or calculations; do not infer official weights or numeric Kindergarten grading from catalog metadata. Draft weights alone are not a complete grading policy, and an adoption reference is not proof that the content is correct.
 
 Implement versioned grade-band policies, subjects, reporting periods, assessment components, score constraints, decimal arithmetic, reproducible computations, missing-score handling, summaries, and reviewed finalization. Independently verify the current DepEd enclosure and school ECR examples; preserve policies for historical years.
 

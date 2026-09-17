@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.3: assessment-policy drafts**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.4: assessment-policy adoption**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -125,6 +125,15 @@ Read [section offerings](docs/section-subjects.md). Operational grading policies
 
 Read [assessment-policy drafts](docs/assessment-policy-drafts.md). Drafts are non-operational: no approval, offering binding, score entry or grade calculation is enabled.
 
+## What works in Section 4A.4
+
+- Manager-only records that the school adopted one exact unarchived draft revision for one school year.
+- Frozen policy snapshots that later draft revisions never change, plus an explicit school reference and in-year adoption date.
+- One standing adoption per school year and policy, reviewed one-way withdrawal, and re-adoption afterwards.
+- An adopted draft cannot be archived until its adoption is withdrawn.
+
+Read [assessment-policy adoption](docs/assessment-policy-adoptions.md). Adoption records a school decision only: no offering binding, score entry or grade calculation is enabled, and an adoption reference is not proof of approval.
+
 ## What works in the school workspace
 
 The workspace at `/app` is a usability aid for backend review, not the final frontend. It covers:
@@ -186,6 +195,7 @@ src/modules/attendance-followups/ Manual managerial cases and evidence history
 src/modules/subjects/    Explicit subject metadata and revision history
 src/modules/section-subjects/ Pinned section offerings and revision history
 src/modules/assessment-policies/ Non-operational managerial assessment drafts
+src/modules/assessment-adoptions/ Reviewed immutable assessment-policy adoption
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

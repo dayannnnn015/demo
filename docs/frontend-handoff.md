@@ -121,6 +121,14 @@ Managers select active, applicable subjects using the current catalog version. D
 
 Save all editable metadata with the current version and a reason. Canonical sorting does not represent component display priority. Archive preserves history; restore returns a record to the default draft list. Refresh on conflicts and inspect history after lost responses. Render source references and reasons as text, not executable markup; a supplied reference does not verify school approval. Teachers have no draft access.
 
+## Assessment-policy adoption screens to build
+
+[Section 4A.4](assessment-policy-adoptions.md) is manager-only and API-only. Present adoption as recording a school decision, never as approval of the content: show `adoption_reference` as the school's own record and keep the existing "unapproved draft" labeling on the draft itself. Display `policy_snapshot` as the frozen adopted revision and keep it visually separate from the draft's current metadata, which may already have moved on.
+
+Adopt with the school year, the draft's current `policy_version`, an adoption date inside that year, a reference and a reason. Surface `ADOPTION_STATE` as "this draft is archived or already withdrawn", `ADOPTION_YEAR` as a closed year or out-of-range date, and `ALREADY_EXISTS` as an existing standing adoption for that school year and policy. Withdrawal is a separate reviewed action with the current adoption version and a reason; it happens once and nothing edits an adoption in place, so offer "withdraw and record a new adoption" rather than an edit form. Expect `POLICY_DRAFT_ADOPTED` when a manager tries to archive an adopted draft, and point them at the withdrawal first.
+
+Refresh on conflicts and inspect history after a lost response instead of adopting twice. Render references and reasons as text. No approval workflow, offering binding, score entry, transmutation or computed grade exists at any endpoint, so do not build a screen that implies one.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.

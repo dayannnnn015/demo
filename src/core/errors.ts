@@ -37,6 +37,9 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
   if (code === 'P1200') return new AppError(409, 'POLICY_DRAFT_UNCHANGED', 'The assessment-policy draft proposal has no changes.');
   if (code === 'P1201') return new AppError(409, 'POLICY_COMPONENTS', 'Use 1 to 10 distinct components with positive integer basis-point weights totaling 10000 (100%).');
+  if (code === 'P1300') return new AppError(409, 'ADOPTION_STATE', 'Adopt the current unarchived draft revision. A withdrawn adoption cannot be withdrawn again.');
+  if (code === 'P1301') return new AppError(409, 'ADOPTION_YEAR', 'Adopt inside an open school year, on a date within that year.');
+  if (code === 'P1302') return new AppError(409, 'POLICY_DRAFT_ADOPTED', 'Withdraw the standing adoption before archiving this draft.');
   if (code === 'P1100') return new AppError(409, 'OFFERING_YEAR_CLOSED', 'Closed-year subject offerings are read only.');
   if (code === 'P1101') return new AppError(409, 'OFFERING_SUBJECT', 'Use an active subject applicable to the section grade.');
   if (code === 'P1102') return new AppError(409, 'OFFERING_REFRESH_LOCKED', 'Subject details can only be refreshed while the school year is draft.');

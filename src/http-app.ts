@@ -18,6 +18,7 @@ import { executePlacement } from './modules/grade-placement/service.js';
 import { executeCalendar } from './modules/calendar/service.js';
 import { executeAttendance } from './modules/attendance/service.js';
 import { executePolicy } from './modules/assessment-policies/service.js';
+import { executeAdoption } from './modules/assessment-adoptions/service.js';
 import { executeOffering } from './modules/section-subjects/service.js';
 import { executeSubject } from './modules/subjects/service.js';
 import { executeFollowup } from './modules/attendance-followups/service.js';
@@ -92,7 +93,8 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.attendance_followup_events') is not null
           and to_regclass('edunexus.subject_events') is not null
           and to_regclass('edunexus.section_subject_events') is not null
-          and to_regclass('edunexus.assessment_policy_draft_events') is not null as ready`);
+          and to_regclass('edunexus.assessment_policy_draft_events') is not null
+          and to_regclass('edunexus.assessment_policy_adoption_events') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -142,6 +144,7 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'enrollment-records') return executeEnrollmentRecord(operation.id, context, input);
         if (operation.module === 'grade-placement') return executePlacement(operation.id, context, input);
         if (operation.module === 'assessment-policies') return executePolicy(operation.id, context, input);
+        if (operation.module === 'assessment-adoptions') return executeAdoption(operation.id, context, input);
         if (operation.module === 'section-subjects') return executeOffering(operation.id, context, input);
         if (operation.module === 'subjects') return executeSubject(operation.id, context, input);
         if (operation.module === 'attendance-followups') return executeFollowup(operation.id, context, input);

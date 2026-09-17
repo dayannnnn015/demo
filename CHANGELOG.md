@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.17.0 | Section 4A.4 — assessment-policy adoption | 0018 |
 | 0.16.0 | Workspace: read-only Section 2A learner registry | — |
 | 0.15.0 | Section 4A.3 — assessment-policy drafts | 0017 |
 | 0.14.0 | Section 4A.2 — section subject offerings | 0016 |
@@ -23,6 +24,25 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.17.0 — Reviewed assessment-policy adoption
+
+Adds manager-only records that the school adopted one exact unarchived
+[assessment-policy draft](docs/assessment-policy-drafts.md) revision for one school
+year. The whole revision is copied into a frozen snapshot, so later draft edits
+advance the draft's own history without changing what the school decided.
+
+A partial unique index permits one standing adoption per school year and policy;
+withdrawn rows stay as evidence, so the same policy can be adopted again. Withdrawal
+is a reviewed one-way action requiring the current adoption version — nothing edits an
+adoption in place. Migration 0018 also replaces the Section 4A.3 draft writer so an
+adopted draft cannot be archived until its adoption is withdrawn, leaving migration
+0017 unchanged.
+
+Adoption records a school decision and nothing more: no section subject offering is
+bound, no score is accepted, and no grade, average, MPS, GWA or transmutation is
+computed. `adoption_reference` is the school's own record of the decision, supplied as
+text, and is not proof that the content is correct or approved.
 
 ## 0.16.0 — Read-only learner registry in the workspace
 
