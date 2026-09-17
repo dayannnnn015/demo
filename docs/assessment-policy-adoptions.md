@@ -47,4 +47,4 @@ Ten focused tests cover frozen snapshots, revision independence, archived and st
 
 ## Next increment
 
-Offering binding: recording which section subject offerings an adopted revision governs, again without computing anything. Score entry, component arithmetic, rounding, transmutation, MPS, GWA and Kindergarten treatment stay out until the current enclosure and the school's ECR examples are independently verified with the school.
+[Section 4A.5](assessment-policy-bindings.md) now records which section subject offerings an adopted revision governs. A standing binding blocks withdrawal until it is released. Score entry, component arithmetic, rounding, transmutation, MPS, GWA and Kindergarten treatment stay out until the current enclosure and the school's ECR examples are independently verified with the school.

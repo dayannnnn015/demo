@@ -129,6 +129,16 @@ Adopt with the school year, the draft's current `policy_version`, an adoption da
 
 Refresh on conflicts and inspect history after a lost response instead of adopting twice. Render references and reasons as text. No approval workflow, offering binding, score entry, transmutation or computed grade exists at any endpoint, so do not build a screen that implies one.
 
+## Assessment-policy binding screens to build
+
+[Section 4A.5](assessment-policy-bindings.md) is manager-only and API-only. Bind from a section's offering list: show the offering, its pinned subject, and the standing adoptions available for that school year whose grade levels include the section grade. Send both current versions, `offering_version` and `adoption_version`, with a reason.
+
+Surface `BINDING_SCOPE` as a specific mismatch rather than a generic failure — wrong school year, inapplicable grade, or a retired offering each need a different fix. `BINDING_STATE` means the adoption was withdrawn or the binding is already released, and `ALREADY_EXISTS` means that offering already has a standing binding, so release it before binding another.
+
+Release is a separate reviewed action on the current binding version; nothing edits a binding in place, so offer "release and bind again" rather than an edit form. Expect `ADOPTION_BOUND` when withdrawing an adoption and `OFFERING_BOUND` when retiring an offering, and point the manager at the release first. Closed years are read only.
+
+Do not present a binding as a grade setting or show any computed value beside it: no score entry, arithmetic, transmutation or grade exists at any endpoint. Teachers have no binding access in this increment.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.

@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.4: assessment-policy adoption**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.5: assessment-policy offering binding**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -132,7 +132,16 @@ Read [assessment-policy drafts](docs/assessment-policy-drafts.md). Drafts are no
 - One standing adoption per school year and policy, reviewed one-way withdrawal, and re-adoption afterwards.
 - An adopted draft cannot be archived until its adoption is withdrawn.
 
-Read [assessment-policy adoption](docs/assessment-policy-adoptions.md). Adoption records a school decision only: no offering binding, score entry or grade calculation is enabled, and an adoption reference is not proof of approval.
+Read [assessment-policy adoption](docs/assessment-policy-adoptions.md). Adoption records a school decision only: no score entry or grade calculation is enabled, and an adoption reference is not proof of approval.
+
+## What works in Section 4A.5
+
+- Manager-only records of which section subject offering a standing adoption governs.
+- Reviewed binding on current offering and adoption versions, one shared school year, an active offering and an applicable section grade.
+- One standing binding per offering, reviewed one-way release, and rebinding afterwards.
+- Standing bindings block adoption withdrawal and offering retirement until released; closed years are read only.
+
+Read [assessment-policy binding](docs/assessment-policy-bindings.md). Binding is a scoping record: no score entry, arithmetic, transmutation or computed grade exists.
 
 ## What works in the school workspace
 
@@ -196,6 +205,7 @@ src/modules/subjects/    Explicit subject metadata and revision history
 src/modules/section-subjects/ Pinned section offerings and revision history
 src/modules/assessment-policies/ Non-operational managerial assessment drafts
 src/modules/assessment-adoptions/ Reviewed immutable assessment-policy adoption
+src/modules/assessment-bindings/ Adopted policy scoped to section subject offerings
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.18.0 | Section 4A.5 — assessment-policy offering binding | 0019 |
 | 0.17.0 | Section 4A.4 — assessment-policy adoption | 0018 |
 | 0.16.0 | Workspace: read-only Section 2A learner registry | — |
 | 0.15.0 | Section 4A.3 — assessment-policy drafts | 0017 |
@@ -24,6 +25,26 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.18.0 — Assessment-policy offering binding
+
+An adoption says the school stands behind one policy revision for one school year;
+it does not say where that revision applies. Binding is that statement: a manager
+records that a standing adoption governs one section subject offering.
+
+Binding requires current offering and adoption versions, one shared school year, an
+active offering, and a section grade the adopted revision applies to. One standing
+binding exists per offering; release is a reviewed one-way action and an offering can
+be bound again afterwards, including to a different adoption.
+
+A standing binding is a live statement, so the records underneath it cannot be pulled
+away: migration 0019 replaces the 4A.4 adoption writer and the 4A.2 offering writer so
+withdrawing a bound adoption or retiring a bound offering is refused until the binding
+is released. Migrations 0016 through 0018 are unchanged.
+
+Still no score entry, component arithmetic, rounding, transmutation, MPS, GWA or
+computed grade at any endpoint. Those wait on the grading enclosure and ECR examples
+gate in docs/constraints.md.
 
 ## 0.17.0 — Reviewed assessment-policy adoption
 
