@@ -49,4 +49,8 @@ The sign-in page now offers "Email me a recovery link", which calls Supabase's `
 
 The reply is identical whether or not the address has an account, so an unauthenticated visitor cannot use the form to discover which addresses are registered.
 
+That sameness has to include the rate limit. Supabase answers 200 for an unknown address but throttles a registered one to a link a minute, so surfacing a throttle as its own message would confirm the account exists. A throttled request therefore gets the same reply as a successful one, and only a project-wide failure such as a disabled Email provider, which behaves identically for every address, is named.
+
+Supabase built-in mail also caps the whole project at a few messages an hour, which will not survive staff onboarding: configure a real SMTP provider first. An operator can issue a single link without mail through the Auth admin generate_link endpoint, which is not rate limited.
+
 Authenticator (MFA) reset is **not** covered. Removing a verified factor for someone who lost their device needs the admin API, so it remains an operator action in Supabase. That, and supervised device enrollment, still need a written operational process with the school.

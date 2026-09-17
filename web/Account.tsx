@@ -131,25 +131,25 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
                   const result = await client.auth.resetPasswordForEmail(address, { redirectTo: `${location.origin}/account/setup` })
                     .catch(error => ({ error } as { error: { code?: string; status?: number } }));
                   setBusy(false);
-                  // Supabase answers 200 even for an unknown address, so a failure
-                  // here is never about the address and can be shown. Anything
-                  // unrecognized still falls back to a generic line, which keeps
-                  // the form useless for discovering registered addresses.
-                  if (result.error) {
-                    const code = result.error.code ?? '';
+                  // Supabase answers 200 for an unknown address but throttles a
+                  // registered one, so a per-address rate limit would reveal that
+                  // the account exists. It therefore gets the same reply as
+                  // success. A disabled provider is project-wide and identical
+                  // for every address, so that one is safe to name.
+                  const code = result.error?.code ?? '';
+                  const throttled = code === 'over_email_send_rate_limit' || result.error?.status === 429;
+                  if (result.error && !throttled) {
                     setStatus({ kind: 'error', text:
                       code === 'email_provider_disabled'
                         ? 'Email sign-in is switched off for this project, so no recovery link can be sent. The system operator must enable the Email provider in Supabase.'
-                        : code === 'over_email_send_rate_limit' || result.error.status === 429
-                          ? 'Too many recovery requests from this project. Wait a few minutes and try again.'
-                          : 'The recovery service did not accept the request. Tell the system operator if this keeps happening.' });
+                        : 'The recovery service did not accept the request. Tell the system operator if this keeps happening.' });
                     return;
                   }
-                  setStatus({ text: 'If that address has an account, a recovery link is on its way. Open it on this device.', kind: 'done' });
+                  setStatus({ kind: 'done', text: 'If that address has an account, a recovery link is on its way. Only one link is sent a minute, so check your inbox and spam folder before asking for another.' });
                 }}>Email a recovery link</button>
               </div>
               <p className="hint" style={{ marginTop: 'var(--s4)', color: 'var(--ink-500)', fontSize: 'var(--text-xs)' }}>
-                Accounts are created by the school, not self-registered. The recovery reply is the same whether or not an account exists.
+                Accounts are created by the school, not self-registered. Recovery links are limited to one a minute, and the reply is the same whether or not an account exists.
               </p>
             </form>
           ) : null}
