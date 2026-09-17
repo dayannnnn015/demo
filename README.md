@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.5: assessment-policy offering binding**. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.5: assessment-policy offering binding**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -143,6 +143,15 @@ Read [assessment-policy adoption](docs/assessment-policy-adoptions.md). Adoption
 
 Read [assessment-policy binding](docs/assessment-policy-bindings.md). Binding is a scoping record: no score entry, arithmetic, transmutation or computed grade exists.
 
+## What works in staff invitations
+
+- Manager-recorded invitation requests with intended email, name and permission level.
+- Operator-provisioned Auth identities linked so school access and the invitation complete in one transaction.
+- One open request per email, terminal completion and cancellation, and protected history.
+- Browser-initiated password recovery from the sign-in page, answering identically whether or not an address is registered.
+
+Read [staff invitations](docs/staff-invitations.md). EDUNEXUS never creates an Auth identity: the runtime holds no service-role key, and authenticator reset remains an operator action.
+
 ## What works in the school workspace
 
 The workspace at `/app` is a usability aid for backend review, not the final frontend. It covers:
@@ -206,6 +215,7 @@ src/modules/section-subjects/ Pinned section offerings and revision history
 src/modules/assessment-policies/ Non-operational managerial assessment drafts
 src/modules/assessment-adoptions/ Reviewed immutable assessment-policy adoption
 src/modules/assessment-bindings/ Adopted policy scoped to section subject offerings
+src/modules/staff-invitations/ Tracked staff invitations and operator linking
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

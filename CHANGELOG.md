@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.19.0 | Staff invitations and account recovery | 0020 |
 | 0.18.0 | Section 4A.5 — assessment-policy offering binding | 0019 |
 | 0.17.0 | Section 4A.4 — assessment-policy adoption | 0018 |
 | 0.16.0 | Workspace: read-only Section 2A learner registry | — |
@@ -25,6 +26,28 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.19.0 — Staff invitations and account recovery
+
+Authorizing a colleague meant an operator inviting them in the Supabase dashboard
+and someone pasting the returned UUID into a form, with nothing recording who asked,
+what permission level was intended, or whether a pending request had been fulfilled.
+Invitations are now tracked records with an immutable journal.
+
+A manager requests an email, display name and permission level. The operator creates
+the Auth identity in Supabase. A manager then links that identifier, which creates the
+staff row and completes the invitation in one transaction, so school access and the
+invitation record cannot disagree. One open request per email; completion and
+cancellation are terminal.
+
+EDUNEXUS still never creates an Auth identity. That would need a service-role key in
+the runtime, which could create, alter or delete any identity in the project including
+principals, and which readConfig rejects by design. An unknown identifier fails the
+foreign key and the whole transaction rolls back.
+
+Account recovery is initiated from the sign-in page by the browser against Supabase
+with the publishable key, and answers identically whether or not an address is
+registered. Authenticator reset needs the admin API and remains an operator action.
 
 ## 0.18.0 — Assessment-policy offering binding
 

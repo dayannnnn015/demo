@@ -86,6 +86,20 @@ async function main() {
     show('mfa');
     message('Verify your authenticator to continue.');
   }
+  // Recovery uses the publishable key exactly as a browser would. The API holds
+  // no privileged Auth credential, so it cannot and does not send this itself.
+  element('recover').addEventListener('click', () => {
+    const button = element<HTMLButtonElement>('recover');
+    const address = element<HTMLInputElement>('email').value.trim();
+    if (!address) { message('Enter your school email address first.'); return; }
+    button.disabled = true;
+    void client.auth.resetPasswordForEmail(address, { redirectTo: `${location.origin}/account/setup` })
+      // The same wording regardless of outcome: whether an address is registered
+      // is not something an unauthenticated visitor should be able to probe.
+      .then(() => { message('If that address has an account, a recovery link is on its way. Open it on this device to set a new password.'); })
+      .catch(() => { message('If that address has an account, a recovery link is on its way. Open it on this device to set a new password.'); })
+      .finally(() => { button.disabled = false; });
+  });
   form('signin', async () => {
     const input = element<HTMLInputElement>('password');
     const { error } = await client.auth.signInWithPassword({ email: element<HTMLInputElement>('email').value.trim(), password: input.value });

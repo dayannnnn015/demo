@@ -47,6 +47,14 @@ Dates are exact `YYYY-MM-DD` calendar dates in the school's Asia/Manila context.
 
 Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) supports learner profiles, annual enrollment, current rosters, and movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRNs as strings, display pending for null, and never generate identifiers or silently merge matching names. Movement requests use the enrollment version and first date of the new state. [Section 2B.2](enrollment-timeline.md) supports reviewed historical corrections; classroom attendance is now available through the Section 3B.1 API, while grades, report exports, and in-app invitations remain unavailable.
 
+## Staff invitation screens to build
+
+[Staff invitations](staff-invitations.md) are manager-only. The workspace still authorizes a bare UUID through `POST /staff`; the tracked flow is API-only so far. A screen should show outstanding requests with their intended permission level, let a manager record a new request, and let them paste the operator's returned identifier into a provision action that carries the current invitation version.
+
+Present provisioning honestly: EDUNEXUS does not send the invitation email and cannot create the identity. The operator does that in Supabase, and `INVALID_REFERENCE` means the identifier does not exist there yet. `INVITATION_STATE` means the request was already completed or cancelled, and `ALREADY_EXISTS` means either an open request for that email or an identity that already holds school access. Administrative officers see requests for any level but may only act on teacher ones.
+
+Recovery is already live on the sign-in page and uses the browser's Supabase client, not the API. Keep its reply identical whether or not an address is registered; a differentiated message would let a visitor probe which addresses exist. Authenticator reset is not available in the app.
+
 ## Learner registry screens
 
 The workspace has a read-only **Learners** tab for every role, built on [Section 2A](learner-registry.md). It searches `GET /learners` with the documented `search`, `lrn` and `birth_date` filters, pages 25 rows at a time by `offset`, and loads a learner's `GET /enrollments?learner_id=` records only when a staff member opens that row, because every successful read appends a record-access event.

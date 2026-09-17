@@ -34,6 +34,7 @@ Each of these is blocked on information EDUNEXUS cannot derive. Do not build pas
 | **Real staff MFA login and school acceptance** | Hosted acceptance sign-off for Section 1 | School and the deployment operator | Completed invited-user password/MFA enrollment and an authenticated API check |
 | **Load and recovery verification** | Section 7 turnover | Operator, with targets agreed with the school | 27+ concurrent session testing, backup restoration into an isolated project, privilege revocation and rollback drills |
 | **Privacy owner and approved purposes** | Importing any real learner data | School | A named privacy owner, approved purposes and fields, hosting arrangements, recovery objectives and a tested restore |
+| **Service-role key in the runtime** | In-app Auth identity creation and authenticator reset | School and the deployment operator | An explicit written decision accepting that a compromised runtime could then create, alter or delete any Auth identity. Until then, the operator provisions identities and EDUNEXUS only records the invitation. |
 
 ## Settled decisions
 
@@ -42,6 +43,7 @@ Recorded so they are not re-litigated each session.
 | Date | Decision |
 |---|---|
 | 2026-09-17 | "Assessment policies are drafts only" in the v0.15.0 briefing **described the state at that release**; it did not forbid building approval. Section 4A.4 adoption is in scope and stays. Section binding and grade calculations remain separate: binding is the next increment, calculations stay behind the grading gate. |
+| 2026-09-17 | Staff invitations are tracked in EDUNEXUS, but identity creation stays with the operator. The runtime holds no service-role key. |
 | 2026-09-17 | Adoption records a school decision, not a correctness judgement. `adoption_reference` is the school's own record of the decision and is never treated as proof the content is right. |
 | Section 2A | Managers make all learner record changes; teachers read only currently assigned learners. No automatic duplicate merge exists. |
 | Section 1 | One adviser per section. Subject-teacher access is not invented. |

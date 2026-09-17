@@ -44,6 +44,7 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P1401') return new AppError(409, 'BINDING_SCOPE', 'Bind an active offering whose school year matches the adoption and whose section grade the adopted revision applies to.');
   if (code === 'P1402') return new AppError(409, 'ADOPTION_BOUND', 'Release the subject bindings before withdrawing this adoption.');
   if (code === 'P1403') return new AppError(409, 'OFFERING_BOUND', 'Release the assessment-policy binding before retiring this offering.');
+  if (code === 'P1500') return new AppError(409, 'INVITATION_STATE', 'This invitation was already completed or cancelled. Request a new one.');
   if (code === 'P1100') return new AppError(409, 'OFFERING_YEAR_CLOSED', 'Closed-year subject offerings are read only.');
   if (code === 'P1101') return new AppError(409, 'OFFERING_SUBJECT', 'Use an active subject applicable to the section grade.');
   if (code === 'P1102') return new AppError(409, 'OFFERING_REFRESH_LOCKED', 'Subject details can only be refreshed while the school year is draft.');
