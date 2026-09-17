@@ -43,11 +43,18 @@ Recorded so they are not re-litigated each session.
 | Date | Decision |
 |---|---|
 | 2026-09-17 | "Assessment policies are drafts only" in the v0.15.0 briefing **described the state at that release**; it did not forbid building approval. Section 4A.4 adoption is in scope and stays. Section binding and grade calculations remain separate: binding is the next increment, calculations stay behind the grading gate. |
+| 2026-09-18 | Frontend work is no longer deferred. The workspace is a Vite + React app with sessions in `sessionStorage`; the API is far ahead of the interface and the TAM evaluation measures the interface. |
 | 2026-09-17 | Staff invitations are tracked in EDUNEXUS, but identity creation stays with the operator. The runtime holds no service-role key. |
 | 2026-09-17 | Adoption records a school decision, not a correctness judgement. `adoption_reference` is the school's own record of the decision and is never treated as proof the content is right. |
 | Section 2A | Managers make all learner record changes; teachers read only currently assigned learners. No automatic duplicate merge exists. |
 | Section 1 | One adviser per section. Subject-teacher access is not invented. |
 | Section 3 | Attendance counts are raw session counts, never official attendance credits, until the mark-meanings gate opens. |
+
+## Handing the project over
+
+[AGENTS.md](../AGENTS.md) is the working contract, read by Codex directly and by Claude Code through a one-line `CLAUDE.md` pointer, so both tools get identical instructions. [status.md](status.md) records where the last session stopped.
+
+A decision that lives only in a chat transcript is lost the moment the tool changes. Record it in the settled-decisions table below, with the date.
 
 ## Asking the school
 

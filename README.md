@@ -2,6 +2,8 @@
 
 EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
 
+Picking this project up, as a person or an agent? Start with [AGENTS.md](AGENTS.md), the working contract, and [where things stand](docs/status.md). `CLAUDE.md` points at the same file, so Claude Code and Codex read identical instructions.
+
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision, and [school information requests](docs/school-information-requests.md) lists what to ask the school to unblock it. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
 ## What works in Section 1
@@ -237,6 +239,8 @@ web/                     Vite + React workspace (built into public/)
 database/migrations/     Ordered, immutable SQL migrations
 scripts/                 Migration, operator setup, API export
 tests/                   PostgreSQL, API, and signed-token tests
+AGENTS.md                Working contract for agents and contributors
+docs/status.md           Where the last session stopped and what is next
 docs/constraints.md      Standing rules, blocking gates and settled decisions
 docs/school-information-requests.md  What to ask the school, in priority order
 docs/                    Requirements, decisions, deployment, API handoff
