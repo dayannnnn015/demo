@@ -52,4 +52,4 @@ Ten focused tests cover the recorded binding and journal, every scope rule, cros
 
 ## Next increment
 
-Score entry and calculation are blocked by the **grading enclosure and ECR examples** gate in [constraints](constraints.md). When the school supplies the current enclosure and its own ECR examples, the binding records here identify which policy applies to which offering, and calculation can be built and verified against approved fixtures.
+[Section 4B.1](assessment-scores.md) now records named assessments and raw learner marks against a bound policy. Calculation remains blocked by the **grading enclosure and ECR examples** gate in [constraints](constraints.md). When the school supplies the current enclosure and its own ECR examples, the binding records here identify which policy applies to which offering, and calculation can be built and verified against approved fixtures.

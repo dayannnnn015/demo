@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.20.0 | Section 4B.1 — assessment tasks and raw score entry | 0021 |
 | 0.19.0 | Staff invitations and account recovery | 0020 |
 | 0.18.0 | Section 4A.5 — assessment-policy offering binding | 0019 |
 | 0.17.0 | Section 4A.4 — assessment-policy adoption | 0018 |
@@ -26,6 +27,25 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.20.0 — Assessment tasks and raw score entry
+
+Teachers can record the marks they actually give: a named assessment with a maximum,
+and one raw score per learner. Both facts hold under any grading policy, which is why
+this could be built while the grading gate is still closed.
+
+A task takes its component code from the bound adopted policy revision rather than
+inventing one, so an offering with no standing binding cannot hold assessments. That
+makes the draft, adoption and binding chain load-bearing.
+
+Marks are written in batches of up to 100, each entry against its own version, so two
+teachers editing different learners do not conflict. An unrecorded learner stays null
+rather than zero, clearing preserves history, and lowering a maximum below a recorded
+mark is refused. One journal row is written per batch rather than per learner.
+
+Nothing is summed, weighted, averaged, converted to a percentage, transmuted or turned
+into a grade, and no endpoint returns a total. Those rules come from the school and sit
+behind the grading enclosure and ECR examples gate in docs/constraints.md.
 
 ## 0.19.0 — Staff invitations and account recovery
 

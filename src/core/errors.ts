@@ -45,6 +45,13 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P1402') return new AppError(409, 'ADOPTION_BOUND', 'Release the subject bindings before withdrawing this adoption.');
   if (code === 'P1403') return new AppError(409, 'OFFERING_BOUND', 'Release the assessment-policy binding before retiring this offering.');
   if (code === 'P1500') return new AppError(409, 'INVITATION_STATE', 'This invitation was already completed or cancelled. Request a new one.');
+  if (code === 'P1600') return new AppError(409, 'TASK_STATE', 'This assessment is archived or its school year is closed.');
+  if (code === 'P1601') return new AppError(409, 'TASK_COMPONENT', 'Bind an adopted assessment policy to this offering and use one of its component codes.');
+  if (code === 'P1602') return new AppError(409, 'TASK_PERIOD', 'Use a reporting period of the offering school year.');
+  if (code === 'P1603') return new AppError(409, 'ASSESSMENT_UNCHANGED', 'The proposal has no changes.');
+  if (code === 'P1604') return new AppError(409, 'TASK_MAXIMUM', 'Recorded scores exceed the proposed maximum. Correct those scores first.');
+  if (code === 'P1605') return new AppError(409, 'SCORE_RANGE', 'Each raw score must be between zero and the assessment maximum.');
+  if (code === 'P1606') return new AppError(409, 'SCORE_ENROLLMENT', 'Record scores only for valid enrollments in this section.');
   if (code === 'P1100') return new AppError(409, 'OFFERING_YEAR_CLOSED', 'Closed-year subject offerings are read only.');
   if (code === 'P1101') return new AppError(409, 'OFFERING_SUBJECT', 'Use an active subject applicable to the section grade.');
   if (code === 'P1102') return new AppError(409, 'OFFERING_REFRESH_LOCKED', 'Subject details can only be refreshed while the school year is draft.');

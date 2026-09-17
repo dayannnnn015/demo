@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4A.5: assessment-policy offering binding**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision, and [school information requests](docs/school-information-requests.md) lists what to ask the school to unblock it. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
@@ -141,7 +141,16 @@ Read [assessment-policy adoption](docs/assessment-policy-adoptions.md). Adoption
 - One standing binding per offering, reviewed one-way release, and rebinding afterwards.
 - Standing bindings block adoption withdrawal and offering retirement until released; closed years are read only.
 
-Read [assessment-policy binding](docs/assessment-policy-bindings.md). Binding is a scoping record: no score entry, arithmetic, transmutation or computed grade exists.
+Read [assessment-policy binding](docs/assessment-policy-bindings.md). Binding is a scoping record.
+
+## What works in Section 4B.1
+
+- Named assessments whose component codes come from the bound adopted revision, never invented.
+- Raw marks in batches of up to 100, each against its own version, with unrecorded learners left null rather than zero.
+- Clearing that preserves history, protection against lowering a maximum below a recorded mark, and archival.
+- Adviser entry for current sections, manager historical access, and manager-only task and score journals.
+
+Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, average, percentage, transmutation or grade is computed anywhere; those wait on the school grading enclosure.
 
 ## What works in staff invitations
 
@@ -216,6 +225,7 @@ src/modules/assessment-policies/ Non-operational managerial assessment drafts
 src/modules/assessment-adoptions/ Reviewed immutable assessment-policy adoption
 src/modules/assessment-bindings/ Adopted policy scoped to section subject offerings
 src/modules/staff-invitations/ Tracked staff invitations and operator linking
+src/modules/assessment-scores/ Named assessments and raw learner marks
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
 database/migrations/     Ordered, immutable SQL migrations

@@ -16,4 +16,5 @@ import { policyOperations } from './modules/assessment-policies/contracts.js';
 import { adoptionOperations } from './modules/assessment-adoptions/contracts.js';
 import { bindingOperations } from './modules/assessment-bindings/contracts.js';
 import { invitationOperations } from './modules/staff-invitations/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations, ...followupOperations, ...subjectOperations, ...offeringOperations, ...policyOperations, ...adoptionOperations, ...bindingOperations, ...invitationOperations];
+import { scoreOperations } from './modules/assessment-scores/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations, ...followupOperations, ...subjectOperations, ...offeringOperations, ...policyOperations, ...adoptionOperations, ...bindingOperations, ...invitationOperations, ...scoreOperations];

@@ -147,6 +147,16 @@ Release is a separate reviewed action on the current binding version; nothing ed
 
 Do not present a binding as a grade setting or show any computed value beside it: no score entry, arithmetic, transmutation or grade exists at any endpoint. Teachers have no binding access in this increment.
 
+## Score entry screens to build
+
+[Section 4B.1](assessment-scores.md) is the first module advisers use weekly, so it deserves real design attention. From a section's offering, list assessments by reporting period and component, and offer a class sheet: learners down, one assessment across, with the maximum shown beside the title.
+
+Component choices come from the bound adopted revision, so fetch them from the binding's adoption rather than hard-coding "WW" and "PT". An offering with no standing binding cannot hold assessments at all, so show that as "no assessment policy is bound to this subject yet" and link to the binding screen rather than presenting an empty form.
+
+Send each learner's own `version`, using `0` for a learner with no mark yet; the batch is 1-100 and commits atomically, so surface a rejected batch as "nothing was saved" rather than implying partial success. **Never render an unrecorded mark as zero** — leave the cell visibly empty, exactly as unmarked attendance sessions are shown. Clearing a mark is sending null, not deleting a row.
+
+Do not compute or display a total, average, percentage or grade anywhere on these screens, even client-side. No endpoint provides one, the weighting rules are not yet confirmed with the school, and a helpfully calculated column would be read as official. Surface `TASK_MAXIMUM` as "lower the recorded scores first", and expect an adviser to be unable to correct a learner who has transferred out; that is a manager action.
+
 ## Calendar screens to build
 
 [Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.
