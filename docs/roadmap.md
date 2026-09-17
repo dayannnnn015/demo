@@ -2,7 +2,7 @@
 
 Build and review one section at a time. The user wants sustained backend refinement before frontend handoff. Do not implement later sections merely to fill out an interface.
 
-Read [standing rules, gates and settled decisions](constraints.md) first. It lists what must never be built and what is blocked on a school decision. Where this roadmap and that file disagree, that file wins and this one is wrong. Every **Next:** line below names the gate it waits on, or states that it has none.
+Read [standing rules, gates and settled decisions](constraints.md) first. It lists what must never be built and what is blocked on a school decision, and [school information requests](school-information-requests.md) lists what to ask the school to unblock it. Where this roadmap and that file disagree, that file wins and this one is wrong. Every **Next:** line below names the gate it waits on, or states that it has none.
 
 ## Section 1 — Staff authorization and school setup
 

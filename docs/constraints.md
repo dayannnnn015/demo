@@ -49,6 +49,12 @@ Recorded so they are not re-litigated each session.
 | Section 1 | One adviser per section. Subject-teacher access is not invented. |
 | Section 3 | Attendance counts are raw session counts, never official attendance credits, until the mark-meanings gate opens. |
 
+## Asking the school
+
+[School information requests](school-information-requests.md) turns the gates above into the actual questions to ask, in priority order, with what a sufficient answer looks like. Request 1, the grading enclosure and ECR examples, is the critical path: it alone opens roughly ten increments.
+
+Filled ECR files and form samples contain real learner names and grades. Ask for them redacted, keep them in the ignored local working area, and never commit them.
+
 ## Using this file
 
 When planning an increment, check the gates first. If the work sits behind a closed gate, it is blocked; say which gate and stop, rather than approximating the missing decision. Every **Next:** line in [the roadmap](roadmap.md) names the gate it depends on, or states that it has none.
