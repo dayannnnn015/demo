@@ -1,0 +1,68 @@
+/*
+  EDUNEXUS design tokens.
+
+  The palette comes from the school's own world rather than a product palette:
+  Benguet pine for the institutional green, bond paper for surfaces because every
+  record here still has a printed counterpart, and ochre rather than red for
+  "needs attention" so that red stays rare and always means a blocked action.
+*/
+:root {
+  /* Institution */
+  --pine-900: #10352a;
+  --pine-800: #164536;
+  --pine-700: #1b5643;
+  --pine-600: #236b54;
+  --pine-100: #dcebe4;
+  --pine-050: #eef5f1;
+
+  /* Paper and ink */
+  --paper: #f5f6f4;
+  --surface: #ffffff;
+  --surface-sunk: #fafbfa;
+  --ink-900: #16231f;
+  --ink-700: #384843;
+  --ink-500: #5d6d67;
+  --ink-400: #7d8b86;
+  --rule: #dfe5e1;
+  --rule-strong: #c7d1cc;
+
+  /* Meaning */
+  --ochre-700: #8a5a12;
+  --ochre-100: #fbeed6;
+  --red-700: #9c2323;
+  --red-100: #fadedd;
+  --blue-700: #1f5275;
+  --blue-100: #ddebf5;
+
+  /* Type */
+  --font-body: 'Source Sans 3', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Source Serif 4', ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+
+  /* Space: 4px base, used in multiples so rhythm stays predictable */
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s5: 1.5rem;
+  --s6: 2rem;
+  --s7: 3rem;
+
+  --radius-sm: 5px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(22, 35, 31, 0.06);
+  --shadow: 0 1px 3px rgba(22, 35, 31, 0.08), 0 6px 16px -8px rgba(22, 35, 31, 0.14);
+
+  --rail: 248px;
+  --header: 60px;
+  --focus: #c07d15;
+}

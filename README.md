@@ -168,6 +168,7 @@ Read [staff invitations](docs/staff-invitations.md). EDUNEXUS never creates an A
 The workspace at `/app` is a usability aid for backend review, not the final frontend. It covers:
 
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
+- **Every other module, listed honestly**: enrollment, roster import, calendars, attendance, academics and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry, read-only**: scoped search by name, exact LRN or birth date, with each learner's annual enrollment records loaded on request.
 

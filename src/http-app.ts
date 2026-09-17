@@ -120,7 +120,7 @@ export function createApp(deps: Dependencies) {
     app.get(['/', '/account/setup', '/app'], (_req, res) => {
       // The bundle is hashed and same-origin; styles ship as a file, and the
       // authenticator QR code arrives as a data URL.
-      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src data:; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.type('html').send(appPage());
     });

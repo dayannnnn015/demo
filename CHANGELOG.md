@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.22.0 | Workspace design system, grouped navigation, honest placeholders | — |
 | 0.21.0 | Workspace rebuilt on Vite + React | — |
 | 0.20.0 | Section 4B.1 — assessment tasks and raw score entry | 0021 |
 | 0.19.0 | Staff invitations and account recovery | 0020 |
@@ -28,6 +29,34 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.22.0 — A workspace staff can be walked through
+
+The interface was functional but plainly a developer's harness, and the TAM
+evaluation measures the interface rather than the API. This turns it into
+something a teacher or an administrative officer can be sat in front of.
+
+A design system replaces ad-hoc styling: tokens for colour, type, spacing and
+elevation; Source Serif for titles and Source Sans for everything else, both
+self-hosted so no staff IP reaches a third party and the policy stays
+same-origin. The palette comes from the school's own world, pine for the
+institution and bond paper for surfaces, with ochre carrying "needs attention"
+so red stays rare and always means blocked.
+
+Navigation is grouped the way the school works — Setup, Learners, Attendance,
+Academics, People — rather than by API module, and the address bar follows the
+screen so a refresh lands where you were. Every module appears, including the
+ones with no interface yet: each states what it will do and, where it applies,
+what it is waiting on, so a walkthrough shows the shape of the finished system
+instead of hiding the gaps.
+
+Each screen carries a record strip naming the record it holds and the official
+form it feeds, because staff navigate by form number rather than by table name.
+Tables echo the ruled registers these records come from, with tabular numerals
+and a header that stays put down a long roster.
+
+Empty states say what to do next, errors say what went wrong, and the
+navigation collapses behind a menu on a phone.
 
 ## 0.21.0 — Workspace rebuilt on Vite + React
 

@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.21.0 · **Last commit:** `0c6bbe3` · **Branch:** `master`, pushed, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.22.0 · **Last commit:** `pending` · **Branch:** `master`, pushed, working tree clean
 
 ## Just shipped
 
@@ -10,6 +10,7 @@ The assessment chain is complete end to end — draft → adoption → binding �
 
 | Version | What |
 |---|---|
+| 0.22.0 | Workspace design system, grouped navigation, honest placeholders |
 | 0.21.0 | Workspace rebuilt on Vite + React, sessions in `sessionStorage` |
 | 0.20.0 | Section 4B.1 assessment tasks and raw score entry, migration 0021 |
 | 0.19.0 | Staff invitations and browser-initiated account recovery, migration 0020 |
@@ -22,7 +23,7 @@ The assessment chain is complete end to end — draft → adoption → binding �
 
 ## Next action
 
-**Build the learner registration and enrollment screens** (Section 2A mutations, manager-only, version-checked). The registry is empty, and nothing downstream is usable without learners.
+**Build the learner registration and enrollment screens** (Section 2A mutations, manager-only, version-checked). The registry is empty, and nothing downstream is usable without learners. The route and its placeholder already exist in `web/routes.tsx`; replace the placeholder with a real screen.
 
 Agreed frontend order after that: calendar setup → daily attendance → score entry → monthly workflows → imports and correction reviews. Daily attendance is the highest-frequency screen in the system: 30 teachers, twice a day.
 

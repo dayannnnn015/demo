@@ -4,6 +4,12 @@ The workspace is a Vite + React + TypeScript application in `web/`, built into `
 
 ## How the app is put together
 
+The workspace is organized as a route table in `web/routes.tsx`. A route carries its navigation label, title, one-line explanation, the record class it holds, the official form it feeds, its permission level and whether an interface exists yet. Adding a screen means adding a route and a component; the shell, navigation grouping and page header follow from the table, and a module with no screen yet renders an honest placeholder rather than disappearing.
+
+`web/styles/tokens.css` holds colour, type, spacing and elevation. Use the tokens rather than literal values: the palette carries meaning, with ochre for "needs attention" and red reserved for blocked actions, so a red control in a new screen should mean something is genuinely stopped. Fonts are self-hosted in `web/fonts`; do not switch to a font CDN, because the policy is same-origin and staff addresses should not reach a third party.
+
+`web/components/primitives.tsx` holds `Editor`, `Finder`, `Table`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`. Prefer them over new markup so screens stay consistent, and give every table a real empty state: an empty screen is where a staff member decides whether the system is broken or simply new.
+
 `web/main.tsx` creates the Supabase client from `/account/config` and decides between the account flow and the workspace. `web/api.ts` wraps every call: it attaches the bearer token, unwraps the `{ data, requestId }` envelope, and throws an `ApiError` carrying the server's own `code`, so a screen can react to `VERSION_CONFLICT` or `TASK_COMPONENT` specifically rather than matching on message text. `web/ui.tsx` holds the shared primitives — `Editor` for versioned saves, `Finder` for filters, `Table`, `OffsetPager`, `Action` and `StatusLine`. Screens live in `web/screens/`.
 
 Add a screen by writing a component that takes `{ api, setStatus, reload, token }`, fetching in a `useEffect` keyed on `token` so a save refreshes it, and registering it in `web/Workspace.tsx`. Run `npm run dev:web` next to `npm run dev` for hot reload; the Vite dev server proxies `/api` to port 3001.
