@@ -4,7 +4,7 @@ EDUNEXUS is a modular TypeScript/Express API with PostgreSQL, Supabase Auth, and
 
 ```mermaid
 flowchart LR
-  Staff[School staff] --> UI[Section 1 workspace / future learner screens]
+  Staff[School staff] --> UI[Vite + React workspace served at /app]
   UI --> Auth[Supabase Auth and MFA]
   UI -->|Bearer token| API[Express API on Vercel]
   API -->|Signature and live user check| Auth

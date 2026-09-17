@@ -29,7 +29,7 @@ import { executeMonitor } from './modules/attendance-monitor/service.js';
 import { executeMonth } from './modules/attendance-months/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
-import { accountPage } from './account-page.js';
+import { appPage } from './app-page.js';
 
 export interface Dependencies { database: Database; auth: Authenticator; origins: string[]; logger: Logger; publicAuth?: { url: string; publishableKey: string }; }
 
@@ -57,6 +57,11 @@ export function createApp(deps: Dependencies) {
     next();
   });
   app.use(helmet());
+  // Before CORS: a module script is always fetched in CORS mode, and these
+  // hashed bundle files are public and carry no credentials, so gating them on
+  // the API origin allowlist would only break the workspace. Vercel serves them
+  // directly in production; this covers local runs and npm start.
+  if (deps.publicAuth) app.use(express.static('public', { index: false, maxAge: '1y', immutable: true }));
   app.use(cors({
     origin(origin, callback) { callback(origin && !deps.origins.includes(origin) ? new AppError(403, 'ORIGIN_NOT_ALLOWED', 'This origin is not allowed.') : null, true); },
     methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
@@ -110,13 +115,13 @@ export function createApp(deps: Dependencies) {
   app.get('/openapi.json', (_req, res) => res.json(openapi));
   if (deps.publicAuth) {
     app.get(['/account/setup', '/app'], (_req, res) => {
-      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+      // The bundle is hashed and same-origin; styles ship as a file, and the
+      // authenticator QR code arrives as a data URL.
+      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
       res.setHeader('Referrer-Policy', 'no-referrer');
-      res.type('html').send(accountPage);
+      res.type('html').send(appPage());
     });
     app.get('/account/config', (_req, res) => res.json(deps.publicAuth));
-    // Vercel serves public assets directly; this serves the bundle for local runs.
-    app.use(express.static('public', { index: false }));
   }
 
   for (const operation of operations) {

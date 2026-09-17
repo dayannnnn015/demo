@@ -1,6 +1,16 @@
 # Frontend integration contract
 
-A basic Section 1 workspace is implemented in `web/workspace.ts`, using the existing API through `web/account.ts`. `/app` and `/account/setup` share the same page. Full frontend design remains deferred until backend review. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API. The workspace now also reads the Section 2A learner registry; import and correction screens are not yet built.
+The workspace is a Vite + React + TypeScript application in `web/`, built into `public/` and served by the API at `/app`; `/app` and `/account/setup` are the same page. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API. The workspace now also reads the Section 2A learner registry; import and correction screens are not yet built.
+
+## How the app is put together
+
+`web/main.tsx` creates the Supabase client from `/account/config` and decides between the account flow and the workspace. `web/api.ts` wraps every call: it attaches the bearer token, unwraps the `{ data, requestId }` envelope, and throws an `ApiError` carrying the server's own `code`, so a screen can react to `VERSION_CONFLICT` or `TASK_COMPONENT` specifically rather than matching on message text. `web/ui.tsx` holds the shared primitives — `Editor` for versioned saves, `Finder` for filters, `Table`, `OffsetPager`, `Action` and `StatusLine`. Screens live in `web/screens/`.
+
+Add a screen by writing a component that takes `{ api, setStatus, reload, token }`, fetching in a `useEffect` keyed on `token` so a save refreshes it, and registering it in `web/Workspace.tsx`. Run `npm run dev:web` next to `npm run dev` for hot reload; the Vite dev server proxies `/api` to port 3001.
+
+Sessions are kept in `sessionStorage` under `edunexus-session`. A refresh keeps the user signed in; closing the tab ends the session. Do not move this to `localStorage` — these are staff tokens for a system holding sensitive learner data, and the exposure window matters more than the convenience.
+
+Static bundle files are served before the CORS middleware, because a `type="module"` script is always fetched in CORS mode and the API origin allowlist would otherwise reject the workspace's own bundle.
 
 ## Authentication
 
@@ -8,7 +18,7 @@ Use Supabase's official client to sign in, refresh sessions, enroll/challenge/ve
 
 There is no public EDUNEXUS registration. A managed Auth identity must also have an active `edunexus.staff` record. On launch, call `/api/v1/me`. Treat `STAFF_ACCESS_REQUIRED` as an unapproved/suspended school account, and `MFA_REQUIRED` as a request to finish MFA. User metadata does not authorize features. Use API permissions as the final authority even if buttons are hidden.
 
-The basic `/account/setup` page accepts invitation/recovery fragments, removes them from browser history, sets a password, and verifies MFA. It holds the session in memory and opens the workspace after `/api/v1/me` succeeds. Refreshing requires another sign-in. Sign-out clears rendered school records; an expired or suspended session returns to sign-in. The frontend still needs its own complete account-management/recovery experience. Configure exact Auth redirect allowlists and API CORS origins. Reset links must remain on trusted routes. Follow the current Supabase Auth documentation when implementing session storage for the chosen frontend framework.
+The account page accepts invitation and recovery fragments, removes them from browser history, sets a password, and verifies MFA, then opens the workspace once `/api/v1/me` succeeds. It also offers "Email me a recovery link", which calls Supabase from the browser and answers identically whether or not an address is registered. Sign-out clears rendered school records; an expired or suspended session returns to sign-in. The frontend still needs its own complete account-management/recovery experience. Configure exact Auth redirect allowlists and API CORS origins. Reset links must remain on trusted routes. Follow the current Supabase Auth documentation when implementing session storage for the chosen frontend framework.
 
 The workspace has role-aware navigation, named adviser choices, paginated staff/section lists, cursor-based activity history, loading/retry messages, validation errors, and forms that retain edits after failed saves. PATCH requests include the displayed record version. Closing a year requires a confirmation. All displayed record text is assigned through DOM text properties, never inserted as HTML. UI permissions supplement the existing API and PostgreSQL checks.
 

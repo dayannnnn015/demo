@@ -166,9 +166,12 @@ Read [staff invitations](docs/staff-invitations.md). EDUNEXUS never creates an A
 The workspace at `/app` is a usability aid for backend review, not the final frontend. It covers:
 
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
+- **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry, read-only**: scoped search by name, exact LRN or birth date, with each learner's annual enrollment records loaded on request.
 
-Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Registration, enrollment, movements, reviewed corrections, attendance, calendars and academic setup stay API-only. Sessions are held in memory, so a refresh requires signing in again.
+Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion, authenticator enrollment and password recovery all run against Supabase from the browser.
+
+Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Registration, enrollment, movements, reviewed corrections, attendance, calendars and academic setup stay API-only.
 
 Read [frontend integration](docs/frontend-handoff.md) before extending it.
 
@@ -178,7 +181,7 @@ Read [frontend integration](docs/frontend-handoff.md) before extending it.
 
 ## Development
 
-Requirements: Node.js 24, npm, and a dedicated Supabase development project. Automated database tests use PGlite and do not need Docker or cloud credentials.
+Requirements: Node.js 24, npm, and a dedicated Supabase development project. The workspace is a Vite + React app in `web/`, built into `public/` and served by the API at `/app`. Automated database tests use PGlite and do not need Docker or cloud credentials.
 
 ```powershell
 rtk proxy npm.cmd ci --ignore-scripts
@@ -194,6 +197,8 @@ rtk proxy npm.cmd run db:credentials
 rtk proxy npm.cmd run db:bootstrap
 rtk proxy npm.cmd run dev
 ```
+
+Run `npm run dev:web` alongside `npm run dev` for a hot-reloading frontend on Vite's port, proxying the API to 3001. `npm run build` produces the bundle the API serves at `/app`.
 
 The local API listens on `http://127.0.0.1:3001`. `npm run build` compiles the backend; `npm start` runs that build. The live runtime uses PostgreSQL, never the PGlite test fixture.
 
@@ -228,6 +233,7 @@ src/modules/staff-invitations/ Tracked staff invitations and operator linking
 src/modules/assessment-scores/ Named assessments and raw learner marks
 src/operations.ts         Combined versioned route catalog
 src/http-app.ts           HTTP boundary and route registration
+web/                     Vite + React workspace (built into public/)
 database/migrations/     Ordered, immutable SQL migrations
 scripts/                 Migration, operator setup, API export
 tests/                   PostgreSQL, API, and signed-token tests

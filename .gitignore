@@ -7,10 +7,11 @@ coverage/
 .vercel/
 .local/
 *.log
-public/account.js
+public/
 
 
 .vercel
 .env*
 !.env.example
 supabase/.temp/
+.playwright-cli/

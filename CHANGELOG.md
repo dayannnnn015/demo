@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.21.0 | Workspace rebuilt on Vite + React | — |
 | 0.20.0 | Section 4B.1 — assessment tasks and raw score entry | 0021 |
 | 0.19.0 | Staff invitations and account recovery | 0020 |
 | 0.18.0 | Section 4A.5 — assessment-policy offering binding | 0019 |
@@ -27,6 +28,28 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.21.0 — Workspace rebuilt on Vite + React
+
+The hand-rolled DOM workspace was fine for Section 1, but the screens still to
+build are batch grids with per-row optimistic versions and review-then-confirm
+flows. This replaces it with a Vite + React + TypeScript app in `web/`, built into
+`public/` and served by the API at `/app`.
+
+Nothing was dropped: sign-in, invitation completion, authenticator enrollment and
+verification, password recovery, school profile, years, periods, sections, staff
+access, activity history and the read-only learner registry all carried over. A
+staff invitations screen is new, covering the workflow added in 0.19.0.
+
+Sessions now live in `sessionStorage`, so a refresh no longer forces a full
+re-login including MFA, while closing the tab still ends the session. In-memory
+sessions were unusable for a teacher recording attendance twice a day, and
+`localStorage` would leave tokens readable by any script on the page.
+
+Static bundle files are now served before the CORS middleware. A `type="module"`
+script is always fetched in CORS mode, so the API origin allowlist was rejecting
+the workspace's own bundle; those files are public and carry no credentials, so
+gating them achieved nothing.
 
 ## 0.20.0 — Assessment tasks and raw score entry
 

@@ -1,6 +1,6 @@
 {
   "name": "edunexus",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,15 +8,16 @@
   },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/dev.ts",
-    "build": "tsc -p tsconfig.build.json && esbuild web/account.ts --bundle --minify --format=esm --target=es2022 --outfile=public/account.js",
-    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json --noEmit",
     "start": "node --env-file-if-exists=.env dist/src/dev.js",
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
     "db:bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts",
     "db:credentials": "tsx --env-file-if-exists=.env scripts/runtime-credentials.ts",
-    "api:export": "tsx scripts/export-openapi.ts"
+    "api:export": "tsx scripts/export-openapi.ts",
+    "dev:web": "vite"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",
@@ -29,7 +30,9 @@
     "pg": "8.23.0",
     "pino": "10.3.1",
     "postgres": "3.4.9",
-    "zod": "4.5.4"
+    "zod": "4.5.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
@@ -38,10 +41,13 @@
     "@types/node": "24.13.3",
     "@types/pg": "8.23.1",
     "@types/supertest": "7.2.1",
-    "esbuild": "0.28.2",
     "supertest": "7.2.2",
     "tsx": "4.23.13",
     "typescript": "7.0.2",
-    "vitest": "5.0.0"
+    "vitest": "5.0.0",
+    "@vitejs/plugin-react": "5.1.0",
+    "vite": "7.3.6",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.1"
   }
 }
