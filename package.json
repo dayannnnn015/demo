@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/dev.ts",
-    "build": "tsc -p tsconfig.build.json && vite build",
+    "build": "vite build && tsx scripts/embed-app-page.ts && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json --noEmit",
     "start": "node --env-file-if-exists=.env dist/src/dev.js",
     "test": "vitest run",
