@@ -61,6 +61,12 @@ Work lands as one reviewable increment per commit. Every module in `src/modules/
 
 `P0002` not found and `P0003` version conflict are shared. Module ranges: `P01xx` timeline, `P02xx` identity, `P03xx` enrollment records, `P04xx` placement, `P05xx` calendar, `P06xx` attendance, `P07xx` months, `P08xx` monitor, `P09xx` follow-ups, `P10xx` subjects, `P11xx` offerings, `P12xx` policy drafts, `P13xx` adoptions, `P14xx` bindings, `P15xx` invitations, `P16xx` assessment tasks and scores. **Next free range: `P17xx`.**
 
+### Supabase configuration
+
+`supabase/config.toml` mirrors the live auth configuration, pulled with `supabase config pull`. It exists so `supabase config diff` can catch drift, and it is how the redirect allowlist, MFA settings and password rules were verified.
+
+**Never run `supabase config push`.** The pull deliberately skipped settings it could not represent, so a push would write local defaults over them, including disabling Twilio. The Email provider toggle is not in this schema at all: it lives in the dashboard, or in the Management API, which needs an account-level token rather than the project API keys kept in `.local/`.
+
 ### Frontend
 
 The workspace is a Vite + React + TypeScript app in `web/`, built into `public/` and served by the API at `/app`. `web/api.ts` throws an `ApiError` carrying the server's own `code`, so screens react to specific codes rather than message text. `web/ui.tsx` holds the shared `Editor`, `Finder`, `Table`, `OffsetPager`, `Action` and `StatusLine`. Screens take `{ api, setStatus, reload, token }` and refetch on `token`. See [docs/frontend-handoff.md](docs/frontend-handoff.md) for every unbuilt screen and the rules it must respect.
