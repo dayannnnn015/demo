@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.21.0 · **Last commit:** `b7777b4` · **Branch:** `master`, pushed, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.21.0 · **Last commit:** `0c6bbe3` · **Branch:** `master`, pushed, working tree clean
 
 ## Just shipped
 
@@ -16,7 +16,9 @@ The assessment chain is complete end to end — draft → adoption → binding �
 | 0.18.0 | Section 4A.5 offering binding, migration 0019 |
 | 0.17.0 | Section 4A.4 assessment-policy adoption, migration 0018 |
 
-272 tests across 21 files. **All 21 migrations are applied** to the development Supabase project. CI green on `master`.
+272 tests across 21 files. **All 21 migrations are applied** to the development Supabase project. CI green on `master`, and https://edunexus-balili.vercel.app serves the workspace at its root.
+
+**Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`. Connecting the Git integration in the Vercel dashboard would remove that manual step.
 
 ## Next action
 
