@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.25.0 · **Last commit:** `9b79d8b` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.25.1 · **Last commit:** `fcf0e72` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
@@ -16,6 +16,7 @@ Three **process ERDs** were then added for the paper — class preparation, atte
 
 | Version | What |
 |---|---|
+| 0.25.1 | Dead MFA content-security directive removed from the workspace page |
 | 0.25.0 | Managers create faculty accounts; service-role key isolated in an Edge Function |
 | 0.24.0 | Multi-factor authentication removed; sign-in is email and password |
 | 0.23.1 | Screen render tests, corrected working contract |
@@ -25,13 +26,21 @@ Three **process ERDs** were then added for the paper — class preparation, atte
 | 0.20.0 | Section 4B.1 assessment tasks and raw score entry, migration 0021 |
 | 0.19.0 | Staff invitations and browser-initiated account recovery, migration 0020 |
 
-283 tests across 22 files. **All 21 migrations are applied**; neither of these increments adds one. CI green on `master`, and https://edunexus-balili.vercel.app serves the workspace at its root.
+283 tests across 22 files. **All 21 migrations are applied**; none of these increments adds one. CI green on `master`.
 
-**Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`.
+## The live site is two releases behind
+
+**https://edunexus-balili.vercel.app is serving 0.23.0.** This was found by a user hitting a sign-in screen that still asked for an authenticator code — a screen whose code was deleted in 0.24.0. The deployed bundle still contains the strings `EDUNEXUS authenticator` and `six-digit code from your authenticator app`; the current build does not.
+
+The live OpenAPI reports version 0.23.0 and 79 operations against 80 locally. The missing endpoint is `/api/v1/staff-invitations/{id}/identity`, so the whole 0.25.0 account-creation feature is absent from the running site, not merely unconfigured.
+
+Nothing is wrong with the repository. **Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`. Three releases — 0.24.0, 0.25.0 and 0.25.1 — are committed, pushed and CI-green but have never been deployed.
+
+A deploy is therefore the first action, ahead of any new screen. Until it runs, the live site will keep demanding a second factor that no longer exists in the code, and any browser testing measures a build from before the last three releases.
 
 ## Next action
 
-**Deploy the account service and complete the first real sign-in.** Both are operator steps and both are now short — see below. Nothing in the repository is half-finished behind them.
+**Deploy.** `npx vercel --prod`. Three releases are committed and CI-green but not live, and the site is currently refusing sign-in with an authenticator step that no longer exists in the code. Then deploy the account service and complete the first real sign-in. All three are operator steps and all three are short. Nothing in the repository is half-finished behind them.
 
 After that, resume the frontend: **the instructional calendar screen**, then daily attendance. Attendance cannot be recorded on a date the calendar does not describe, so the calendar comes first. Daily attendance is the highest-frequency screen in the system: 30 advisers, twice a day.
 
