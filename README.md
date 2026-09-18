@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The basic [school workspace](https://edunexus-balili.vercel.app/app) exposes Section 1 forms and a read-only Section 2A learner registry; later modules are API-only and full frontend design is deferred.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The [school workspace](https://edunexus-balili.vercel.app/app) covers Section 1 setup, the Section 2A learner registry and enrollment; later modules are API-only and appear as honest placeholders.
 
 Picking this project up, as a person or an agent? Start with [AGENTS.md](AGENTS.md), the working contract, and [where things stand](docs/status.md). `CLAUDE.md` points at the same file, so Claude Code and Codex read identical instructions.
 
@@ -165,7 +165,7 @@ Read [staff invitations](docs/staff-invitations.md). A manager records the reque
 
 ## What works in the school workspace
 
-The workspace at `/app` is a usability aid for backend review, not the final frontend. It covers:
+The workspace at `/app` is a white, keyboard-navigable administrative interface. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:
 
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
 - **Every other module, listed honestly**: enrollment, roster import, calendars, attendance, academics and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
@@ -175,13 +175,15 @@ The workspace at `/app` is a usability aid for backend review, not the final fro
 
 Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
 
-Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Registration, enrollment, movements, reviewed corrections, attendance, calendars and academic setup stay API-only.
+Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed corrections, attendance, calendars and academic setup stay API-only.
+
+A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
 
 Read [frontend integration](docs/frontend-handoff.md) before extending it.
 
 ## Release history
 
-[CHANGELOG.md](CHANGELOG.md) lists every released increment, its manuscript section and its database migration. The current release is **0.16.0**.
+[CHANGELOG.md](CHANGELOG.md) lists every released increment, its manuscript section and its database migration. The current release is **0.26.0**.
 
 ## Development
 

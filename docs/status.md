@@ -2,20 +2,46 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.25.1 · **Last commit:** `0236c45` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.26.0 · **Last commit:** `01179c1` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
-Two changes, both settled by reading the manuscript itself rather than the documentation about it.
+**The workspace was redesigned** against a reference the user supplied: a
+professional administrative product, mostly white, organized so a screen says
+what it is in one line and then gets out of the way.
 
-**Multi-factor authentication is gone.** The paper never mentions MFA, an authenticator, TOTP, OTP or a second factor anywhere. Its only security requirements are Data Confidentiality and role-based Access Control, which the staff roles and RLS policies already carry. Sign-in is now email and password, which also removes the enrollment step that was blocking the first real sign-in. The paper does not mention passwords either, so this was put to the user as a judgement rather than a deduction, and the reasoning is recorded in [constraints.md](constraints.md).
+The dark green rail is gone. Surfaces are white on a near-white canvas with
+hairline separation, so learner records are the darkest thing on screen. Pine
+green stays as the single accent. Type is Inter with JetBrains Mono for
+identifiers — two variable files, 80 KB against the 135 KB of four static faces —
+still self-hosted. Every route description is now one clause, and the page header
+carries only the title, that clause and the DepEd form the records feed.
 
-**A manager can create a faculty account.** That one *is* in the paper — Table 1's first functional requirement is that the Principal or Administrative Officer can manage authorized teacher accounts — and it was the only part of that requirement the system could not do. Minting an Auth identity needs a service-role key, and that key still does not go in the API runtime: it lives in an isolated Edge Function whose only reachable action is inviting one address, with no update, delete or read path over other identities.
+Two structural changes came out of it rather than out of the styling. A table row
+opens into a panel spanning the full table width instead of a `<details>` inside
+the last cell, which is what six-field editors actually needed. And a learner
+reads as a name over its LRN in one cell, the way a class list prints.
 
-Three **process ERDs** were then added for the paper — class preparation, attendance record, academic record — cut along the processes the manuscript names rather than along implementation domains, and each standalone. Checking them against the migrations turned up eight errors in the existing diagrams (wrong column names, wrong enum values, two columns that do not exist). All corrected, every figure regenerated, and the regeneration recipe is now written down so the drift cannot recur silently. No schema change.
+**Two content-policy violations were found on the way.** Every screen had been
+using inline `style={{ … }}` props, which `style-src 'self'` silently drops in
+the deployed app while they work under the Vite dev server — they are classes
+now. The redesign then nearly reintroduced the same bug with a `data:` URL
+chevron on selects; there is no `img-src` at all, so selects go through a
+`Select` primitive that draws an inline SVG. Both traps are now written into
+[AGENTS.md](../AGENTS.md).
+
+Three accessibility defects were corrected: two greys that failed the 4.5:1 text
+minimum, and a rail whose identity block and sign-out could be scrolled out of
+reach behind a seventeen-item list.
+
+The redesign was verified by server-rendering the real components against the
+real built stylesheet and screenshotting them at 1440px and 390px. **No signed-in
+browser pass has still happened**, so the data paths behind a fetch are as
+untested as they were.
 
 | Version | What |
 |---|---|
+| 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen |
 | 0.25.1 | Dead MFA content-security directive removed from the workspace page |
 | 0.25.0 | Managers create faculty accounts; service-role key isolated in an Edge Function |
 | 0.24.0 | Multi-factor authentication removed; sign-in is email and password |
@@ -24,13 +50,12 @@ Three **process ERDs** were then added for the paper — class preparation, atte
 | 0.22.0 | Workspace design system, grouped navigation, honest placeholders |
 | 0.21.0 | Workspace rebuilt on Vite + React, sessions in `sessionStorage` |
 | 0.20.0 | Section 4B.1 assessment tasks and raw score entry, migration 0021 |
-| 0.19.0 | Staff invitations and browser-initiated account recovery, migration 0020 |
 
 283 tests across 22 files. **All 21 migrations are applied**; none of these increments adds one. CI green on `master`.
 
 ## The live site is current again
 
-**https://edunexus-balili.vercel.app now serves 0.25.1**, deployment `dpl_EeiHVSfKmAZfy1jqAAuG4nwPkr1k`.
+**The live site serves 0.25.1** and is now one release behind again: 0.26.0 is committed but not deployed. Deploy with `npx vercel --prod`.
 
 It had been stuck on 0.23.0. A user hit a sign-in screen still asking for an authenticator code — a screen deleted in 0.24.0 — and the cause was not the code but the deployment: three releases were committed, pushed and CI-green while the running site stayed three behind. The live OpenAPI reported 79 operations against 80 locally, so `/api/v1/staff-invitations/{id}/identity` was absent and account creation had nothing to call.
 
@@ -40,13 +65,25 @@ Verified after deploying: the OpenAPI reports 0.25.1 and 80 operations, the iden
 
 ## Next action
 
-**Complete the first real sign-in.** The site is live and current, sign-in is one screen now that the authenticator step is gone, and no human has ever completed an authenticated session against this system. That is the oldest open item in the project and the largest remaining unknown. Deploying the account service is the other operator step; both are short, and nothing in the repository is half-finished behind them.
+**Deploy 0.26.0 and complete the first real sign-in.** The redesign is only
+verified against server-rendered markup; nobody has seen it in a browser with a
+session behind it, and no human has ever completed an authenticated session
+against this system at all. That is the oldest open item in the project and the
+largest remaining unknown. Deploying the account service is the other operator
+step; both are short, and nothing in the repository is half-finished behind them.
 
-After that, resume the frontend: **the instructional calendar screen**, then daily attendance. Attendance cannot be recorded on a date the calendar does not describe, so the calendar comes first. Daily attendance is the highest-frequency screen in the system: 30 advisers, twice a day.
+After that, resume the frontend: **the instructional calendar screen**, then
+daily attendance. Attendance cannot be recorded on a date the calendar does not
+describe, so the calendar comes first. Daily attendance is the highest-frequency
+screen in the system: 30 advisers, twice a day.
 
-Then score entry → monthly consolidation → roster import and the reviewed correction workflows.
+Then score entry → monthly consolidation → roster import and the reviewed
+correction workflows. Read the design contract in
+[frontend-handoff.md](frontend-handoff.md) before building one — the two
+content-policy traps above are both easy to walk back into.
 
-Backend is otherwise **fully gated**: every remaining backend increment waits on a school decision.
+Backend is otherwise **fully gated**: every remaining backend increment waits on
+a school decision.
 
 ### Known gap
 

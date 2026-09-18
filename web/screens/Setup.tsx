@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
-import { Badge, Button, Callout, Editor, EmptyState, Pager, Table, gradeName, value, yearName, type Field, type Status } from '../components/primitives';
+import { Badge, Button, Callout, Editor, EmptyState, Pager, Select, Table, gradeName, sentence, value, yearName, type Field, type Status } from '../components/primitives';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number };
 
@@ -23,9 +23,6 @@ export function School({ api, manager, setStatus, reload, token }: Props) {
   ];
   return (
     <div className="card">
-      <div className="card-head">
-        <div><h2>Profile</h2><p>Printed at the top of every official form.</p></div>
-      </div>
       <div className="card-body">
         {!school ? <div className="skeleton" /> : manager
           ? <Editor fields={fields} initial={school} setStatus={setStatus} onSaved={reload}
@@ -44,7 +41,7 @@ export function SchoolYears({ api, manager, setStatus, reload, token }: Props) {
   return (
     <>
       <div className="card">
-        <div className="card-head"><div><h2>Years</h2><p>A year must be active before attendance or records can be entered against it.</p></div></div>
+        <div className="card-head"><h2>Years</h2></div>
         <Table
           loading={years === null}
           rows={years ?? []}
@@ -54,7 +51,7 @@ export function SchoolYears({ api, manager, setStatus, reload, token }: Props) {
             { header: 'School year', cell: yearName },
             { header: 'First day', cell: r => value(r, 'starts_on') },
             { header: 'Last day', cell: r => value(r, 'ends_on') },
-            { header: 'State', cell: r => <Badge tone={yearTone(r.status)}>{value(r, 'status')}</Badge> },
+            { header: 'State', cell: r => <Badge tone={yearTone(r.status)}>{sentence(value(r, 'status'))}</Badge> },
           ]}
           detailLabel="Change state"
           detail={manager ? (row => {
@@ -79,7 +76,7 @@ export function SchoolYears({ api, manager, setStatus, reload, token }: Props) {
       </div>
       {manager ? (
         <div className="card">
-          <div className="card-head"><div><h2>Add a school year</h2><p>It starts as a draft so you can set its reporting periods first.</p></div></div>
+          <div className="card-head"><div><h2>Add a school year</h2><p className="card-note">Created as a draft, so its reporting periods can be set before it opens.</p></div></div>
           <div className="card-body">
             <Editor submitLabel="Create year" setStatus={setStatus} onSaved={reload}
               fields={[{ key: 'start_year', label: 'Starting year', type: 'number', min: 2000, max: 2199, hint: 'Enter 2026 for the 2026–2027 school year.' }, ...dateFields]}
@@ -147,13 +144,13 @@ export function YearScoped({ api, manager, setStatus, reload, token, page }: Pro
     <>
       <div className="card">
         <div className="card-head">
-          <div className="field" style={{ margin: 0, minWidth: 220 }}>
+          <div className="field inline">
             <label className="label" htmlFor="year-scope">School year</label>
-            <select id="year-scope" value={yearId} onChange={e => { setYearId(e.target.value); setOffset(0); }}>
-              {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearName(y)} — {String(y.status)}</option>)}
-            </select>
+            <Select id="year-scope" value={yearId} onChange={e => { setYearId(e.target.value); setOffset(0); }}>
+              {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearName(y)} — {sentence(String(y.status))}</option>)}
+            </Select>
           </div>
-          <Badge tone={yearTone(selected.status)}>{value(selected, 'status')}</Badge>
+          <Badge tone={yearTone(selected.status)}>{sentence(value(selected, 'status'))}</Badge>
         </div>
 
         {page === 'Reporting periods' ? (
@@ -203,7 +200,7 @@ export function YearScoped({ api, manager, setStatus, reload, token, page }: Pro
         <div className="card">
           <div className="card-head"><div>
             <h2>{page === 'Reporting periods' ? 'Add a reporting period' : 'Add a section'}</h2>
-            <p>{page === 'Reporting periods' ? 'Periods must sit inside the school year and must not overlap each other.' : 'An adviser must be an active teacher, and sees only the learners in their own sections.'}</p>
+            <p className="card-note">{page === 'Reporting periods' ? 'Periods sit inside the school year and must not overlap.' : 'An adviser sees only the learners in their own sections.'}</p>
           </div></div>
           <div className="card-body">
             {page === 'Reporting periods'

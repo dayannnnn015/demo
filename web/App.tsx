@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createApi, message, type Row } from './api';
 import { Account } from './Account';
 import { AppShell, PageHeader } from './components/AppShell';
+import { Icon } from './components/icons';
 import { StatusLine, idle, type Status } from './components/primitives';
 import { routeFor } from './routes';
 
@@ -61,10 +62,16 @@ export function App() {
 
   if (!client || !api) {
     return (
-      <div className="entry">
-        <div className="entry-card">
-          <div className="entry-head"><strong>EDUNEXUS</strong><span>Balili Elementary School</span></div>
-          <div className="entry-body"><StatusLine status={{ text: fatal || 'Connecting to the sign-in service…', kind: fatal ? 'error' : 'busy' }} /></div>
+      <div className="auth">
+        <div className="auth-card">
+          <div className="auth-brand">
+            <span className="brand-mark"><Icon name="school" size={17} /></span>
+            <span className="brand-text">
+              <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
+              <span>Balili Elementary School</span>
+            </span>
+          </div>
+          <StatusLine status={{ text: fatal || 'Connecting to the sign-in service…', kind: fatal ? 'error' : 'busy' }} />
         </div>
       </div>
     );

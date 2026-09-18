@@ -1,68 +1,83 @@
 /*
   EDUNEXUS design tokens.
 
-  The palette comes from the school's own world rather than a product palette:
-  Benguet pine for the institutional green, bond paper for surfaces because every
-  record here still has a printed counterpart, and ochre rather than red for
-  "needs attention" so that red stays rare and always means a blocked action.
+  A white interface: pure white surfaces on a near-white canvas, separated by
+  hairlines rather than shadow, so the records themselves are the darkest thing
+  on screen. The one accent stays Benguet pine — the institutional colour this
+  project started from — recalibrated to carry text contrast on white.
+
+  Greys are mixed very slightly green so they sit with the accent instead of
+  fighting it. Ochre rather than red means "needs attention", so red stays rare
+  and always means a blocked action.
 */
 :root {
-  /* Institution */
-  --pine-900: #10352a;
-  --pine-800: #164536;
-  --pine-700: #1b5643;
-  --pine-600: #236b54;
-  --pine-100: #dcebe4;
-  --pine-050: #eef5f1;
+  color-scheme: light;
 
-  /* Paper and ink */
-  --paper: #f5f6f4;
-  --surface: #ffffff;
-  --surface-sunk: #fafbfa;
-  --ink-900: #16231f;
-  --ink-700: #384843;
-  --ink-500: #5d6d67;
-  --ink-400: #7d8b86;
-  --rule: #dfe5e1;
-  --rule-strong: #c7d1cc;
+  /* Accent */
+  --accent-900: #0d3d2f;
+  --accent-800: #114d3c; /* 8.9:1 on white */
+  --accent-700: #15604a; /* 6.7:1 on white — primary fill */
+  --accent-600: #1a7459;
+  --accent-200: #b6d8c8;
+  --accent-100: #d8ebe2;
+  --accent-050: #eff7f3;
+
+  /* Neutrals */
+  --white: #ffffff;
+  --canvas: #f7f8f8;
+  --sunk: #fafbfa;
+  --hover: #f3f5f4;
+  --line: #e7eae8;
+  --line-strong: #d6dbd8;
+  --ink-900: #101613; /* headings */
+  --ink-700: #33403b; /* body */
+  --ink-500: #5c6b65; /* 5.4:1 on white — secondary text */
+  --ink-400: #8a9691; /* 3.1:1 — icons and placeholders only, never body text */
 
   /* Meaning */
-  --ochre-700: #8a5a12;
-  --ochre-100: #fbeed6;
-  --red-700: #9c2323;
-  --red-100: #fadedd;
-  --blue-700: #1f5275;
-  --blue-100: #ddebf5;
+  --amber-700: #855312;
+  --amber-100: #fbeed4;
+  --amber-200: #edd6a5;
+  --red-700: #a12222;
+  --red-100: #fbe4e2;
+  --red-200: #f0c2bf;
+  --blue-700: #1b5680;
+  --blue-100: #e2eef7;
+  --blue-200: #bcd7e9;
+  --green-700: #14624b;
+  --green-100: #dcefe5;
 
   /* Type */
-  --font-body: 'Source Sans 3', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Source Serif 4', ui-serif, Georgia, serif;
-  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, monospace;
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-md: 1.0625rem;
-  --text-lg: 1.375rem;
-  --text-xl: 1.75rem;
+  --t-11: 0.6875rem;
+  --t-12: 0.75rem;
+  --t-13: 0.8125rem;
+  --t-14: 0.875rem;
+  --t-16: 1rem;
+  --t-18: 1.125rem;
+  --t-20: 1.25rem;
+  --t-26: 1.625rem;
 
-  /* Space: 4px base, used in multiples so rhythm stays predictable */
-  --s1: 0.25rem;
-  --s2: 0.5rem;
-  --s3: 0.75rem;
-  --s4: 1rem;
-  --s5: 1.5rem;
-  --s6: 2rem;
-  --s7: 3rem;
+  /* Space: 4px base, dashboard density */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
 
-  --radius-sm: 5px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --r-sm: 6px;
+  --r: 8px;
+  --r-md: 10px;
+  --r-lg: 12px;
 
-  --shadow-sm: 0 1px 2px rgba(22, 35, 31, 0.06);
-  --shadow: 0 1px 3px rgba(22, 35, 31, 0.08), 0 6px 16px -8px rgba(22, 35, 31, 0.14);
+  --shadow-xs: 0 1px 2px rgba(16, 22, 19, .04);
+  --shadow-pop: 0 1px 2px rgba(16, 22, 19, .06), 0 12px 28px -10px rgba(16, 22, 19, .22);
 
-  --rail: 248px;
-  --header: 60px;
-  --focus: #c07d15;
+  --rail: 264px;
+  --measure: 1240px;
+  --focus: var(--accent-700);
 }

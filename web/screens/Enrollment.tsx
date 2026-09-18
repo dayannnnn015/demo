@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { message, query } from '../api';
 import {
-  Badge, Callout, Editor, EmptyState, Finder, Table,
+  Badge, Callout, Cell, Editor, EmptyState, Finder, Select, Table,
   gradeName, learnerName, sentence, value, yearName, type Status,
 } from '../components/primitives';
 
@@ -57,9 +57,9 @@ function MovementForm({ api, enrollment, sections, setStatus, reload }: {
       <div className="form-grid">
         <div className="field">
           <label className="label" htmlFor={`act-${enrollment.id}`}>What happened</label>
-          <select id={`act-${enrollment.id}`} value={action} onChange={e => setAction(e.target.value)}>
+          <Select id={`act-${enrollment.id}`} value={action} onChange={e => setAction(e.target.value)}>
             {actions.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
-          </select>
+          </Select>
         </div>
         <div className="field">
           <label className="label" htmlFor={`on-${enrollment.id}`}>First day of the new state</label>
@@ -69,17 +69,17 @@ function MovementForm({ api, enrollment, sections, setStatus, reload }: {
         {action === 'withdrawn' ? (
           <div className="field">
             <label className="label" htmlFor={`why-${enrollment.id}`}>Reason</label>
-            <select id={`why-${enrollment.id}`} value={reason} onChange={e => setReason(e.target.value)}>
+            <Select id={`why-${enrollment.id}`} value={reason} onChange={e => setReason(e.target.value)}>
               {exitReasons.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
-            </select>
+            </Select>
             <span className="hint">A recorded staff decision, not something worked out from attendance.</span>
           </div>
         ) : (
           <div className="field">
             <label className="label" htmlFor={`sec-${enrollment.id}`}>Section</label>
-            <select id={`sec-${enrollment.id}`} value={section} onChange={e => setSection(e.target.value)}>
+            <Select id={`sec-${enrollment.id}`} value={section} onChange={e => setSection(e.target.value)}>
               {choices.map(s => <option key={String(s.id)} value={String(s.id)}>{String(s.name)}</option>)}
-            </select>
+            </Select>
             <span className="hint">Same grade and school year. Promotion is a separate workflow.</span>
           </div>
         )}
@@ -171,20 +171,20 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
     <>
       <div className="card">
         <div className="card-head">
-          <div className="row">
-            <div className="field" style={{ margin: 0, minWidth: 200 }}>
+          <div className="toolbar">
+            <div className="field inline">
               <label className="label" htmlFor="enrol-year">School year</label>
-              <select id="enrol-year" value={yearId} onChange={e => setYearId(e.target.value)}>
-                {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearName(y)} — {String(y.status)}</option>)}
-              </select>
+              <Select id="enrol-year" value={yearId} onChange={e => setYearId(e.target.value)}>
+                {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearName(y)} — {sentence(String(y.status))}</option>)}
+              </Select>
             </div>
-            <div className="field" style={{ margin: 0, minWidth: 220 }}>
+            <div className="field inline">
               <label className="label" htmlFor="enrol-section">Section</label>
-              <select id="enrol-section" value={sectionId} onChange={e => setSectionId(e.target.value)}>
+              <Select id="enrol-section" value={sectionId} onChange={e => setSectionId(e.target.value)}>
                 {sections.length
                   ? sections.map(s => <option key={String(s.id)} value={String(s.id)}>{gradeName(s.grade_level)} · {String(s.name)}</option>)
                   : <option value="">No sections in this year</option>}
-              </select>
+              </Select>
             </div>
           </div>
           {closed ? <Badge tone="neutral">Closed year — read only</Badge> : null}
@@ -196,8 +196,8 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
           rowKey={r => String(r.id)}
           empty={<EmptyState title="Nobody enrolled here yet" body={closed ? 'This year is closed and its enrollment can no longer change.' : 'Find a learner below and enrol them into this section.'} />}
           columns={[
-            { header: 'Learner', cell: named },
-            { header: 'LRN', cell: r => { const l = learners[String(r.learner_id)]; return l?.lrn ? <code>{String(l.lrn)}</code> : <Badge tone="attention">Pending</Badge>; } },
+            { header: 'Learner', cell: r => { const l = learners[String(r.learner_id)];
+              return <Cell title={named(r)} meta={l?.lrn ? `LRN ${String(l.lrn)}` : <Badge tone="attention">LRN pending</Badge>} />; } },
             { header: 'Status', cell: r => r.status === 'withdrawn'
               ? <Badge tone="stopped">{sentence(value(r, 'last_reason'))}</Badge>
               : <Badge tone="good">Enrolled</Badge> },
@@ -214,7 +214,7 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
             return (
               <>
                 <MovementForm api={api} enrollment={row} sections={sections} setStatus={setStatus} reload={reload} />
-                <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                <hr className="rule" />
                 <History api={api} enrollment={row} />
               </>
             );
@@ -226,7 +226,7 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
         <div className="card">
           <div className="card-head"><div>
             <h2>Enrol a learner into {gradeName(section.grade_level)} · {String(section.name)}</h2>
-            <p>Search the registry, then set the first day this learner belongs to this section.</p>
+            <p className="card-note">Search the registry, then set the first day in this section.</p>
           </div></div>
           <div className="card-body">
             <Finder
@@ -248,7 +248,7 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
 
             {found === null ? null : enrolling ? (
               <>
-                <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                <hr className="rule" />
                 <p><strong>{learnerName(enrolling)}</strong>{enrolling.lrn ? <> · LRN {String(enrolling.lrn)}</> : ' · LRN pending'}</p>
                 <Editor
                   submitLabel="Enrol this learner"
@@ -266,14 +266,13 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
               </>
             ) : (
               <>
-                <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                <hr className="rule" />
                 <Table
                   rows={found}
                   rowKey={r => String(r.id)}
                   empty={<EmptyState title="No learner found" body="Check the spelling, or register the learner first from the Learner registry screen." />}
                   columns={[
-                    { header: 'Learner', cell: learnerName },
-                    { header: 'LRN', cell: r => r.lrn ? <code>{String(r.lrn)}</code> : <Badge tone="attention">Pending</Badge> },
+                    { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={r.lrn ? `LRN ${String(r.lrn)}` : <Badge tone="attention">LRN pending</Badge>} /> },
                     { header: 'Birth date', cell: r => value(r, 'birth_date') },
                     { header: '', cell: r => <button type="button" className="btn secondary small" onClick={() => setEnrolling(r)}>Choose</button> },
                   ]}
@@ -285,7 +284,7 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
       ) : null}
 
       <Callout tone="info" title="Not on this screen yet">
-        Correcting a recorded movement or its dates, voiding an enrollment entered by mistake, correcting a whole-year grade placement, and merging duplicate learner records are all reviewed workflows that exist in the API but have no screen. Promotion to the next grade is a separate section and is not built at all.
+        Correcting a recorded movement, voiding an enrollment entered by mistake and correcting a grade placement exist in the API but have no screen. Promotion to the next grade is not built at all.
       </Callout>
     </>
   );

@@ -10,7 +10,7 @@ export function Upcoming({ summary, detail, blocked }: { summary: string; detail
   return (
     <div className="card">
       <div className="card-body">
-        <div className="empty" style={{ paddingBottom: 'var(--s5)' }}>
+        <div className="empty">
           <h3>{summary}</h3>
           <p>{detail}</p>
         </div>

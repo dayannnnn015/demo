@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen | — |
 | 0.25.1 | Dead MFA content-security directive removed from the workspace page | — |
 | 0.25.0 | Managers create faculty accounts; service-role key isolated in an Edge Function | — |
 | 0.24.0 | Multi-factor authentication removed; sign-in is email and password | — |
@@ -34,6 +35,67 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.26.0 — A workspace that reads like the system it is
+
+The interface was rebuilt against a reference the user supplied: a professional
+administrative product, mostly white, organized so that a screen states what it
+is in one line and then gets out of the way.
+
+**White, not dark.** The dark green rail is gone. Surfaces are pure white on a
+near-white canvas, separated by hairlines rather than shadow, so the records are
+the darkest thing on screen — which is the right hierarchy for a system whose
+whole content is rows of learner data. Pine green survives as the single accent,
+recalibrated to carry text contrast on white; it is the one deliberately
+non-default choice in the palette, and it keeps the institutional colour the
+project started from.
+
+**One type family, and a second one that earns its place.** Source Sans 3 and
+the Source Serif 4 display face are replaced by Inter, which is the neo-grotesque
+the reference uses. Identifiers — LRNs, school IDs, audit table names — are set
+in JetBrains Mono, because a twelve-digit LRN is transcribed from paper by hand
+and `0`/`O` and `1`/`l` have to be distinguishable. Both are variable fonts, so
+the whole type system is two files and 80 KB, against 135 KB for the four static
+faces it replaces. Still self-hosted; nothing reaches a font CDN.
+
+**Less prose per screen.** Every route description is now one clause. The page
+header carries the title, that clause, and the DepEd form the records end up on
+— nothing else. The four-fact mono "record strip" is gone: the table name was
+developer detail, the access level is already answered by the navigation hiding
+what a teacher cannot open, and the scope field was never populated. Card
+headings lost most of their explanatory paragraph; what survived is the handful
+of sentences that state a rule a staff member cannot otherwise discover.
+
+**Two structural fixes came out of the redesign rather than the styling.**
+
+A table row now opens into a panel spanning the full width of the table, instead
+of a `<details>` disclosure inside the last cell. Those panels hold six-field
+editors; a 260px cell was never enough room for one. And a learner now reads as
+a name over its LRN in the same cell, the way a class list prints, which removes
+a column and keeps the pending-LRN warning visible.
+
+**Two content-policy violations were found and fixed on the way.**
+
+The policy is `default-src 'none'`, tightened in 0.25.1. Every screen had been
+using inline `style={{ … }}` props for dividers and field widths, which
+`style-src 'self'` silently drops in the deployed app while they work perfectly
+under the Vite dev server. They are all classes now. The redesign then nearly
+reintroduced the same class of bug from the other direction, with a `data:` URL
+chevron on selects; there is no `img-src` at all, so every `<select>` now goes
+through a `Select` primitive that draws its chevron as an inline SVG.
+
+Navigation icons are drawn inline in `web/components/icons.tsx` rather than
+pulled from an icon package — seventeen glyphs do not justify a dependency, and
+an inline SVG needs no extra origin in the policy.
+
+Three accessibility defects were corrected: navigation group labels and the
+"soon" tag were set in a grey reserved for icons and failed the 4.5:1 text
+minimum; the rail's identity block and sign-out could be scrolled out of reach
+behind a seventeen-item list, and now sit in a fixed frame while only the
+sections scroll.
+
+No API contract changed. The OpenAPI document moves to 0.26.0 with the same 80
+operations and the same descriptions.
 
 ## 0.25.1 — A content policy that matches the code
 

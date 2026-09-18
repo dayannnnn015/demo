@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
-import { Badge, Button, Callout, Editor, EmptyState, Finder, Pager, Table, gradeName, learnerName, sentence, value, type Field, type Status } from '../components/primitives';
+import { Badge, Button, Callout, Cell, Editor, EmptyState, Finder, Pager, Table, gradeName, learnerName, sentence, value, type Field, type Status } from '../components/primitives';
 
 // The API takes exactly these keys, so the form must not send anything else.
 const profileFields: Field[] = [
@@ -50,11 +50,10 @@ export function Learners({ api, manager, setStatus, reload, token }: {
     <>
       {manager
         ? null
-        : <Callout tone="info" title="You see your own learners">This list holds only the learners currently enrolled in the sections you advise in an open school year.</Callout>}
+        : <Callout tone="info" title="You see your own learners">Only the learners enrolled in the sections you advise, in an open school year. A principal or administrative officer maintains these records.</Callout>}
 
       <div className="card">
-        <div className="card-head"><div><h2>Find a learner</h2><p>Search by name, or go straight to an exact LRN.</p></div></div>
-        <div className="card-body">
+        <div className="card-tools">
           <Finder
             initial={filters}
             onApply={next => { setFilters(next); setOffset(0); }}
@@ -66,13 +65,6 @@ export function Learners({ api, manager, setStatus, reload, token }: {
             ]}
           />
         </div>
-      </div>
-
-      <div className="card">
-        <div className="card-head">
-          <div><h2>Learners</h2><p>{manager ? 'Open a learner to correct their details or fill a pending LRN.' : 'Read only. A principal or administrative officer maintains these records.'}</p></div>
-          {rows?.items.length ? <Badge tone="neutral">{rows.items.length} shown</Badge> : null}
-        </div>
         <Table
           loading={rows === null}
           rows={rows?.items ?? []}
@@ -81,8 +73,7 @@ export function Learners({ api, manager, setStatus, reload, token }: {
             ? <EmptyState title="No learners match" body="Try a shorter name, or clear the search to see everyone you have access to." />
             : <EmptyState title="The registry is empty" body={manager ? 'Register the first learner below, then enrol them into a section.' : 'No learners are currently assigned to your sections.'} />}
           columns={[
-            { header: 'Learner', cell: learnerName },
-            { header: 'LRN', cell: r => r.lrn == null ? <Badge tone="attention">Pending</Badge> : <code>{value(r, 'lrn')}</code> },
+            { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={r.lrn == null ? <Badge tone="attention">LRN pending</Badge> : `LRN ${value(r, 'lrn')}`} /> },
             { header: 'Birth date', cell: r => value(r, 'birth_date') },
             { header: 'Sex', cell: r => sentence(value(r, 'sex')) },
           ]}
@@ -96,12 +87,12 @@ export function Learners({ api, manager, setStatus, reload, token }: {
                 {manager ? (
                   <>
                     <h3>Correct details</h3>
-                    <p className="muted">An assigned LRN is never changed here. Correcting one is a separate reviewed workflow with no screen yet.</p>
+                    <p className="muted">An assigned LRN is never changed here; correcting one is a separate reviewed workflow.</p>
                     <Editor fields={profileFields} initial={row} setStatus={setStatus} onSaved={reload}
                       onSubmit={data => api(`/learners/${row.id}`, 'PATCH', { ...data, version: row.version })} />
                     {row.lrn == null ? (
                       <>
-                        <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                        <hr className="rule" />
                         <h3>Fill the official LRN</h3>
                         <p className="muted">Recorded once. It cannot be cleared or replaced afterwards.</p>
                         <Editor submitLabel="Assign LRN" setStatus={setStatus} onSaved={reload}
@@ -109,7 +100,7 @@ export function Learners({ api, manager, setStatus, reload, token }: {
                           onSubmit={data => api(`/learners/${row.id}/lrn`, 'PATCH', { ...data, version: row.version })} />
                       </>
                     ) : null}
-                    <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                    <hr className="rule" />
                   </>
                 ) : null}
                 <h3>School years</h3>
@@ -145,7 +136,7 @@ export function Learners({ api, manager, setStatus, reload, token }: {
         <div className="card">
           <div className="card-head"><div>
             <h2>Register a learner</h2>
-            <p>One permanent record, carried across every school year. Enrolling them into a section is the next step, on the Enrollment screen.</p>
+            <p className="card-note">Enrolling them into a section is the next step, on the Enrollment screen.</p>
           </div></div>
           <div className="card-body">
             <Editor submitLabel="Register learner" setStatus={setStatus} onSaved={reload}
@@ -157,7 +148,7 @@ export function Learners({ api, manager, setStatus, reload, token }: {
 
       {manager ? (
         <Callout tone="info" title="Not on this screen yet">
-          Correcting an LRN that was already assigned, merging two records for the same child, voiding a record entered by mistake, and importing a class list from a file are reviewed workflows that exist in the API but have no screen.
+          Correcting an assigned LRN, merging two records for the same child, and voiding a record entered by mistake exist in the API but have no screen.
         </Callout>
       ) : null}
     </>

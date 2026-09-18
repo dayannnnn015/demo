@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { message } from '../api';
+import { Icon } from './icons';
 
 export type Field = {
   key: string;
@@ -19,8 +20,15 @@ export type Field = {
 export type Status = { text: string; kind: 'idle' | 'busy' | 'error' | 'done' };
 export const idle: Status = { text: '', kind: 'idle' };
 
+const statusIcon = { error: 'alert', busy: 'info', done: 'check', idle: 'info' } as const;
+
 export function StatusLine({ status }: { status: Status }) {
-  return <p className={`status ${status.kind}`} role="status" aria-live="polite">{status.text}</p>;
+  return (
+    <p className={`status ${status.kind}`} role="status" aria-live="polite">
+      {status.kind === 'idle' ? null : <Icon name={statusIcon[status.kind]} size={16} />}
+      {status.text}
+    </p>
+  );
 }
 
 export function Button({ label, onRun, setStatus, variant = 'secondary', size, confirm }: {
@@ -45,15 +53,34 @@ export function Button({ label, onRun, setStatus, variant = 'secondary', size, c
   );
 }
 
-function Control({ field, value, onChange }: { field: Field; value: string; onChange: (value: string) => void }) {
+/**
+ * Every select in the workspace goes through here. The chevron has to be an
+ * inline SVG, because the content policy allows no images at all — see the
+ * .select-wrap note in app.css.
+ */
+export function Select({ children, ...props }: React.ComponentProps<'select'>) {
+  return (
+    <span className="select-wrap">
+      <select {...props}>{children}</select>
+      <Icon name="chevron" size={15} />
+    </span>
+  );
+}
+
+/**
+ * `compact` is the filter-row variant: the format hint becomes the input's own
+ * placeholder rather than a line beneath it, so every field in the row is the
+ * same height and the labels sit on one line.
+ */
+function Control({ field, value, onChange, compact }: { field: Field; value: string; onChange: (value: string) => void; compact?: boolean }) {
   const id = useId();
   return (
     <div className="field">
       <label className="label" htmlFor={id}>{field.label}</label>
       {field.options
-        ? <select id={id} name={field.key} required={!field.optional} value={value} onChange={e => onChange(e.target.value)}>
+        ? <Select id={id} name={field.key} required={!field.optional} value={value} onChange={e => onChange(e.target.value)}>
             {field.options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
-          </select>
+          </Select>
         : <input
             id={id}
             name={field.key}
@@ -65,9 +92,10 @@ function Control({ field, value, onChange }: { field: Field; value: string; onCh
             minLength={field.minLength}
             maxLength={field.maxLength}
             pattern={field.pattern}
+            placeholder={compact ? field.hint : undefined}
             onChange={e => onChange(e.target.value)}
           />}
-      {field.hint ? <span className="hint">{field.hint}</span> : null}
+      {field.hint && !compact ? <span className="hint">{field.hint}</span> : null}
     </div>
   );
 }
@@ -120,7 +148,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   );
 }
 
-/** The same controls as an editor, but the values only narrow the current list. */
+/** The same controls as an editor, but laid out as one filter row above a list. */
 export function Finder({ fields, initial, onApply, onClear }: {
   fields: Field[];
   initial: Record<string, string>;
@@ -130,14 +158,14 @@ export function Finder({ fields, initial, onApply, onClear }: {
   const [values, setValues] = useState(initial);
   const filled = Object.values(values).some(Boolean);
   return (
-    <form onSubmit={event => { event.preventDefault(); onApply(values); }}>
+    <form className="toolbar" onSubmit={event => { event.preventDefault(); onApply(values); }}>
       <div className="form-grid">
         {fields.map(field => (
-          <Control key={field.key} field={field} value={values[field.key] ?? ''} onChange={next => setValues(v => ({ ...v, [field.key]: next }))} />
+          <Control key={field.key} compact field={field} value={values[field.key] ?? ''} onChange={next => setValues(v => ({ ...v, [field.key]: next }))} />
         ))}
       </div>
       <div className="form-actions">
-        <button type="submit" className="btn">Search</button>
+        <button type="submit" className="btn"><Icon name="search" size={15} />Search</button>
         {filled && onClear
           ? <button type="button" className="btn ghost" onClick={() => { const cleared = Object.fromEntries(fields.map(f => [f.key, ''])); setValues(cleared); onClear(); }}>Clear</button>
           : null}
@@ -148,6 +176,11 @@ export function Finder({ fields, initial, onApply, onClear }: {
 
 export type Column<T> = { header: string; cell: (row: T) => ReactNode; numeric?: boolean };
 
+/**
+ * One open row at a time, and its panel spans the full width of the table
+ * rather than being squeezed into the last column. The editors these panels
+ * hold are multi-field forms; a 260px cell was never enough room for one.
+ */
 export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', actionsLabel = 'Actions', rowKey, loading }: {
   rows: T[];
   columns: Column<T>[];
@@ -158,37 +191,75 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
   rowKey: (row: T) => string;
   loading?: boolean | undefined;
 }) {
+  const scope = useId();
+  const [open, setOpen] = useState<string | null>(null);
   if (loading) return <div className="card-body"><div className="skeleton" /><div className="skeleton" /><div className="skeleton" /></div>;
   if (!rows.length) return <>{empty ?? <EmptyState title="Nothing here yet" body="Records you add will appear in this list." />}</>;
+  const span = columns.length + (detail ? 1 : 0);
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
             {columns.map(column => <th key={column.header} scope="col" className={column.numeric ? 'numeric' : ''}>{column.header}</th>)}
-            {detail ? <th scope="col">{actionsLabel}</th> : null}
+            {detail ? <th scope="col" className="actions">{actionsLabel}</th> : null}
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
-            <tr key={rowKey(row)}>
-              {columns.map(column => <td key={column.header} className={column.numeric ? 'numeric' : ''}>{column.cell(row)}</td>)}
-              {detail ? <td><details className="row-detail"><summary>{detailLabel}</summary><div>{detail(row)}</div></details></td> : null}
-            </tr>
-          ))}
+          {rows.map(row => {
+            const key = rowKey(row);
+            const expanded = open === key;
+            const panel = `${scope}-${key}`;
+            return (
+              <Fragment key={key}>
+                <tr>
+                  {columns.map(column => <td key={column.header} className={column.numeric ? 'numeric' : ''}>{column.cell(row)}</td>)}
+                  {detail ? (
+                    <td className="actions">
+                      <button
+                        type="button"
+                        className="row-toggle"
+                        aria-expanded={expanded}
+                        aria-controls={panel}
+                        onClick={() => setOpen(expanded ? null : key)}
+                      >{detailLabel}<Icon name="chevron" size={14} /></button>
+                    </td>
+                  ) : null}
+                </tr>
+                {detail && expanded ? (
+                  <tr className="row-panel">
+                    <td colSpan={span} id={panel}><div className="panel-inner">{detail(row)}</div></td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
-  return <div className="empty"><h3>{title}</h3><p>{body}</p>{action ? <div className="form-actions" style={{ justifyContent: 'center' }}>{action}</div> : null}</div>;
+/** A record and the identifier it is filed under, stacked the way a register reads. */
+export function Cell({ title, meta }: { title: ReactNode; meta?: ReactNode }) {
+  return (
+    <span className="cell">
+      <span className="cell-title">{title}</span>
+      {meta ? <span className="cell-meta">{meta}</span> : null}
+    </span>
+  );
 }
+
+export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
+  return <div className="empty"><h3>{title}</h3><p>{body}</p>{action ? <div className="form-actions centred">{action}</div> : null}</div>;
+}
+
+const calloutIcon = { info: 'info', attention: 'alert', stopped: 'stop' } as const;
 
 export function Callout({ tone = 'info', title, children }: { tone?: 'info' | 'attention' | 'stopped' | 'plain'; title?: string; children: ReactNode }) {
   return (
     <div className={`callout ${tone === 'plain' ? '' : tone}`}>
+      {tone === 'plain' ? null : <Icon name={calloutIcon[tone]} size={16} />}
       <div>{title ? <h3>{title}</h3> : null}{children}</div>
     </div>
   );
@@ -204,9 +275,15 @@ export function Pager({ offset, count, hasMore, onChange, size = 25 }: {
   if (!offset && !hasMore) return null;
   return (
     <div className="pager">
-      <button type="button" className="btn ghost small" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - size))}>Previous</button>
       <span>Showing {count ? offset + 1 : 0}–{offset + count}</span>
-      <button type="button" className="btn ghost small" disabled={!hasMore} onClick={() => onChange(offset + size)}>Next</button>
+      <div className="pager-nav">
+        <button type="button" className="btn secondary small" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - size))}>
+          <Icon name="back" size={14} />Previous
+        </button>
+        <button type="button" className="btn secondary small" disabled={!hasMore} onClick={() => onChange(offset + size)}>
+          Next<Icon name="forward" size={14} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
-import { Badge, Callout, Editor, EmptyState, Pager, Table, sentence, value, type Field, type Status } from '../components/primitives';
+import { Badge, Callout, Editor, EmptyState, Pager, Select, Table, sentence, value, type Field, type Status } from '../components/primitives';
 
 type Props = { api: Api; me?: Row; setStatus: (s: Status) => void; reload: () => void; token: number };
 
@@ -17,7 +17,7 @@ export function Staff({ api, me, setStatus, reload, token }: Props & { me: Row }
   return (
     <>
       <div className="card">
-        <div className="card-head"><div><h2>People with access</h2><p>Suspending someone blocks them immediately, without deleting anything they recorded.</p></div></div>
+        <div className="card-head"><div><h2>People with access</h2><p className="card-note">Suspending blocks someone immediately without deleting anything they recorded.</p></div></div>
         <Table
           loading={rows === null}
           rows={rows?.items ?? []}
@@ -48,7 +48,7 @@ export function Staff({ api, me, setStatus, reload, token }: Props & { me: Row }
       </div>
 
       <div className="card">
-        <div className="card-head"><div><h2>Authorize an existing account</h2><p>For an identity the operator has already created in Supabase. To start from scratch, use Invitations instead.</p></div></div>
+        <div className="card-head"><div><h2>Authorize an existing account</h2><p className="card-note">For an identity the operator already created. To start from scratch, use Invitations.</p></div></div>
         <div className="card-body">
           <Editor submitLabel="Grant access" setStatus={setStatus} onSaved={reload}
             fields={[{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}' }, nameField, { key: 'role', label: 'Permission level', options: allowed }]}
@@ -66,19 +66,19 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
   return (
     <>
       <Callout tone="info" title="How an invitation works">
-        Record who should get an account, then open the request and create it. EDUNEXUS asks the school's account service to email an invitation, and the colleague chooses their own password. If your deployment has no account service connected, the operator creates the identity in Supabase and returns its user ID for you to link instead.
+        Record who should get an account, then open the request and create it. Your colleague is emailed an invitation and chooses their own password.
       </Callout>
 
       <div className="card">
         <div className="card-head">
-          <div><h2>Invitations</h2><p>Requests waiting on the operator, and the ones already completed.</p></div>
-          <div className="field" style={{ margin: 0, minWidth: 200 }}>
+          <h2>Invitations</h2>
+          <div className="field inline">
             <label className="label" htmlFor="invite-filter">Show</label>
-            <select id="invite-filter" value={status} onChange={e => setFilter(e.target.value)}>
+            <Select id="invite-filter" value={status} onChange={e => setFilter(e.target.value)}>
               {[['requested', 'Waiting on the operator'], ['provisioned', 'Completed'], ['cancelled', 'Cancelled'], ['all', 'All']].map(([key, text]) => (
                 <option key={key} value={key}>{text}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
         <Table
@@ -102,11 +102,11 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
                 <Editor submitLabel="Create the account" setStatus={setStatus} onSaved={reload}
                   fields={[{ ...reasonField, hint: 'An invitation email goes to this address and they choose their own password.' }]}
                   onSubmit={data => api(`/staff-invitations/${row.id}/identity`, 'POST', { ...data, version: row.version })} />
-                <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                <hr className="rule" />
                 <Editor submitLabel="Link an account the operator made" setStatus={setStatus} onSaved={reload}
                   fields={[{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}', hint: 'Only needed when the operator created the identity in Supabase by hand.' }, reasonField]}
                   onSubmit={data => api(`/staff-invitations/${row.id}/provision`, 'POST', { ...data, version: row.version })} />
-                <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                <hr className="rule" />
                 <Editor submitLabel="Cancel invitation" setStatus={setStatus} onSaved={reload}
                   fields={[reasonField]}
                   onSubmit={data => api(`/staff-invitations/${row.id}/cancellation`, 'POST', { ...data, version: row.version })} />
@@ -117,7 +117,7 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
       </div>
 
       <div className="card">
-        <div className="card-head"><div><h2>Request an invitation</h2><p>Recorded here so the request, who made it and why are all traceable.</p></div></div>
+        <div className="card-head"><div><h2>Request an invitation</h2><p className="card-note">Recorded so the request, who made it and why stay traceable.</p></div></div>
         <div className="card-body">
           <Editor submitLabel="Record request" setStatus={setStatus} onSaved={reload}
             fields={[
@@ -139,7 +139,7 @@ export function Activity({ api, token }: { api: Api; token: number }) {
   useEffect(() => { setRows(null); void api<Page>(`/audit-events${query({ limit: 25, before_id: before })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, before, token]);
   return (
     <div className="card">
-      <div className="card-head"><div><h2>Recorded changes</h2><p>Field names only. Values, learner names and credentials are never copied into this log.</p></div></div>
+      <div className="card-head"><div><h2>Recorded changes</h2><p className="card-note">Field names only. Values, learner names and credentials are never copied here.</p></div></div>
       <Table
         loading={rows === null}
         rows={rows?.items ?? []}
@@ -147,15 +147,17 @@ export function Activity({ api, token }: { api: Api; token: number }) {
         empty={<EmptyState title="No activity yet" body="Every change made in EDUNEXUS is recorded here automatically." />}
         columns={[
           { header: 'When', cell: r => new Date(String(r.occurred_at)).toLocaleString() },
-          { header: 'Record', cell: r => <code style={{ fontSize: 'var(--text-xs)' }}>{value(r, 'entity_table')}</code> },
+          { header: 'Record', cell: r => <code>{value(r, 'entity_table')}</code> },
           { header: 'Action', cell: r => sentence(value(r, 'operation')) },
           { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) ? r.changed_fields.join(', ') : <span className="muted">—</span> },
         ]}
       />
       <div className="pager">
-        <button type="button" className="btn ghost small" disabled={!before} onClick={() => setBefore('')}>Newest</button>
-        <span>25 per page</span>
-        <button type="button" className="btn ghost small" disabled={!rows?.pagination?.next_before_id} onClick={() => setBefore(String(rows!.pagination!.next_before_id))}>Older</button>
+        <span>25 per page, newest first</span>
+        <div className="pager-nav">
+          <button type="button" className="btn secondary small" disabled={!before} onClick={() => setBefore('')}>Newest</button>
+          <button type="button" className="btn secondary small" disabled={!rows?.pagination?.next_before_id} onClick={() => setBefore(String(rows!.pagination!.next_before_id))}>Older</button>
+        </div>
       </div>
     </div>
   );

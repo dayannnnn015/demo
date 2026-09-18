@@ -4,11 +4,24 @@ The workspace is a Vite + React + TypeScript application in `web/`, built into `
 
 ## How the app is put together
 
-The workspace is organized as a route table in `web/routes.tsx`. A route carries its navigation label, title, one-line explanation, the record class it holds, the official form it feeds, its permission level and whether an interface exists yet. Adding a screen means adding a route and a component; the shell, navigation grouping and page header follow from the table, and a module with no screen yet renders an honest placeholder rather than disappearing.
+The workspace is organized as a route table in `web/routes.tsx`. A route carries its navigation label, its icon, title, one-line explanation, the record class it holds, the official form it feeds, its permission level and whether an interface exists yet. Adding a screen means adding a route and a component; the shell, navigation grouping and page header follow from the table, and a module with no screen yet renders an honest placeholder rather than disappearing.
+
+Keep `lede` to one clause. It is the only sentence a screen gets, and the page header shows nothing else but the title and the form the records end up on. Everything a screen used to restate in its header — the table it writes, who is allowed to open it — is either developer detail or already answered by the navigation, so it is not printed.
 
 `web/styles/tokens.css` holds colour, type, spacing and elevation. Use the tokens rather than literal values: the palette carries meaning, with ochre for "needs attention" and red reserved for blocked actions, so a red control in a new screen should mean something is genuinely stopped. Fonts are self-hosted in `web/fonts`; do not switch to a font CDN, because the policy is same-origin and staff addresses should not reach a third party.
 
-`web/components/primitives.tsx` holds `Editor`, `Finder`, `Table`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`. Prefer them over new markup so screens stay consistent, and give every table a real empty state: an empty screen is where a staff member decides whether the system is broken or simply new.
+The interface is white: pure white surfaces on a near-white canvas, separated by hairlines rather than shadow, so the records are the darkest thing on screen. Pine green is the only accent. Type is Inter throughout, with JetBrains Mono reserved for identifiers — LRNs, school IDs, audit table names — because a twelve-digit LRN is transcribed from paper and `0`/`O` and `1`/`l` have to be told apart. Do not set body text in the mono face, and do not introduce a third family.
+
+Two constraints come from the content policy, which is `default-src 'none'` with no `img-src` at all:
+
+- **No images, and no `data:` URLs.** A CSS `background-image: url(...)` is dropped silently. This is why every `<select>` goes through the `Select` primitive, which wraps it in `.select-wrap` and draws the chevron as an inline SVG. Use `Select`, never a bare `<select>`.
+- **No inline `style` attributes.** `style-src 'self'` covers them, so a `style={{ … }}` prop does nothing in the deployed app even though it works under `npm run dev:web`. Add a class instead. There is a `.rule` class for a divider and a `.field.inline` modifier for a control that sits in a header row.
+
+Icons live in `web/components/icons.tsx`, drawn inline on a 24px grid with a 1.75 stroke. They sit beside their own visible label, so they are decorative and are hidden from the accessibility tree. Add to that file rather than reaching for an icon package; the set is small on purpose.
+
+`web/components/primitives.tsx` holds `Editor`, `Finder`, `Table`, `Cell`, `Select`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`. Prefer them over new markup so screens stay consistent, and give every table a real empty state: an empty screen is where a staff member decides whether the system is broken or simply new.
+
+`Table` opens one row at a time into a panel that spans the full width of the table, not a disclosure squeezed into the last cell. `Cell` stacks a record over the identifier it is filed under — the name on one line, the LRN in mono beneath it — which is how a class list reads on paper and is worth more than a separate identifier column. `Finder` renders as a single filter row inside the card it filters; its fields show their format hint as a placeholder rather than a line underneath, so the row stays on one baseline.
 
 `web/main.tsx` creates the Supabase client from `/account/config` and decides between the account flow and the workspace. `web/api.ts` wraps every call: it attaches the bearer token, unwraps the `{ data, requestId }` envelope, and throws an `ApiError` carrying the server's own `code`, so a screen can react to `VERSION_CONFLICT` or `TASK_COMPONENT` specifically rather than matching on message text. `web/components/primitives.tsx` holds the shared primitives — `Editor` for versioned saves, `Finder` for filters, `Table`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`. Screens live in `web/screens/` and are declared in `web/routes.tsx`.
 
