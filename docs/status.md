@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.25.1 · **Last commit:** `fcf0e72` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.25.1 · **Last commit:** `0236c45` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
@@ -28,19 +28,19 @@ Three **process ERDs** were then added for the paper — class preparation, atte
 
 283 tests across 22 files. **All 21 migrations are applied**; none of these increments adds one. CI green on `master`.
 
-## The live site is two releases behind
+## The live site is current again
 
-**https://edunexus-balili.vercel.app is serving 0.23.0.** This was found by a user hitting a sign-in screen that still asked for an authenticator code — a screen whose code was deleted in 0.24.0. The deployed bundle still contains the strings `EDUNEXUS authenticator` and `six-digit code from your authenticator app`; the current build does not.
+**https://edunexus-balili.vercel.app now serves 0.25.1**, deployment `dpl_EeiHVSfKmAZfy1jqAAuG4nwPkr1k`.
 
-The live OpenAPI reports version 0.23.0 and 79 operations against 80 locally. The missing endpoint is `/api/v1/staff-invitations/{id}/identity`, so the whole 0.25.0 account-creation feature is absent from the running site, not merely unconfigured.
+It had been stuck on 0.23.0. A user hit a sign-in screen still asking for an authenticator code — a screen deleted in 0.24.0 — and the cause was not the code but the deployment: three releases were committed, pushed and CI-green while the running site stayed three behind. The live OpenAPI reported 79 operations against 80 locally, so `/api/v1/staff-invitations/{id}/identity` was absent and account creation had nothing to call.
 
-Nothing is wrong with the repository. **Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`. Three releases — 0.24.0, 0.25.0 and 0.25.1 — are committed, pushed and CI-green but have never been deployed.
+Verified after deploying: the OpenAPI reports 0.25.1 and 80 operations, the identity endpoint is present, the served bundle hash matches the local build, all three authenticator strings are gone from it, and the `Content-Security-Policy` no longer carries `img-src data:`. Smoke checks pass — `/health/live` 200, `/health/ready` 200, `/api/v1/me` 401 unauthenticated, `/account/config` 200, `/app` 200.
 
-A deploy is therefore the first action, ahead of any new screen. Until it runs, the live site will keep demanding a second factor that no longer exists in the code, and any browser testing measures a build from before the last three releases.
+**Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`. This gap went unnoticed for three releases because CI going green reads like shipping. Check the live version after any release that matters.
 
 ## Next action
 
-**Deploy.** `npx vercel --prod`. Three releases are committed and CI-green but not live, and the site is currently refusing sign-in with an authenticator step that no longer exists in the code. Then deploy the account service and complete the first real sign-in. All three are operator steps and all three are short. Nothing in the repository is half-finished behind them.
+**Complete the first real sign-in.** The site is live and current, sign-in is one screen now that the authenticator step is gone, and no human has ever completed an authenticated session against this system. That is the oldest open item in the project and the largest remaining unknown. Deploying the account service is the other operator step; both are short, and nothing in the repository is half-finished behind them.
 
 After that, resume the frontend: **the instructional calendar screen**, then daily attendance. Attendance cannot be recorded on a date the calendar does not describe, so the calendar comes first. Daily attendance is the highest-frequency screen in the system: 30 advisers, twice a day.
 
