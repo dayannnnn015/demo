@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.23.1 | Screen render tests, corrected working contract | — |
 | 0.23.0 | Learner registration and enrollment screens | — |
 | 0.22.0 | Workspace design system, grouped navigation, honest placeholders | — |
 | 0.21.0 | Workspace rebuilt on Vite + React | — |
@@ -30,6 +31,29 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.23.1 — Tests for the screens, and a contract that matches the code
+
+Two defects found by auditing the repository against itself after the full
+manuscript read.
+
+`AGENTS.md`, the working contract both Claude Code and Codex read, pointed at
+`web/ui.tsx` and named `OffsetPager` and `Action`. None of the three has existed
+since 0.22.0, when the file became `web/components/primitives.tsx` and those
+components became `Pager` and `Button`. A working contract that names files
+which are not there is worse than no contract, because it is followed. The same
+error sat in the frontend handoff.
+
+The interface also had no automated tests at all, against 272 for the backend.
+`tests/web-screens.test.ts` now renders every route once for a manager and again
+for a teacher, checks the route table stays coherent, and asserts that no column
+or field is labelled with a computed grade, since grading arithmetic is gated.
+It catches a crash on first render, which a typecheck cannot. Effects do not run
+in a server render, so it does not reach the data paths behind a fetch; a
+signed-in browser check is still the only thing that does.
+
+Vitest now compiles JSX, and the web test is typechecked by the web project
+rather than the backend one, which uses a different module resolution.
 
 ## 0.23.0 — Registering learners and recording movements
 

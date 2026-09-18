@@ -69,7 +69,9 @@ Work lands as one reviewable increment per commit. Every module in `src/modules/
 
 ### Frontend
 
-The workspace is a Vite + React + TypeScript app in `web/`, built into `public/` and served by the API at `/app`. `web/api.ts` throws an `ApiError` carrying the server's own `code`, so screens react to specific codes rather than message text. `web/ui.tsx` holds the shared `Editor`, `Finder`, `Table`, `OffsetPager`, `Action` and `StatusLine`. Screens take `{ api, setStatus, reload, token }` and refetch on `token`. See [docs/frontend-handoff.md](docs/frontend-handoff.md) for every unbuilt screen and the rules it must respect.
+The workspace is a Vite + React + TypeScript app in `web/`, built into `public/` and served by the API at `/app`. `web/api.ts` throws an `ApiError` carrying the server's own `code`, so screens react to specific codes rather than message text. `web/components/primitives.tsx` holds the shared `Editor`, `Finder`, `Table`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`, and `web/styles/tokens.css` holds the design tokens. Screens are declared in the route table in `web/routes.tsx`, take `{ api, setStatus, reload, token }` and refetch on `token`. Adding a screen means adding a route and a component; a module with no screen yet renders an honest placeholder rather than disappearing from the navigation.
+
+`tests/web-screens.test.ts` renders every route once. It catches a crash on first render, which a typecheck cannot, but effects do not run so it does not cover the data paths behind a fetch. See [docs/frontend-handoff.md](docs/frontend-handoff.md) for every unbuilt screen and the rules it must respect.
 
 Sessions live in `sessionStorage`. Do not move them to `localStorage`.
 

@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.23.0 · **Last commit:** `2648913` · **Branch:** `master`, pushed, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.23.1 · **Last commit:** `pending` · **Branch:** `master`, pushed, working tree clean
 
 ## Just shipped
 
@@ -10,6 +10,7 @@ The workspace can now put data into the system: a manager registers learners, en
 
 | Version | What |
 |---|---|
+| 0.23.1 | Screen render tests, corrected working contract |
 | 0.23.0 | Learner registration and enrollment screens |
 | 0.22.0 | Workspace design system, grouped navigation, honest placeholders |
 | 0.21.0 | Workspace rebuilt on Vite + React, sessions in `sessionStorage` |
@@ -18,7 +19,7 @@ The workspace can now put data into the system: a manager registers learners, en
 | 0.18.0 | Section 4A.5 offering binding, migration 0019 |
 | 0.17.0 | Section 4A.4 assessment-policy adoption, migration 0018 |
 
-272 tests across 21 files. **All 21 migrations are applied** to the development Supabase project. CI green on `master`, and https://edunexus-balili.vercel.app serves the workspace at its root.
+276 tests across 22 files. **All 21 migrations are applied** to the development Supabase project. CI green on `master`, and https://edunexus-balili.vercel.app serves the workspace at its root.
 
 **Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`. Connecting the Git integration in the Vercel dashboard would remove that manual step.
 
@@ -32,7 +33,9 @@ Backend is **fully gated**: every remaining backend increment waits on a school 
 
 ### Known gap
 
-There are no automated frontend tests. Screens are verified by typecheck, build, and a server-side render of every route, which catches a crash on first render but not the data paths behind a fetch. A signed-in browser pass over the new screens has not happened, because no human has completed a sign-in yet. Worth adding a small render smoke test to the suite.
+Frontend tests now exist but are shallow. `tests/web-screens.test.ts` renders every route once and checks the route table, which catches a crash on first render. Effects do not run in a server render, so the data paths behind a fetch are still untested, and no signed-in browser pass has happened because no human has completed a sign-in yet. The registration, enrollment and movement screens are therefore unverified against real data.
+
+One transient test failure was observed once during this session and did not reproduce across four subsequent full runs. It is recorded here rather than treated as fixed.
 
 ## In flight
 
