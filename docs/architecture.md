@@ -31,6 +31,8 @@ Identity and request IDs are transaction-local PostgreSQL settings. Policies use
 
 Role checks in RLS protect against missing query filters. They do not make a stolen runtime database credential harmless: the API is a trusted identity boundary and its database login can set transaction context. All user values are parameterized and the runtime secret remains server-only.
 
+The full schema, all 44 tables across five domains, is drawn in [the entity relationship diagram](erd.md). The section below covers only the Section 1 foundation.
+
 ## Data model for Section 1
 
 ```mermaid

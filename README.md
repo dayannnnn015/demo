@@ -244,6 +244,7 @@ tests/                   PostgreSQL, API, and signed-token tests
 AGENTS.md                Working contract for agents and contributors
 docs/status.md           Where the last session stopped and what is next
 docs/constraints.md      Standing rules, blocking gates and settled decisions
+docs/erd.md              Entity relationship diagram of all 44 tables
 docs/school-information-requests.md  What to ask the school, in priority order
 docs/                    Requirements, decisions, deployment, API handoff
 CHANGELOG.md             Released increments, sections and migrations
