@@ -1,6 +1,6 @@
 # Entity relationship diagram
 
-Generated from the live `edunexus` schema: 44 tables across 21 migrations. A single diagram at that size is unreadable, so this is an overview followed by one diagram per domain.
+Generated from the live `edunexus` schema: 44 tables across 21 migrations. A single diagram at that size is unreadable, so this is an overview followed by one diagram per domain, then three process views cut the same schema a second way, along the school processes the manuscript names.
 
 For a document rather than a screen, use the rendered figures in [diagrams/](diagrams/): each diagram as SVG and as a double-resolution PNG, with suggested captions.
 
@@ -72,13 +72,13 @@ erDiagram
     text last_name
     text first_name
     date birth_date
-    enum sex
+    text sex
   }
   ENROLLMENTS {
     uuid id PK
     integer grade_level
     date enrolled_on
-    enum status
+    text status
     text record_state
   }
   INSTRUCTIONAL_CALENDARS {
@@ -88,8 +88,8 @@ erDiagram
   INSTRUCTIONAL_DAYS {
     uuid id PK
     date day_on
-    text am_mode
-    text pm_mode
+    text am
+    text pm
   }
   ATTENDANCE_DAYS {
     uuid id PK
@@ -98,8 +98,8 @@ erDiagram
   }
   ATTENDANCE_MARKS {
     uuid id PK
-    boolean am
-    boolean pm
+    text am
+    text pm
   }
   ATTENDANCE_MONTHS {
     uuid id PK
@@ -268,7 +268,7 @@ erDiagram
     text first_name
     text middle_name "nullable"
     date birth_date
-    enum sex
+    text sex "male, female"
     uuid merged_into FK "set when linked as duplicate"
     integer version
   }
@@ -280,7 +280,7 @@ erDiagram
     uuid section_id FK
     date enrolled_on
     date effective_on "start of the current state"
-    enum status "enrolled, withdrawn"
+    text status "enrolled, withdrawn"
     text last_reason
     text record_state "valid, voided"
     integer version
@@ -289,8 +289,10 @@ erDiagram
     uuid id PK
     uuid enrollment_id FK
     integer enrollment_version
-    text action "regular, section_change, transfer_out, return_to_school"
+    text event_type "enrolled, reassigned, withdrawn, reentered"
     date effective_on
+    uuid section_id FK
+    text reason
   }
 ```
 
@@ -308,11 +310,12 @@ erDiagram
 
   IMPORT_PREVIEWS {
     uuid id PK
-    uuid section_id
+    uuid actor_user_id FK
     text input_hash "binds the reviewed file"
     text plan_hash "binds the reviewed plan"
-    text status
-    timestamptz expires_at
+    integer row_count "1 to 50"
+    timestamptz expires_at "30 minutes"
+    timestamptz committed_at "null until committed"
   }
   LRN_CORRECTIONS {
     uuid id PK
@@ -354,32 +357,34 @@ erDiagram
   ENROLLMENTS ||--o{ ATTENDANCE_MARKS : "marked learner"
   ATTENDANCE_DAYS ||--o{ ATTENDANCE_REVIEW_EVENTS : journals
   SECTIONS ||--o{ ATTENDANCE_MONTHS : consolidates
-  ATTENDANCE_MONTHS ||--o{ ATTENDANCE_MONTH_SNAPSHOTS : freezes
+  SECTIONS ||--o{ ATTENDANCE_MONTH_SNAPSHOTS : "frozen at each submission"
+  ATTENDANCE_MONTHS }o--|| ATTENDANCE_MONTH_SNAPSHOTS : "current frozen state"
   ATTENDANCE_MONTHS ||--o{ ATTENDANCE_MONTH_EVENTS : journals
   ENROLLMENTS ||--o{ ATTENDANCE_FOLLOWUPS : "case opened against"
   ATTENDANCE_FOLLOWUPS ||--o{ ATTENDANCE_FOLLOWUP_EVENTS : journals
 
   INSTRUCTIONAL_DAYS {
     uuid id PK
-    uuid calendar_id FK
+    uuid academic_year_id FK "the calendar"
     uuid section_id FK "null means school-wide"
     date day_on
-    text am_mode "classroom, adm, no_class, suspended"
-    text pm_mode
+    boolean configured "false means the date is unconfigured"
+    text am "classroom, alternative_delivery, no_class, suspended"
+    text pm
   }
   ATTENDANCE_MARKS {
     uuid id PK
     uuid attendance_day_id FK
     uuid enrollment_id FK
-    boolean am "null means not recorded"
-    boolean pm "null means not recorded"
+    text am "present, absent; null means not recorded"
+    text pm "present, absent; null means not recorded"
   }
   ATTENDANCE_MONTHS {
     uuid id PK
     uuid section_id FK
     date month_on "first of month"
-    text status "open, submitted, returned, locked"
-    uuid current_snapshot_id FK
+    text status "draft, submitted, locked"
+    uuid snapshot_id FK
     integer version
   }
   ATTENDANCE_FOLLOWUPS {
@@ -387,9 +392,9 @@ erDiagram
     uuid enrollment_id FK
     uuid section_id FK
     text category "absence, recording_gap"
-    text status
-    uuid owner_user_id
-    date due_on "nullable"
+    text status "open, resolved, cancelled"
+    uuid assignee_user_id FK
+    date due_on "nullable, open cases only"
   }
 ```
 
@@ -472,6 +477,329 @@ erDiagram
 The chain runs draft → adoption → binding → task → score, and each link protects the one below it: an adopted draft cannot be archived, a bound adoption cannot be withdrawn, and a bound offering cannot be retired, until the thing depending on it is released first. An adoption freezes the whole draft revision, so revising the draft afterwards never changes what the school decided.
 
 **Nothing in this domain computes a grade.** There is no table, column or endpoint for a total, average, percentage, MPS, GWA or transmuted mark. Those wait on the school's grading enclosure, recorded as a gate in [constraints](constraints.md).
+
+## Process views
+
+The five domain diagrams above are cut by how the system is built, and are meant to be read in order: each assumes the one before it. The three below are cut by the school processes the manuscript names, and each one is **standalone** — it repeats the upstream entities it depends on, so a single figure can carry a section of a document without the others beside it.
+
+Same schema and the same tables, sliced a second way. These are not separate databases, and an entity appearing in two views is one table.
+
+### Class preparation
+
+```mermaid
+erDiagram
+  STAFF ||--o{ SECTIONS : advises
+  ACADEMIC_YEARS ||--o{ SECTIONS : contains
+  ACADEMIC_YEARS ||--o{ REPORTING_PERIODS : divides
+  ACADEMIC_YEARS ||--o{ ENROLLMENTS : scopes
+  LEARNERS ||--o{ ENROLLMENTS : "one record per school year"
+  SECTIONS ||--o{ ENROLLMENTS : "class placement"
+  ENROLLMENTS ||--o{ ENROLLMENT_EVENTS : "movement history"
+  SECTIONS ||--o{ ENROLLMENT_EVENTS : "section at the time"
+  STAFF ||--o{ IMPORT_PREVIEWS : "stages a class list"
+
+  STAFF {
+    uuid user_id PK "auth.users"
+    text display_name
+    enum role "principal, administrative_officer, teacher"
+    boolean active
+    integer version
+  }
+  ACADEMIC_YEARS {
+    uuid id PK
+    integer start_year UK
+    date starts_on
+    date ends_on
+    enum status "draft, active, closed"
+    integer version
+  }
+  REPORTING_PERIODS {
+    uuid id PK
+    uuid academic_year_id FK
+    smallint ordinal "unique per year"
+    text name
+    date starts_on
+    date ends_on
+  }
+  SECTIONS {
+    uuid id PK
+    uuid academic_year_id FK
+    smallint grade_level "0 is Kindergarten"
+    text name "unique per year and grade"
+    uuid adviser_user_id FK "nullable, must be an active teacher"
+    integer version
+  }
+  LEARNERS {
+    uuid id PK
+    text lrn UK "12 digits, null while pending"
+    text last_name
+    text first_name
+    text middle_name "nullable"
+    date birth_date
+    text sex "male, female"
+    uuid merged_into FK "set when linked as a duplicate"
+    integer version
+  }
+  ENROLLMENTS {
+    uuid id PK
+    uuid learner_id FK
+    uuid academic_year_id FK
+    smallint grade_level
+    uuid section_id FK
+    date enrolled_on
+    date effective_on "start of the current state"
+    text status "enrolled, withdrawn"
+    text last_reason "regular, transfer_in, section_change, transfer_out, ..."
+    text record_state "valid, voided"
+    integer version
+  }
+  ENROLLMENT_EVENTS {
+    uuid id PK
+    uuid enrollment_id FK
+    integer enrollment_version
+    text event_type "enrolled, reassigned, withdrawn, reentered"
+    date effective_on
+    uuid section_id FK
+    text reason
+  }
+  IMPORT_PREVIEWS {
+    uuid id PK
+    uuid actor_user_id FK
+    text input_hash "binds the reviewed file"
+    text plan_hash "binds the reviewed plan"
+    integer row_count "1 to 50"
+    timestamptz expires_at "30 minutes"
+    timestamptz committed_at "null until committed"
+  }
+```
+
+Preparing classes is one pass per school year: open the year, divide it into reporting periods, create its sections, give each an adviser, then place learners.
+
+A section is unique by year, grade and normalized name, and it carries a second key of `(id, academic_year_id, grade_level)`. Every table that references a section references that composite key, which is why a learner cannot be placed into a section belonging to another year or another grade — it is impossible rather than merely checked. An adviser must be an active teacher, and may be null while the section is still being set up.
+
+One **valid** enrollment per learner per school year is enforced by a partial unique index, so a voided record stays as evidence without occupying the slot. The learner record itself persists across years; only the enrollment underneath it is annual, which is what lets a child carry six years of history without any year being rewritten.
+
+A class list imported from a file is staged as a preview first. The preview stores a hash of the exact file and of the plan that was reviewed, and the commit must present both, so an edited file or an expired preview is refused instead of being applied quietly.
+
+### Attendance record
+
+```mermaid
+erDiagram
+  ACADEMIC_YEARS ||--o| INSTRUCTIONAL_CALENDARS : "one per year"
+  INSTRUCTIONAL_CALENDARS ||--o{ INSTRUCTIONAL_DAYS : defines
+  SECTIONS ||--o{ INSTRUCTIONAL_DAYS : "section override"
+  SECTIONS ||--o{ ATTENDANCE_DAYS : "one sheet per date"
+  ATTENDANCE_DAYS ||--o{ ATTENDANCE_MARKS : holds
+  ENROLLMENTS ||--o{ ATTENDANCE_MARKS : "marked learner"
+  SECTIONS ||--o{ ATTENDANCE_MONTHS : consolidates
+  SECTIONS ||--o{ ATTENDANCE_MONTH_SNAPSHOTS : "frozen at each submission"
+  ATTENDANCE_MONTHS }o--|| ATTENDANCE_MONTH_SNAPSHOTS : "current frozen state"
+  ENROLLMENTS ||--o{ ATTENDANCE_FOLLOWUPS : "case opened against"
+  STAFF ||--o{ ATTENDANCE_FOLLOWUPS : "assigned to"
+
+  ACADEMIC_YEARS {
+    uuid id PK
+    integer start_year UK
+    enum status "draft, active, closed"
+  }
+  STAFF {
+    uuid user_id PK
+    text display_name
+    enum role "principal, administrative_officer, teacher"
+    boolean active
+  }
+  SECTIONS {
+    uuid id PK
+    uuid academic_year_id FK
+    smallint grade_level
+    text name
+    uuid adviser_user_id FK
+  }
+  ENROLLMENTS {
+    uuid id PK
+    uuid learner_id FK
+    uuid section_id FK
+    text status "enrolled, withdrawn"
+    text record_state "valid, voided"
+  }
+  INSTRUCTIONAL_CALENDARS {
+    uuid id PK "also the academic_year_id"
+    integer version
+  }
+  INSTRUCTIONAL_DAYS {
+    uuid id PK
+    uuid academic_year_id FK "the calendar"
+    uuid section_id FK "null means school-wide"
+    date day_on
+    boolean configured "false means the date is unconfigured"
+    text am "classroom, alternative_delivery, no_class, suspended"
+    text pm
+    text day_type "regular, holiday, school_break, weekend, makeup, suspension, other"
+    text label
+  }
+  ATTENDANCE_DAYS {
+    uuid id PK
+    uuid section_id FK
+    date day_on "unique per section"
+    integer version
+  }
+  ATTENDANCE_MARKS {
+    uuid id PK
+    uuid attendance_day_id FK
+    uuid enrollment_id FK
+    date day_on "unique per enrollment"
+    text am "present, absent; null means not recorded"
+    text pm "present, absent; null means not recorded"
+    integer version
+  }
+  ATTENDANCE_MONTHS {
+    uuid id PK
+    uuid section_id FK
+    uuid academic_year_id FK
+    date month_on "first of the month"
+    text status "draft, submitted, locked"
+    uuid snapshot_id FK
+    integer version
+  }
+  ATTENDANCE_MONTH_SNAPSHOTS {
+    uuid id PK
+    uuid section_id FK
+    date month_on
+    jsonb payload "roster and marks as submitted"
+    text data_hash
+  }
+  ATTENDANCE_FOLLOWUPS {
+    uuid id PK
+    uuid enrollment_id FK
+    uuid section_id FK
+    date from_on
+    date to_on "window of at most 31 dates"
+    text category "absence, recording_gap"
+    text status "open, resolved, cancelled"
+    uuid assignee_user_id FK
+    date due_on "nullable, open cases only"
+    jsonb opening_evidence
+  }
+```
+
+Two absences of a record are meaningful here, and neither is a zero.
+
+A date with no configured calendar row is **unconfigured** — it is not a school day, and it is not a non-school day either; nothing is known about it. A session with no mark is **unknown**, not a presence and not an absence. Inferring either would put an invented figure on an SF2, so both stay null and the workflows refuse to proceed until a human resolves them.
+
+Marks attach to the annual enrollment rather than to the learner, so a child who changes section mid-year keeps one continuous attendance history and the old section's records stay as they were recorded. `day_on` is duplicated onto the mark to carry the unique constraint that stops the same enrollment being marked twice for one date.
+
+Submitting a month writes an immutable snapshot of exactly who was enrolled and what was marked, and the month row points at the current one. Resubmitting writes a new snapshot rather than editing the old one, so every submission the school made remains reconstructable. A deferred constraint trigger blocks any later edit to attendance, calendar or roster that would contradict a frozen month.
+
+Counts produced here are **raw session counts**, not official attendance credits. The conversion to SF2 and SF4 arithmetic waits on the school's approved mark meanings and half-day rules.
+
+### Academic record
+
+```mermaid
+erDiagram
+  ACADEMIC_YEARS ||--o{ REPORTING_PERIODS : divides
+  SECTIONS ||--o{ SECTION_SUBJECTS : takes
+  SUBJECTS ||--o{ SECTION_SUBJECTS : "offered as"
+  ASSESSMENT_POLICY_DRAFTS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : "a revision is adopted"
+  ACADEMIC_YEARS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : scopes
+  ASSESSMENT_POLICY_ADOPTIONS ||--o{ ASSESSMENT_POLICY_BINDINGS : governs
+  SECTION_SUBJECTS ||--o| ASSESSMENT_POLICY_BINDINGS : "one standing binding"
+  SECTION_SUBJECTS ||--o{ ASSESSMENT_TASKS : assesses
+  ASSESSMENT_POLICY_BINDINGS ||--o{ ASSESSMENT_TASKS : "component source"
+  REPORTING_PERIODS ||--o{ ASSESSMENT_TASKS : "falls within"
+  ASSESSMENT_TASKS ||--o{ ASSESSMENT_SCORES : "raw marks"
+  ENROLLMENTS ||--o{ ASSESSMENT_SCORES : "marked learner"
+
+  ACADEMIC_YEARS {
+    uuid id PK
+    integer start_year UK
+    enum status "draft, active, closed"
+  }
+  REPORTING_PERIODS {
+    uuid id PK
+    uuid academic_year_id FK
+    smallint ordinal
+    text name
+  }
+  SECTIONS {
+    uuid id PK
+    uuid academic_year_id FK
+    smallint grade_level
+    text name
+  }
+  ENROLLMENTS {
+    uuid id PK
+    uuid learner_id FK
+    uuid section_id FK
+    text record_state "valid, voided"
+  }
+  SUBJECTS {
+    uuid id PK
+    text code UK "immutable once created"
+    text name
+    text kind "learning_area, domain"
+    int_array grade_levels
+    boolean active
+    integer version
+  }
+  SECTION_SUBJECTS {
+    uuid id PK
+    uuid section_id FK
+    uuid subject_id FK
+    jsonb subject_snapshot "catalog revision pinned at this offering"
+    boolean active
+    integer display_order
+    integer version
+  }
+  ASSESSMENT_POLICY_DRAFTS {
+    uuid id PK
+    text code UK
+    jsonb components "codes and basis points totalling 10000"
+    int_array grade_levels "1 to 6, excludes Kindergarten"
+    text status "draft, archived"
+    integer version
+  }
+  ASSESSMENT_POLICY_ADOPTIONS {
+    uuid id PK
+    uuid academic_year_id FK
+    uuid policy_id FK
+    integer policy_version "the revision frozen below"
+    jsonb policy_snapshot "frozen copy of that revision"
+    date adopted_on
+    text adoption_reference "the school's own record of the decision"
+    text status "adopted, withdrawn"
+  }
+  ASSESSMENT_POLICY_BINDINGS {
+    uuid id PK
+    uuid offering_id FK
+    uuid adoption_id FK
+    text status "bound, released"
+    integer version
+  }
+  ASSESSMENT_TASKS {
+    uuid id PK
+    uuid offering_id FK
+    uuid binding_id FK
+    uuid reporting_period_id FK
+    text component_code "from the adopted revision"
+    integer sequence "1 to 99, unique per component and period"
+    text title
+    numeric max_score "a sanity bound, not a grading rule"
+    text status "open, archived"
+  }
+  ASSESSMENT_SCORES {
+    uuid id PK
+    uuid task_id FK
+    uuid enrollment_id FK
+    numeric raw_score "null means not recorded"
+    integer version
+  }
+```
+
+The chain runs draft → adoption → binding → task → score, and each link protects the one below it. An adopted draft cannot be archived, a bound adoption cannot be withdrawn, and a bound offering cannot be retired, until whatever depends on it is released first.
+
+Two snapshots do the real work. A section offering pins the subject catalogue revision it was created from, so renaming a subject later never rewrites what a past section was taught. An adoption freezes the entire policy revision it was made from, so revising the draft afterwards never changes what the school actually decided. `adoption_reference` is the school's own record of that decision; it is not treated as evidence that the content is correct.
+
+**Nothing in this view computes a grade.** There is no table, column or endpoint for a total, average, percentage, MPS, GWA or transmuted mark, and `raw_score` left null means a mark was never recorded, never a zero. Those calculations wait on the school's current DepEd grading enclosure and its own ECR examples, recorded as a gate in [constraints](constraints.md). Until that gate opens, this view stores what a teacher wrote down and nothing derived from it.
 
 ## What is not here yet
 
