@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.25.1 | Dead MFA content-security directive removed from the workspace page | — |
 | 0.25.0 | Managers create faculty accounts; service-role key isolated in an Edge Function | — |
 | 0.24.0 | Multi-factor authentication removed; sign-in is email and password | — |
 | 0.23.1 | Screen render tests, corrected working contract | — |
@@ -33,6 +34,25 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.25.1 — A content policy that matches the code
+
+Removing multi-factor authentication in 0.24.0 left the workspace page asking
+for a permission it no longer needs. Its `Content-Security-Policy` still
+carried `img-src data:`, which was there for exactly one reason: the enrollment
+step rendered the authenticator QR code as a data URL. That step no longer
+exists.
+
+The workspace renders no images at all — no `<img>`, no background image, no
+favicon, only self-hosted fonts — so images now fall back to `default-src
+'none'`. The one remaining producer of a data-URL image in the bundle is the
+`mfa.enroll` path inside `@supabase/auth-js`, which EDUNEXUS never calls.
+
+The comment above the header explained the policy by naming the QR code. It now
+explains why nothing relaxes the policy for images instead, so the next reader
+is not left looking for an image that is not there.
+
+No API contract changed.
 
 ## 0.23.1 — Tests for the screens, and a contract that matches the code
 
