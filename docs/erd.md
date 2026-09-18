@@ -4,6 +4,155 @@ Generated from the live `edunexus` schema: 44 tables across 21 migrations. A sin
 
 For a document rather than a screen, use the rendered figures in [diagrams/](diagrams/): each diagram as SVG and as a double-resolution PNG, with suggested captions.
 
+## General view
+
+One figure for the whole system, showing only the entities that hold current state. It omits the 14 change journals, the two audit logs and the rate limiter, which together account for most of the table count and none of the meaning. Those appear in the domain diagrams below.
+
+```mermaid
+erDiagram
+  STAFF ||--o{ SECTIONS : advises
+  ACADEMIC_YEARS ||--o{ SECTIONS : contains
+  ACADEMIC_YEARS ||--o{ REPORTING_PERIODS : divides
+  LEARNERS ||--o{ ENROLLMENTS : "enrolled each year"
+  ACADEMIC_YEARS ||--o{ ENROLLMENTS : scopes
+  SECTIONS ||--o{ ENROLLMENTS : places
+  ACADEMIC_YEARS ||--o| INSTRUCTIONAL_CALENDARS : "one per year"
+  INSTRUCTIONAL_CALENDARS ||--o{ INSTRUCTIONAL_DAYS : defines
+  SECTIONS ||--o{ ATTENDANCE_DAYS : "sheet per date"
+  ATTENDANCE_DAYS ||--o{ ATTENDANCE_MARKS : holds
+  ENROLLMENTS ||--o{ ATTENDANCE_MARKS : "marked learner"
+  SECTIONS ||--o{ ATTENDANCE_MONTHS : consolidates
+  SUBJECTS ||--o{ SECTION_SUBJECTS : "offered as"
+  SECTIONS ||--o{ SECTION_SUBJECTS : takes
+  ASSESSMENT_POLICY_DRAFTS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : "adopted as"
+  ACADEMIC_YEARS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : scopes
+  ASSESSMENT_POLICY_ADOPTIONS ||--o{ ASSESSMENT_POLICY_BINDINGS : governs
+  SECTION_SUBJECTS ||--o| ASSESSMENT_POLICY_BINDINGS : "bound to"
+  ASSESSMENT_POLICY_BINDINGS ||--o{ ASSESSMENT_TASKS : "component source"
+  SECTION_SUBJECTS ||--o{ ASSESSMENT_TASKS : assesses
+  REPORTING_PERIODS ||--o{ ASSESSMENT_TASKS : "falls within"
+  ASSESSMENT_TASKS ||--o{ ASSESSMENT_SCORES : "raw marks"
+  ENROLLMENTS ||--o{ ASSESSMENT_SCORES : "marked learner"
+  ENROLLMENTS ||--o{ ATTENDANCE_FOLLOWUPS : "case against"
+
+  SCHOOL_PROFILE {
+    text name
+    text school_code
+    text address
+  }
+  STAFF {
+    uuid user_id PK
+    text display_name
+    enum role
+    boolean active
+  }
+  ACADEMIC_YEARS {
+    uuid id PK
+    integer start_year UK
+    date starts_on
+    date ends_on
+    enum status
+  }
+  REPORTING_PERIODS {
+    uuid id PK
+    integer ordinal
+    text name
+    date starts_on
+    date ends_on
+  }
+  SECTIONS {
+    uuid id PK
+    integer grade_level
+    text name
+    uuid adviser_user_id FK
+  }
+  LEARNERS {
+    uuid id PK
+    text lrn UK
+    text last_name
+    text first_name
+    date birth_date
+    enum sex
+  }
+  ENROLLMENTS {
+    uuid id PK
+    integer grade_level
+    date enrolled_on
+    enum status
+    text record_state
+  }
+  INSTRUCTIONAL_CALENDARS {
+    uuid id PK
+    integer version
+  }
+  INSTRUCTIONAL_DAYS {
+    uuid id PK
+    date day_on
+    text am_mode
+    text pm_mode
+  }
+  ATTENDANCE_DAYS {
+    uuid id PK
+    date day_on
+    integer version
+  }
+  ATTENDANCE_MARKS {
+    uuid id PK
+    boolean am
+    boolean pm
+  }
+  ATTENDANCE_MONTHS {
+    uuid id PK
+    date month_on
+    text status
+  }
+  ATTENDANCE_FOLLOWUPS {
+    uuid id PK
+    text category
+    text status
+    date due_on
+  }
+  SUBJECTS {
+    uuid id PK
+    text code UK
+    text name
+    text kind
+  }
+  SECTION_SUBJECTS {
+    uuid id PK
+    jsonb subject_snapshot
+    boolean active
+  }
+  ASSESSMENT_POLICY_DRAFTS {
+    uuid id PK
+    text code UK
+    jsonb components
+    text status
+  }
+  ASSESSMENT_POLICY_ADOPTIONS {
+    uuid id PK
+    jsonb policy_snapshot
+    date adopted_on
+    text status
+  }
+  ASSESSMENT_POLICY_BINDINGS {
+    uuid id PK
+    text status
+  }
+  ASSESSMENT_TASKS {
+    uuid id PK
+    text component_code
+    integer sequence
+    numeric max_score
+  }
+  ASSESSMENT_SCORES {
+    uuid id PK
+    numeric raw_score
+  }
+```
+
+Read left to right and it is the school year: a year holds sections and reporting periods, a learner is enrolled into a section for that year, attendance is marked against that enrollment, and scores are recorded against it too. Everything downstream hangs off the annual enrollment rather than off the learner, which is what lets one child carry six years of records without their history being rewritten each August.
+
 ## How to read these
 
 Two patterns repeat throughout and explain most of the table count.

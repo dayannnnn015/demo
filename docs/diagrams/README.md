@@ -6,6 +6,7 @@ Each diagram exists twice. Use the **SVG** in anything that accepts it — it st
 
 | File | Figure | Shows |
 |---|---|---|
+| `general-erd` | **Entity relationship diagram** | The whole system in one figure: 19 entities holding current state, with every relationship between them |
 | `00-overview` | Domain map | How the five domains depend on each other, and which feed which official form |
 | `01-foundation-and-people` | Foundation and people | School profile, staff, invitations, school years, reporting periods, sections |
 | `02-learner-registry-and-enrollment` | Learner registry | Learners, annual enrollment, movement history, identity links |
@@ -17,6 +18,7 @@ Each diagram exists twice. Use the **SVG** in anything that accepts it — it st
 
 Wording you can lift directly, each stating what the figure is evidence of rather than repeating its title.
 
+- **General ERD.** *Entity relationship diagram of EDUNEXUS. Attendance and assessment records attach to the annual enrollment rather than to the learner, so a child carries several years of records without any year being rewritten. Change journals, audit logs and the rate limiter are omitted for legibility.*
 - **Overview.** *Domain dependencies in EDUNEXUS. Attendance and academic records both attach to an annual enrollment, and corrections sit beside the registry rather than inside it.*
 - **Foundation and people.** *Foundation entities. A composite key on sections carries the school year and grade level into every record that references a section.*
 - **Learner registry.** *One permanent learner record per child, with annual enrollment beneath it. A partial unique index permits one valid enrollment per learner per school year.*
