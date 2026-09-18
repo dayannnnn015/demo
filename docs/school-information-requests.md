@@ -20,20 +20,6 @@ Ask in this order. Request 1 alone unblocks roughly ten increments and is the cr
 | 8 | Design review of the ERD and the workspace | Closing User Design in the paper's own terms | Not sent |
 | 9 | Confirmation of cloud hosting | Recorded deployment decision | Not sent |
 
-## Request 8 — Design review of the ERD and the workspace
-
-**Why:** the methodology makes the database design and the interface prototypes reviewable deliverables, approved by the school head, administrative officers and teachers, with revisions until they agree. Neither has been through that review.
-
-**Ask for:** a session where the school walks through [the ERD](erd.md) and the deployed workspace, and says what is missing, misnamed or wrong. Record what they ask to change.
-
-**Sufficient answer:** an approval, or a list of changes, attributable to named staff on a date.
-
-## Request 9 — Confirmation of cloud hosting
-
-**Why:** the paper says the deployment approach is decided with the client. EDUNEXUS runs on Vercel and Supabase because the operator chose that; the school has not confirmed it, and it is inseparable from where learner data physically sits.
-
-**Ask for:** confirmation that cloud hosting is acceptable, or the constraint that would require a local deployment instead. This belongs in the same conversation as the privacy owner in Request 6.
-
 ## Handling what comes back
 
 **Filled ECR files and form samples contain real learner names and grades.** Ask for them with learner names and LRNs removed, or replaced with placeholders. What EDUNEXUS needs from a sample is the structure, the formulas and the resulting numbers, not the identities. If the school can only supply unredacted copies, treat them as real learner data: they fall under request 6, and they must not be committed to this repository or pasted into any issue, chat or deployment log.
@@ -101,6 +87,20 @@ Keep every supplied document in the ignored local working area, never in version
 **Ask for:** a scheduled session with the school head or administrative officer to complete enrollment and sign in once; agreement on acceptable response time and error rate; and a date when enough staff can be online together for a realistic load test.
 
 **Note:** authenticator reset is currently an operator action in Supabase, not something the school can do in the app. Agree who performs it and how a staff member requests it, and write that into the operational runbook.
+
+## Request 8 — Design review of the ERD and the workspace
+
+**Why:** the methodology makes the database design and the interface prototypes reviewable deliverables, approved by the school head, administrative officers and teachers, with revisions until they agree. Neither has been through that review.
+
+**Ask for:** a session where the school walks through [the ERD](erd.md) and the deployed workspace, and says what is missing, misnamed or wrong. Record what they ask to change.
+
+**Sufficient answer:** an approval, or a list of changes, attributable to named staff on a date.
+
+## Request 9 — Confirmation of cloud hosting
+
+**Why:** the paper says the deployment approach is decided with the client. EDUNEXUS runs on Vercel and Supabase because the operator chose that; the school has not confirmed it, and it is inseparable from where learner data physically sits.
+
+**Ask for:** confirmation that cloud hosting is acceptable, or the constraint that would require a local deployment instead. This belongs in the same conversation as the privacy owner in Request 6.
 
 ## What the school does not need to decide
 
