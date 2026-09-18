@@ -1,18 +1,28 @@
 # Staff invitations and account recovery
 
-Authorizing a colleague used to mean an operator inviting them in the Supabase dashboard, then someone pasting the returned UUID into a form. Nothing recorded who asked for the account, what permission level was intended, or whether a pending request had been fulfilled. This increment adds that record. It does **not** move identity creation into EDUNEXUS.
+Authorizing a colleague used to mean an operator inviting them in the Supabase dashboard, then someone pasting the returned UUID into a form. Nothing recorded who asked for the account, what permission level was intended, or whether a pending request had been fulfilled. That record was added first. A manager can now also create the account from the same screen.
 
-## Why EDUNEXUS still does not mint identities
+## Why the account service is a separate deployment
 
-Creating an Auth user requires a Supabase service-role key. A key like that in the Vercel runtime could create, alter or delete **any** identity in the project, including principals — a much larger blast radius than the restricted database login the runtime holds today.
+The manuscript's first functional requirement is that the Principal or Administrative Officer can *manage authorized teacher accounts*. Creating one requires a Supabase service-role key, and such a key in the Vercel runtime could create, alter or delete **any** identity in the project, principals included — a much larger blast radius than the restricted database login the runtime holds.
 
-That is a deliberate boundary, enforced in two places. [`readConfig`](../src/core/config.ts) rejects a secret or service key outright, and [deployment](deployment.md) keeps the service-role key local to the operator. This increment keeps the boundary and improves the workflow around it. Moving identity creation into the API remains an open decision for the school and the deployment operator, recorded as such in [constraints](constraints.md).
+So the key does not go there. It lives in [one Edge Function](../supabase/functions/create-staff-identity/index.ts) whose only reachable action is "invite this address". The function has no update path, no delete path, and no read path over other identities. It takes the redirect target from its own configuration rather than from the caller, so a compromised caller cannot redirect invitation links. It authenticates the caller with a shared secret compared in constant time.
+
+The runtime boundary is unchanged and still enforced: [`readConfig`](../src/core/config.ts) rejects a secret or service key for `SUPABASE_PUBLISHABLE_KEY`, and now also rejects one supplied as `PROVISION_FUNCTION_SECRET`. A deployment that configures no function keeps the operator workflow exactly as it was and answers `IDENTITY_SERVICE_DISABLED` to the new endpoint.
+
+This is narrower than the decision recorded in [constraints](constraints.md) as the service-role gate. That gate asks the school to accept that a compromised **runtime** could alter any identity. Here it still cannot, so the gate's risk is avoided rather than accepted.
+
+### What is not rolled back
+
+An Auth identity is created by an HTTP call, and no database transaction can undo it. EDUNEXUS therefore checks everything it can *before* that call: the invitation exists, is still `requested`, matches the version the manager read, and carries a permission level this manager may grant. The database re-checks the permission level afterwards, because a security-definer function bypasses row policies.
+
+If the call succeeds and the database write then fails, the transaction rolls back and the address holds an Auth identity with no `edunexus.staff` row — which grants access to nothing. Asking again returns `IDENTITY_EXISTS`, and the manager links that identity through the ordinary provision endpoint.
 
 ## The workflow
 
 1. **Request.** A manager records the intended email, display name and permission level, with a reason. The invitation is `requested`.
-2. **Provision.** The operator creates the Auth identity in Supabase, outside EDUNEXUS, and returns its UUID.
-3. **Link.** A manager submits that UUID against the current invitation version. EDUNEXUS creates the `edunexus.staff` row and marks the invitation `provisioned` **in one transaction**, so school access and the invitation record can never disagree.
+2. **Create.** A manager creates the account against the current invitation version. EDUNEXUS asks the account service to invite the address, then writes the `edunexus.staff` row and marks the invitation `provisioned`. The colleague receives an email and chooses their own password; no credential passes through EDUNEXUS.
+3. **Or link.** Where the operator created the identity in Supabase by hand, a manager submits its UUID instead. Either route creates the `edunexus.staff` row and completes the invitation **in one transaction**, so school access and the invitation record can never disagree.
 4. **Cancel.** An outstanding request can be cancelled with a reason instead, leaving the history intact.
 
 Both `provisioned` and `cancelled` are terminal. Correcting a mistake means cancelling and requesting again; the same email may be requested again afterwards.
@@ -33,11 +43,12 @@ Both `provisioned` and `cancelled` are terminal. Correcting a mistake means canc
 | `GET /api/v1/staff-invitations` | `status=requested\|provisioned\|cancelled\|all` (default requested), `role`, `after_id`, `limit` default 50/max 100. Filters precede pagination. |
 | `GET /api/v1/staff-invitations/:id` | One invitation. |
 | `POST /api/v1/staff-invitations` | Email, display name, permission level and reason. |
+| `POST /api/v1/staff-invitations/:id/identity` | Current version and a reason. Creates the account through the account service, then completes the invitation. |
 | `POST /api/v1/staff-invitations/:id/provision` | Current version, the provisioned Auth `user_id`, and a reason. |
 | `POST /api/v1/staff-invitations/:id/cancellation` | Current version and a reason. |
 | `GET /api/v1/staff-invitations/:id/events` | Newest-first history, `limit` default 5/max 10, `before_version`. |
 
-Every operation requires an active manager. A completed or cancelled target returns `INVITATION_STATE` (409); a duplicate open email or an already-authorized identity returns `ALREADY_EXISTS` (409); an unknown Auth identity returns `INVALID_REFERENCE` (409). No endpoint sends mail, and none accepts or returns a credential.
+`/identity` additionally answers `IDENTITY_SERVICE_DISABLED` (501) where no function is configured, `IDENTITY_EXISTS` (409) where the address already has an identity, `IDENTITY_SERVICE_UNAVAILABLE` (503) on a timeout or rate limit, and `IDENTITY_SERVICE_FAILED` (502) otherwise. Every operation requires an active manager. A completed or cancelled target returns `INVITATION_STATE` (409); a duplicate open email or an already-authorized identity returns `ALREADY_EXISTS` (409); an unknown Auth identity returns `INVALID_REFERENCE` (409). No endpoint sends mail, and none accepts or returns a credential.
 
 ## Personal data
 

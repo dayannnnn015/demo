@@ -1,11 +1,12 @@
 import type { z } from 'zod';
 import type { Identity } from '../../core/auth.js';
+import type { IdentityProvisioner } from '../../core/identities.js';
 import type { Query, Row } from '../../core/db.js';
 import { AppError } from '../../core/errors.js';
 import { schemas, type OperationId, type StaffRole } from './contracts.js';
 
 export interface Staff extends Row { user_id: string; display_name: string; role: StaffRole; active: boolean; version: number; }
-export interface Context { tx: Query; identity: Identity; staff: Staff; }
+export interface Context { tx: Query; identity: Identity; staff: Staff; identities?: IdentityProvisioner; }
 
 export async function currentStaff(tx: Query, identity: Identity): Promise<Staff> {
   const [staff] = await tx.query<Staff>('select * from edunexus.staff where user_id = $1', [identity.userId]);

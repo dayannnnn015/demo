@@ -66,7 +66,7 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
   return (
     <>
       <Callout tone="info" title="How an invitation works">
-        You record who should get an account. The deployment operator creates the identity in Supabase and sends the email, then returns its user ID for you to enter below. EDUNEXUS never creates accounts itself.
+        Record who should get an account, then open the request and create it. EDUNEXUS asks the school's account service to email an invitation, and the colleague chooses their own password. If your deployment has no account service connected, the operator creates the identity in Supabase and returns its user ID for you to link instead.
       </Callout>
 
       <div className="card">
@@ -99,8 +99,12 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
             if (row.status !== 'requested') return <p className="muted">Completed and cancelled invitations are kept as a record and cannot be changed.</p>;
             return (
               <>
-                <Editor submitLabel="Grant school access" setStatus={setStatus} onSaved={reload}
-                  fields={[{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}', hint: 'From the operator, once they have invited this address.' }, reasonField]}
+                <Editor submitLabel="Create the account" setStatus={setStatus} onSaved={reload}
+                  fields={[{ ...reasonField, hint: 'An invitation email goes to this address and they choose their own password.' }]}
+                  onSubmit={data => api(`/staff-invitations/${row.id}/identity`, 'POST', { ...data, version: row.version })} />
+                <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
+                <Editor submitLabel="Link an account the operator made" setStatus={setStatus} onSaved={reload}
+                  fields={[{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}', hint: 'Only needed when the operator created the identity in Supabase by hand.' }, reasonField]}
                   onSubmit={data => api(`/staff-invitations/${row.id}/provision`, 'POST', { ...data, version: row.version })} />
                 <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: 'var(--s5) 0' }} />
                 <Editor submitLabel="Cancel invitation" setStatus={setStatus} onSaved={reload}

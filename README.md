@@ -161,7 +161,7 @@ Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, ave
 - One open request per email, terminal completion and cancellation, and protected history.
 - Browser-initiated password recovery from the sign-in page, answering identically whether or not an address is registered.
 
-Read [staff invitations](docs/staff-invitations.md). EDUNEXUS never creates an Auth identity: the runtime holds no service-role key.
+Read [staff invitations](docs/staff-invitations.md). A manager records the request, then creates the account from the same screen. The API runtime still holds no service-role key: the key is confined to an isolated Edge Function whose only action is inviting one address, and a deployment without one keeps the operator's link-by-UUID route.
 
 ## What works in the school workspace
 

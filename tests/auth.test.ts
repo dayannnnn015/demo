@@ -64,6 +64,19 @@ describe('deployment configuration', () => {
     expect(() => readConfig({ ...valid, NODE_ENV: 'development', VERCEL: '1', DATABASE_SSL: 'false' })).toThrow();
     expect(() => readConfig({ ...valid, SUPABASE_PUBLISHABLE_KEY: 'sb_secret_never_expose' })).toThrow();
   });
+  it('pairs the account service settings and keeps a service key out of the runtime', () => {
+    const url = 'https://project.functions.test/create-staff-identity', secret = 'x'.repeat(40);
+    expect(readConfig({ ...valid, PROVISION_FUNCTION_URL: url, PROVISION_FUNCTION_SECRET: secret }).PROVISION_FUNCTION_SECRET).toBe(secret);
+    expect(readConfig(valid).PROVISION_FUNCTION_URL).toBeUndefined();
+    for (const bad of [
+      { PROVISION_FUNCTION_URL: url },
+      { PROVISION_FUNCTION_SECRET: secret },
+      { PROVISION_FUNCTION_URL: 'http://project.functions.test/create-staff-identity', PROVISION_FUNCTION_SECRET: secret },
+      { PROVISION_FUNCTION_URL: url, PROVISION_FUNCTION_SECRET: 'too-short' },
+      { PROVISION_FUNCTION_URL: url, PROVISION_FUNCTION_SECRET: 'sb_secret_' + 'y'.repeat(40) },
+    ]) expect(() => readConfig({ ...valid, ...bad })).toThrow();
+  });
+
   it('reports configuration field names without secret values', () => {
     expect(() => readConfig({ ...valid, DATABASE_URL: 'very-private-secret' })).toThrow('Invalid configuration fields: DATABASE_URL');
   });

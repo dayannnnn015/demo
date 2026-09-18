@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { decodeJwt } from 'jose';
 
 const booleanString = z.enum(['true', 'false']).transform(v => v === 'true');
+/** A service key here would defeat the whole point of the identity function. */
+function isServiceKey(key: string) {
+  if (key.startsWith('sb_secret_')) return true;
+  try { return decodeJwt(key).role === 'service_role'; } catch { return false; }
+}
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.url(),
@@ -9,6 +14,8 @@ const schema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(10),
   ALLOWED_ORIGINS: z.string().min(1),
+  PROVISION_FUNCTION_URL: z.url().optional(),
+  PROVISION_FUNCTION_SECRET: z.string().min(32).max(512).optional(),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   LOG_LEVEL: z.enum(['silent', 'error', 'warn', 'info', 'debug']).default('info'),
 });
@@ -22,6 +29,14 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     try { isPublicKey = decodeJwt(c.SUPABASE_PUBLISHABLE_KEY).role === 'anon'; } catch { /* Invalid public key. */ }
   }
   if (!isPublicKey) throw new Error('SUPABASE_PUBLISHABLE_KEY must be a publishable or legacy anon key, never a secret/service key');
+  // The identity function is optional, but half of it configured is a deployment
+  // mistake, and the service-role key belongs in that function, never here.
+  if (Boolean(c.PROVISION_FUNCTION_URL) !== Boolean(c.PROVISION_FUNCTION_SECRET)) throw new Error('Set PROVISION_FUNCTION_URL and PROVISION_FUNCTION_SECRET together, or neither');
+  if (c.PROVISION_FUNCTION_SECRET && isServiceKey(c.PROVISION_FUNCTION_SECRET)) throw new Error('PROVISION_FUNCTION_SECRET must be a shared secret, never a Supabase secret/service key');
+  if (c.PROVISION_FUNCTION_URL) {
+    const fn = new URL(c.PROVISION_FUNCTION_URL);
+    if (fn.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(fn.hostname)) throw new Error('PROVISION_FUNCTION_URL must use HTTPS');
+  }
   const databaseUrl = new URL(c.DATABASE_URL);
   const authUrl = new URL(c.SUPABASE_URL);
   if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)) throw new Error('DATABASE_URL must use PostgreSQL');

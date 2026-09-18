@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Logger } from 'pino';
 import type { Authenticator, Identity } from './core/auth.js';
+import type { IdentityProvisioner } from './core/identities.js';
 import { assertRuntimeRole, type Database, type Query } from './core/db.js';
 import { AppError, normalizeError } from './core/errors.js';
 import { uuid } from './modules/foundation/contracts.js';
@@ -31,7 +32,7 @@ import { currentStaff, executeOperation } from './modules/foundation/service.js'
 import { openapi } from './openapi.js';
 import { appPage } from './app-page.js';
 
-export interface Dependencies { database: Database; auth: Authenticator; origins: string[]; logger: Logger; publicAuth?: { url: string; publishableKey: string }; }
+export interface Dependencies { database: Database; auth: Authenticator; origins: string[]; logger: Logger; publicAuth?: { url: string; publishableKey: string }; identities?: IdentityProvisioner; }
 
 async function withActor<T>(database: Database, identity: Identity, requestId: string, work: (tx: Query) => Promise<T>) {
   return database.transaction(async tx => {
@@ -149,7 +150,7 @@ export function createApp(deps: Dependencies) {
         const staff = await currentStaff(tx, identity);
         if ('manager' in operation && staff.role === 'teacher') throw new AppError(403, 'FORBIDDEN', 'A principal or administrative officer account is required.');
         const input = { body, query, ...(id ? { id } : {}) };
-        const context = { tx, staff, identity };
+        const context = { tx, staff, identity, ...(deps.identities ? { identities: deps.identities } : {}) };
         if (!('module' in operation)) return executeOperation(operation.id, context, input);
         if (operation.module === 'registry') return executeRegistry(operation.id, context, input);
         if (operation.module === 'registry-review') return executeReview(operation.id, context, input);

@@ -118,6 +118,8 @@ For local development, merge `DATABASE_URL` from `.local/runtime.env` into `.env
 | `SUPABASE_URL` | Project Auth base URL | No |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable or legacy anon key; never service-role | Public by design |
 | `ALLOWED_ORIGINS` | Comma-separated exact HTTPS frontend origins | No |
+| `PROVISION_FUNCTION_URL` | Account-service Edge Function URL. Omit to keep the operator link-by-UUID route | No |
+| `PROVISION_FUNCTION_SECRET` | Shared secret for that function, 32+ characters. Never a Supabase key | Yes |
 | `LOG_LEVEL` | `info` by default | No |
 
 Never upload `MIGRATION_DATABASE_URL`, the database owner password, bootstrap fields, local development secrets, or Supabase service-role keys. Vercel uses Express, Node 24, the repository root, `npm run build`, and Singapore `sin1` from `vercel.json`. `src/index.ts` is the sole Vercel application entrypoint. The app factory lives in `src/http-app.ts` so framework detection cannot select it accidentally. [Express deployment](https://vercel.com/docs/frameworks/backend/express).
@@ -134,11 +136,24 @@ Configure preview environments separately with development-only credentials and 
 
 Use Supabase Auth's administrative invitation workflow with a working callback URL. Never send a password in email. The managed service returns the user's UUID. Set `BOOTSTRAP_PRINCIPAL_ID` and `BOOTSTRAP_PRINCIPAL_NAME` locally, then run `npm run db:bootstrap`. The script requires an invited or confirmed, non-deleted, non-banned Auth identity and an empty staff registry. It creates the school profile with no invented school ID. Bootstrap fails safely if staff already exist.
 
-After the user follows the invitation, `/account/setup` sets a password. A successful `/api/v1/me` call confirms API access. Auth identity approval and staff activation are separate controls. For subsequent teachers, invite/create the identity first, then call `POST /api/v1/staff`.
+After the user follows the invitation, `/account/setup` sets a password. A successful `/api/v1/me` call confirms API access. Auth identity approval and staff activation are separate controls.
+
+### The account service
+
+Subsequent staff are created by a manager in the workspace, through an Edge Function that holds the service-role key so the API runtime does not have to. Deploy it once:
+
+```powershell
+rtk proxy npx.cmd supabase functions deploy create-staff-identity --no-verify-jwt
+rtk proxy npx.cmd supabase secrets set EDUNEXUS_PROVISION_SECRET=<32+ random characters> EDUNEXUS_INVITE_REDIRECT=https://edunexus-balili.vercel.app/account/setup
+```
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into Edge Functions automatically; do not set them by hand and never copy the service-role key into Vercel. Put the same random secret into Vercel as `PROVISION_FUNCTION_SECRET`, and the function's URL as `PROVISION_FUNCTION_URL`. Rotate the secret by setting it in both places.
+
+Without these two variables the endpoint answers `IDENTITY_SERVICE_DISABLED` and nothing else changes: the operator invites the identity in Supabase and a manager links its UUID with `POST /api/v1/staff-invitations/:id/provision`, or authorizes it directly with `POST /api/v1/staff`.
 
 ## Smoke checks and release discipline
 
-Check `/health/live` for HTTP 200. `/health/ready` must return 503 before bootstrap and 200 afterward. It does not imply successful email delivery. Check `/account/setup`, `/account.js`, CSP, and public-key-only `/account/config`. `/api/v1/me` without a token must return 401. A verified staff session must return its database role. Test a teacher against another section.
+Check `/health/live` for HTTP 200. `/health/ready` must return 503 before bootstrap and 200 afterward. It does not imply successful email delivery. Check `/account/setup`, `/account.js`, CSP, and public-key-only `/account/config`. `/api/v1/me` without a token must return 401. A verified staff session must return its database role. Where an account service is configured, create one synthetic staff account end to end and confirm the invitation email arrives, then remove that identity. Test a teacher against another section.
 
 Run `npm run check` and regenerate `docs/openapi.json` before deployment. CI checks types, tests, build, contract freshness, and high-severity runtime dependency advisories. Add migrations instead of editing applied files. A Vercel code rollback does not reverse database migrations; use compatible schema changes and a rehearsed recovery procedure.
 

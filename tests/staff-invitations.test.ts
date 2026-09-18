@@ -3,6 +3,8 @@ import request from 'supertest';
 import pino from 'pino';
 import {randomUUID} from 'node:crypto';
 import {createApp} from '../src/http-app.js';
+import {createIdentityProvisioner} from '../src/core/identities.js';
+import {AppError} from '../src/core/errors.js';
 import {testDatabase,ids} from './helpers/database.js';
 import {invitationResponses as responses} from '../src/modules/staff-invitations/contracts.js';
 
@@ -90,6 +92,64 @@ describe('Staff invitation records without a privileged runtime credential',()=>
       .rejects.toMatchObject({code:'42501'});
   });
 
+  // The account service is a separate deployment holding the service-role key.
+  // This runtime only ever names one address and receives one identifier back.
+  const withService=(create:(q:any)=>Promise<string>)=>createApp({database:db.database,logger:pino({enabled:false}),origins:[],
+    auth:{async verify(token){return {userId:token};}},identities:{create}});
+  const mint=(target:ReturnType<typeof createApp>,i:any,extra:object={},actor=ids.principal)=>
+    request(target).post(`${base}/${i.id}/identity`).set('Authorization',`Bearer ${actor}`).send({version:i.version,reason,...extra});
+
+  it('creates the account and authorizes school access in one step',async()=>{
+    // PGlite is one connection: the account identifier must exist before the
+    // request transaction opens, because the stub cannot query inside it.
+    const invitation=await made(),user=await identity();let asked:any=null;
+    const r=await mint(withService(async q=>{asked=q;return user;}),invitation);
+    expect(r.status,JSON.stringify(r.body)).toBe(201);
+    expect(asked).toEqual({email:invitation.email,displayName:invitation.display_name,role:'teacher'});
+    expect(responses.invitationProvisionIdentity!.safeParse(r.body.data).success).toBe(true);
+    expect(r.body.data).toMatchObject({status:'provisioned',version:2});
+    const staff=(await get('/api/v1/staff?limit=100')).body.data.items.find((v:any)=>v.user_id===r.body.data.linked_user_id);
+    expect(staff).toMatchObject({role:'teacher',active:true});
+    expect((await get(`${base}/${invitation.id}/events`)).body.data.items[0]).toMatchObject({action:'provision',reason,actor_user_id:ids.principal});
+  });
+
+  it('refuses when the deployment configures no account service',async()=>{
+    const invitation=await made();
+    const r=await mint(app,invitation);
+    expect(r.status).toBe(501);
+    expect(r.body.error.code).toBe('IDENTITY_SERVICE_DISABLED');
+    expect((await get(`${base}/${invitation.id}`)).body.data.status).toBe('requested');
+  });
+
+  it('refuses an officer a managerial account before any account is created',async()=>{
+    const managerial=await made({role:'administrative_officer'});let called=false;
+    const r=await mint(withService(async()=>{called=true;return randomUUID();}),managerial,{},ids.officer);
+    expect(r.status).toBe(403);
+    expect(called).toBe(false);
+    expect((await get(`${base}/${managerial.id}`)).body.data.status).toBe('requested');
+  });
+
+  it('checks the version and the state before creating an account',async()=>{
+    const invitation=await made();let called=false;
+    const service=withService(async()=>{called=true;return randomUUID();});
+    expect((await mint(service,invitation,{version:invitation.version+5})).status).toBe(409);
+    expect(called).toBe(false);
+    expect((await cancel(invitation)).status).toBe(201);
+    const r=await mint(service,{...invitation,version:invitation.version+1});
+    expect(r.status).toBe(409);
+    expect(r.body.error.code).toBe('INVITATION_STATE');
+    expect(called).toBe(false);
+  });
+
+  it('leaves the invitation outstanding when the account service fails',async()=>{
+    const invitation=await made();
+    const r=await mint(withService(async()=>{throw new AppError(503,'IDENTITY_SERVICE_UNAVAILABLE','unavailable');}),invitation);
+    expect(r.status).toBe(503);
+    const after=(await get(`${base}/${invitation.id}`)).body.data;
+    expect(after).toMatchObject({status:'requested',linked_user_id:null,version:invitation.version});
+    expect((await get(`${base}/${invitation.id}/events`)).body.data.items.map((v:any)=>v.action)).toEqual(['request']);
+  });
+
   it('rejects malformed emails, names and permission levels at both boundaries',async()=>{
     for(const extra of [{email:'not-an-address'},{email:'two@ad@dress.test'},{email:'with space@example.test'},{email:'a@b'},
       {display_name:''},{display_name:'Bad\nname'},{role:'headmaster'},{reason:'short'},{user_id:randomUUID()}])
@@ -142,5 +202,29 @@ describe('Staff invitation records without a privileged runtime credential',()=>
     expect((await get(base+'/'+randomUUID())).status).toBe(404);
     const api=(await request(app).get('/openapi.json')).body;
     for(const path of [base+'/{id}/send',base+'/{id}/email','/api/v1/auth/invite','/api/v1/auth/admin'])expect(api.paths[path]).toBeUndefined();
+  });
+});
+
+describe('Isolated account service client',()=>{
+  const call=(fetcher:any)=>createIdentityProvisioner({url:'https://functions.test/create-staff-identity',secret:'s'.repeat(40),fetcher})
+    .create({email:'synthetic@example.test',displayName:'Synthetic teacher',role:'teacher'});
+  const reply=(status:number,body:object)=>async()=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
+
+  it('presents the shared secret and returns only the identifier',async()=>{
+    let seen:any=null;
+    const id=randomUUID();
+    await expect(call(async(url:string,init:any)=>{seen={url,init};return (await reply(200,{user_id:id})())})).resolves.toBe(id);
+    expect(seen.url).toBe('https://functions.test/create-staff-identity');
+    expect(seen.init.headers['x-edunexus-provision-secret']).toBe('s'.repeat(40));
+    expect(JSON.parse(seen.init.body)).toEqual({email:'synthetic@example.test',display_name:'Synthetic teacher',role:'teacher'});
+  });
+
+  it('maps every refusal to a code a screen can act on',async()=>{
+    await expect(call(reply(409,{error:'email_exists'}))).rejects.toMatchObject({status:409,code:'IDENTITY_EXISTS'});
+    await expect(call(reply(401,{error:'unauthorized'}))).rejects.toMatchObject({status:500,code:'IDENTITY_SERVICE_REJECTED'});
+    await expect(call(reply(429,{error:'rate_limited'}))).rejects.toMatchObject({status:503,code:'IDENTITY_SERVICE_UNAVAILABLE'});
+    await expect(call(reply(502,{error:'invite_failed'}))).rejects.toMatchObject({status:502,code:'IDENTITY_SERVICE_FAILED'});
+    await expect(call(reply(200,{}))).rejects.toMatchObject({status:502,code:'IDENTITY_SERVICE_FAILED'});
+    await expect(call(async()=>{throw new TypeError('network');})).rejects.toMatchObject({status:503,code:'IDENTITY_SERVICE_UNAVAILABLE'});
   });
 });
