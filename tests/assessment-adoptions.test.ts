@@ -26,7 +26,7 @@ describe('Section 4A.4 reviewed immutable assessment-policy adoption',()=>{
     adopted_on:`${n}-06-15`,adoption_reference:reference,reason,...extra},actor);
   const made=async(extra:object={})=>{const r=await adopt(extra);expect(r.status,JSON.stringify(r.body)).toBe(201);return r.body.data;};
   const withdraw=(a:any,extra:object={},actor=ids.principal)=>post(`${base}/${a.id}/withdrawal`,{version:a.version,reason,...extra},actor);
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');
     n++;year=randomUUID();

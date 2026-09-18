@@ -12,7 +12,7 @@ describe('Section 4A.1 subject catalog',()=>{
   const create=(b=body(),actor=ids.principal)=>request(app).post('/api/v1/subjects').set('Authorization',`Bearer ${actor}`).send(b);
   const get=(path:string,actor=ids.principal)=>request(app).get(path).set('Authorization',`Bearer ${actor}`);
   const update=(row:any,extra:object={},actor=ids.principal)=>request(app).patch('/api/v1/subjects/'+row.id).set('Authorization',`Bearer ${actor}`).send({version:row.version,name:row.name,kind:row.kind,grade_levels:row.grade_levels,active:row.active,reason,...extra});
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>db.pg.query('delete from edunexus.request_buckets'));
   afterAll(async()=>db?.database.close());
   it('starts with no seeded curriculum and creates canonical codes with explicit Kindergarten applicability',async()=>{

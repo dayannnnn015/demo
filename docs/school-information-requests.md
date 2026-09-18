@@ -16,7 +16,7 @@ Ask in this order. Request 1 alone unblocks roughly ten increments and is the cr
 | 4 | Kindergarten assessment policy | Kindergarten reporting | Not sent |
 | 5 | Learner fields and class capacity | Registry acceptance and promotion capacity | Not sent |
 | 6 | Privacy owner and approved purposes | Importing any real learner data | Not sent |
-| 7 | Staff MFA enrollment and acceptance testing | Section 1 sign-off, Section 7 turnover | Not sent |
+| 7 | Staff sign-in and acceptance testing | Section 1 sign-off, Section 7 turnover | Not sent |
 | 8 | Design review of the ERD and the workspace | Closing User Design in the paper's own terms | Not sent |
 | 9 | Confirmation of cloud hosting | Recorded deployment decision | Not sent |
 
@@ -80,13 +80,13 @@ Keep every supplied document in the ignored local working area, never in version
 
 **Sufficient answer:** a named person, a written scope, and a tested restore of a backup into an isolated project before the first real import.
 
-## Request 7 — Staff MFA enrollment and acceptance testing
+## Request 7 — Staff sign-in and acceptance testing
 
-**Why:** an invited administrator identity exists but no real person has completed password and authenticator setup, so an end-to-end authenticated login has never been proven. Section 7 also needs at least 27 concurrent teacher sessions.
+**Why:** an invited administrator identity exists but no real person has completed password setup, so an end-to-end authenticated login has never been proven. Section 7 also needs at least 27 concurrent teacher sessions.
 
 **Ask for:** a scheduled session with the school head or administrative officer to complete enrollment and sign in once; agreement on acceptable response time and error rate; and a date when enough staff can be online together for a realistic load test.
 
-**Note:** authenticator reset is currently an operator action in Supabase, not something the school can do in the app. Agree who performs it and how a staff member requests it, and write that into the operational runbook.
+**Note:** the paper asks for no second authentication factor, so sign-in is email and password only. Agree how a staff member requests a password reset when the emailed link does not reach them, and write that into the operational runbook.
 
 ## Request 8 — Design review of the ERD and the workspace
 

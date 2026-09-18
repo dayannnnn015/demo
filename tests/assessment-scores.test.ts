@@ -17,7 +17,7 @@ describe('Section 4B.1 assessment tasks and raw score entry',()=>{
   const newTask=(extra:object={},actor=ids.principal,o=offering)=>post(tasksOf(o),{reporting_period_id:period,component_code:'WW',sequence:1,title:'Synthetic written work',max_score:20,reason,...extra},actor);
   const record=(entries:object[],actor=ids.teacher,t=task)=>post(`/api/v1/assessment-tasks/${t.id}/scores`,{entries,reason},actor);
   const entry=(i:number,raw_score:number|null,version=0)=>({enrollment_id:enrollments[i],raw_score,version});
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');
     n++;year=randomUUID();section=randomUUID();period=randomUUID();

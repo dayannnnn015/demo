@@ -17,7 +17,7 @@ describe('Section 2A learner registry and enrollment boundaries', () => {
   beforeAll(async () => {
     db = await testDatabase();
     app = createApp({ database: db.database, origins: ['http://localhost:3000'], logger: pino({ level: 'silent' }), auth: {
-      async verify(token) { if (!Object.values(ids).includes(token)) throw new AppError(401, 'INVALID_TOKEN', 'Invalid token'); return { userId: token, aal: 'aal2' }; },
+      async verify(token) { if (!Object.values(ids).includes(token)) throw new AppError(401, 'INVALID_TOKEN', 'Invalid token'); return { userId: token }; },
     } });
     await db.pg.query("insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,2025,'2025-06-01','2026-03-31'),($2,2024,'2024-06-01','2025-03-31')", [yearId, otherYearId]);
     for (const [id, year, grade, adviser] of [[sectionA, yearId, 1, ids.teacher], [sectionB, yearId, 1, ids.otherTeacher], [sectionC, yearId, 1, ids.otherTeacher], [wrongGrade, yearId, 2, ids.teacher], [wrongYear, otherYearId, 1, ids.teacher]]) {

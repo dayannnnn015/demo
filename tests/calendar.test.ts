@@ -33,7 +33,7 @@ describe('Section 3A reviewed instructional calendar', () => {
     (select count(*)::int from edunexus.instructional_days) days,(select count(*)::int from edunexus.calendar_review_events) reviews,
     (select count(*)::int from edunexus.audit_events) audits`)).rows;
   beforeAll(async () => {
-    db = await testDatabase(); app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token, aal: 'aal2' }; } } });
+    db = await testDatabase(); app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token }; } } });
   });
   beforeEach(async () => {
     year = randomUUID(); section = randomUUID(); other = randomUUID(); start++;

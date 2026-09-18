@@ -8,7 +8,7 @@ The manuscript has been analyzed and the work is divided into reviewable section
 
 ## What works in Section 1
 
-- Supabase staff token verification with signature, issuer, audience, expiration, MFA, and live identity checks.
+- Supabase staff token verification with signature, issuer, audience, expiration, and live identity checks.
 - Principal, administrative officer, and teacher permissions, enforced in the API and PostgreSQL row-level policies.
 - Staff authorization, updates, suspension, and protection against self-lockout or removing the last principal.
 - School profile, draft/active/closed school years, configurable reporting periods, and Kindergarten–Grade 6 sections with adviser assignments.
@@ -55,7 +55,7 @@ The manuscript has been analyzed and the work is divided into reviewable section
 - Preserved original movements, dates, reasons, and enrollment identity, with immutable old/new grade evidence.
 - Updated teacher roster access and compatibility with later movements, timeline corrections, and reviewed reversal.
 
-Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. [Grade-placement corrections](docs/grade-placement.md) are implemented. School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain. Attendance consolidation, grading, promotion, and forms remain subsequent work. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user MFA login and school acceptance remain to be verified.
+Read [learner registry](docs/learner-registry.md), [registry review](docs/registry-review.md), and [enrollment timeline](docs/enrollment-timeline.md) for API workflows and limits. Read [learner identity](docs/learner-identity.md) for linking and reversal. Read [enrollment record review](docs/enrollment-records.md) for resolving overlapping annual records. [Grade-placement corrections](docs/grade-placement.md) are implemented. School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain. Attendance consolidation, grading, promotion, and forms remain subsequent work. No real learner data has been imported. See [deployment](docs/deployment.md); real invited-user sign-in and school acceptance remain to be verified.
 
 ## What works in Section 3A
 
@@ -161,7 +161,7 @@ Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, ave
 - One open request per email, terminal completion and cancellation, and protected history.
 - Browser-initiated password recovery from the sign-in page, answering identically whether or not an address is registered.
 
-Read [staff invitations](docs/staff-invitations.md). EDUNEXUS never creates an Auth identity: the runtime holds no service-role key, and authenticator reset remains an operator action.
+Read [staff invitations](docs/staff-invitations.md). EDUNEXUS never creates an Auth identity: the runtime holds no service-role key.
 
 ## What works in the school workspace
 
@@ -173,7 +173,7 @@ The workspace at `/app` is a usability aid for backend review, not the final fro
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
 - **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
 
-Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion, authenticator enrollment and password recovery all run against Supabase from the browser.
+Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
 
 Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Registration, enrollment, movements, reviewed corrections, attendance, calendars and academic setup stay API-only.
 
@@ -210,7 +210,7 @@ The local API listens on `http://127.0.0.1:3001`. `npm run build` compiles the b
 
 The machine-readable contract is [docs/openapi.json](docs/openapi.json) and is served at `/openapi.json`. [Frontend integration](docs/frontend-handoff.md) explains authentication, response envelopes, dates, pagination, and version conflicts.
 
-All business endpoints are under `/api/v1` and require `Authorization: Bearer <Supabase access token>`. `/`, `/health/live`, `/health/ready`, `/openapi.json`, `/app`, and the account setup/configuration endpoints are public and return no personal records. `/`, `/app` and `/account/setup` all open the workspace described above, sharing password/MFA sign-in. Readiness checks the database, restricted runtime role, school bootstrap, and rate-limit function; it does not certify an end-to-end Supabase login.
+All business endpoints are under `/api/v1` and require `Authorization: Bearer <Supabase access token>`. `/`, `/health/live`, `/health/ready`, `/openapi.json`, `/app`, and the account setup/configuration endpoints are public and return no personal records. `/`, `/app` and `/account/setup` all open the workspace described above, sharing the same password sign-in. Readiness checks the database, restricted runtime role, school bootstrap, and rate-limit function; it does not certify an end-to-end Supabase login.
 
 ## Repository layout
 

@@ -31,7 +31,7 @@ Clearing retains the database row as an unconfigured tombstone and preserves eve
 
 ## API workflow
 
-All paths below are relative to `/api/v1/academic-years/:id/calendar`. Authenticate with an active staff bearer token; deployed requests require MFA.
+All paths below are relative to `/api/v1/academic-years/:id/calendar`. Authenticate with an active staff bearer token.
 
 | Method and path | Input and result |
 |---|---|

@@ -36,7 +36,7 @@ describe('Section 2B.5 reviewed whole-year grade placement', () => {
     (select count(*)::int from edunexus.audit_events) as audits`)).rows;
   beforeAll(async () => {
     db = await testDatabase();
-    app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token, aal: 'aal2' }; } } });
+    app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token }; } } });
     await db.pg.query("insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,2025,'2025-06-01','2026-03-31'),($2,2024,'2024-06-01','2025-03-31')", [year, oldYear]);
     for (const [id, y, grade, actor] of [[a1,year,1,ids.teacher],[b1,year,1,ids.teacher],[a2,year,2,ids.otherTeacher],[b2,year,2,ids.otherTeacher],[kindergarten,year,0,ids.otherTeacher],[sixth,year,6,ids.otherTeacher],[oldSection,oldYear,1,ids.teacher]]) {
       await db.pg.query('insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,$3,$4,$5)', [id, y, grade, `Synthetic ${id}`, actor]);

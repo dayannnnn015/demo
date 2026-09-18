@@ -37,7 +37,7 @@ describe('Section 4A.5 assessment-policy offering binding',()=>{
   const release=(b:any,extra:object={},actor=ids.principal)=>post(`${base}/${b.id}/release`,{version:b.version,reason,...extra},actor);
   const retire=(o:any,active=false)=>patch('/api/v1/section-subjects/'+o.id,{version:o.version,active,display_order:o.display_order,refresh_subject:false,subject_version:null,reason});
   const withdrawAdoption=(a:any)=>post(`/api/v1/assessment-policy-adoptions/${a.id}/withdrawal`,{version:a.version,reason});
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');
     n++;year=randomUUID();section=randomUUID();gradeTwo=randomUUID();

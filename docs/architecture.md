@@ -5,7 +5,7 @@ EDUNEXUS is a modular TypeScript/Express API with PostgreSQL, Supabase Auth, and
 ```mermaid
 flowchart LR
   Staff[School staff] --> UI[Vite + React workspace served at /app]
-  UI --> Auth[Supabase Auth and MFA]
+  UI --> Auth[Supabase Auth]
   UI -->|Bearer token| API[Express API on Vercel]
   API -->|Signature and live user check| Auth
   API -->|Restricted login and transaction-local identity| Pool[Supabase transaction pooler]
@@ -17,11 +17,11 @@ flowchart LR
 
 ## Identity and authorization
 
-Supabase manages passwords, refresh tokens, and MFA. The API accepts ES256/RS256 access tokens issued by the configured project to the authenticated audience. It verifies signatures via the project's JWKS, checks expiry, then checks the user with the Auth service. School roles come from `edunexus.staff`, not user-editable metadata or a role claimed by the frontend. The API reads staff activation on every request. Deployed environments require assurance level `aal2`.
+Supabase manages passwords and refresh tokens. The API accepts ES256/RS256 access tokens issued by the configured project to the authenticated audience. It verifies signatures via the project's JWKS, checks expiry, then checks the user with the Auth service. School roles come from `edunexus.staff`, not user-editable metadata or a role claimed by the frontend. The API reads staff activation on every request.
 
 Staff are provisioned in two stages: create a managed identity, then authorize its UUID in the staff registry. Migration 0020 adds `staff_invitations` and immutable `staff_invitation_events` around that second stage, so the intended email, name and permission level are recorded before provisioning and linked to the resulting identity afterwards. Linking creates the staff row and completes the invitation in one transaction; a `assert_may_grant_role` helper mirrors the `staff_insert` row policy, which a security-definer function would otherwise bypass. The runtime still holds no Supabase service-role key and cannot create, alter or delete an Auth identity, so an unknown identifier fails the foreign key. Recovery is initiated by the browser with the publishable key. See [staff invitations](staff-invitations.md). The bootstrap script creates the first principal and school profile only when the staff registry is empty. Only principals can manage administrative accounts; principals and administrative officers can manage teachers. This privilege split is an implementation proposal that the school can review.
 
-Tokens are bearer credentials. The future frontend must never put tokens in URLs or logs. Signing out revokes refresh capability according to the Auth provider; an already-issued access token can remain valid until expiry. Use `staff.active=false` for immediate school-level suspension. MFA is mandatory for deployed API access; supervised device enrollment and account recovery need an operational process. [Supabase JWT documentation](https://supabase.com/docs/guides/auth/jwts), [Supabase MFA](https://supabase.com/docs/guides/auth/auth-mfa).
+Tokens are bearer credentials. The future frontend must never put tokens in URLs or logs. Signing out revokes refresh capability according to the Auth provider; an already-issued access token can remain valid until expiry. Use `staff.active=false` for immediate school-level suspension. Account recovery needs an operational process agreed with the school. [Supabase JWT documentation](https://supabase.com/docs/guides/auth/jwts).
 
 ## Database boundary
 

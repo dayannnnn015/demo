@@ -15,7 +15,7 @@ describe('Section 4A.3 non-operational assessment-policy drafts',()=>{
   const get=(path=base,actor=ids.principal)=>request(app).get(path).set('Authorization',`Bearer ${actor}`);
   const update=(r:any,extra:object={},actor=ids.principal)=>request(app).patch(base+'/'+r.id).set('Authorization',`Bearer ${actor}`).send({version:r.version,name:r.name,source_reference:r.source_reference,grade_levels:r.grade_levels,components:r.components,status:r.status,reason,...extra});
   const sqlCreate=(components:unknown,grades=[1],status='draft')=>db.asUser(ids.principal,tx=>tx.query("select edunexus.create_assessment_policy_draft('SQL_TEST','Synthetic policy','Synthetic reference', $1::integer[],$2::jsonb,$3,$4)",[grades,JSON.stringify(components),status,reason]));
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>db.pg.query('delete from edunexus.request_buckets'));
   afterAll(async()=>db?.database.close());
   it('starts empty and canonicalizes explicit grade and component metadata without seeding rules',async()=>{

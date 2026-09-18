@@ -14,7 +14,7 @@ Default enrollment lists include only valid records. Managers can filter `record
 
 ## Preview, confirmation, and history
 
-All routes below are under `/api/v1` and require an active manager and the deployment's MFA policy.
+All routes below are under `/api/v1` and require an active manager.
 
 | Route | Purpose |
 |---|---|

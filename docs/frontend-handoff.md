@@ -22,11 +22,11 @@ Static bundle files are served before the CORS middleware, because a `type="modu
 
 ## Authentication
 
-Use Supabase's official client to sign in, refresh sessions, enroll/challenge/verify MFA, and recover accounts. The frontend receives only the Supabase URL and publishable key. The API receives the Supabase access token in the `Authorization` header. Do not use a service-role key, database credential, or custom JWT in the browser.
+Use Supabase's official client to sign in, refresh sessions, and recover accounts. The frontend receives only the Supabase URL and publishable key. The API receives the Supabase access token in the `Authorization` header. Do not use a service-role key, database credential, or custom JWT in the browser.
 
-There is no public EDUNEXUS registration. A managed Auth identity must also have an active `edunexus.staff` record. On launch, call `/api/v1/me`. Treat `STAFF_ACCESS_REQUIRED` as an unapproved/suspended school account, and `MFA_REQUIRED` as a request to finish MFA. User metadata does not authorize features. Use API permissions as the final authority even if buttons are hidden.
+There is no public EDUNEXUS registration. A managed Auth identity must also have an active `edunexus.staff` record. On launch, call `/api/v1/me`. Treat `STAFF_ACCESS_REQUIRED` as an unapproved/suspended school account. User metadata does not authorize features. Use API permissions as the final authority even if buttons are hidden.
 
-The account page accepts invitation and recovery fragments, removes them from browser history, sets a password, and verifies MFA, then opens the workspace once `/api/v1/me` succeeds. It also offers "Email me a recovery link", which calls Supabase from the browser and answers identically whether or not an address is registered. Sign-out clears rendered school records; an expired or suspended session returns to sign-in. The frontend still needs its own complete account-management/recovery experience. Configure exact Auth redirect allowlists and API CORS origins. Reset links must remain on trusted routes. Follow the current Supabase Auth documentation when implementing session storage for the chosen frontend framework.
+The account page accepts invitation and recovery fragments, removes them from browser history and sets a password, then opens the workspace once `/api/v1/me` succeeds. It also offers "Email me a recovery link", which calls Supabase from the browser and answers identically whether or not an address is registered. Sign-out clears rendered school records; an expired or suspended session returns to sign-in. The frontend still needs its own complete account-management/recovery experience. Configure exact Auth redirect allowlists and API CORS origins. Reset links must remain on trusted routes. Follow the current Supabase Auth documentation when implementing session storage for the chosen frontend framework.
 
 The workspace has role-aware navigation, named adviser choices, paginated staff/section lists, cursor-based activity history, loading/retry messages, validation errors, and forms that retain edits after failed saves. PATCH requests include the displayed record version. Closing a year requires a confirmation. All displayed record text is assigned through DOM text properties, never inserted as HTML. UI permissions supplement the existing API and PostgreSQL checks.
 
@@ -71,7 +71,7 @@ Show draft school-year setup before activation. Allow period corrections only in
 
 Present provisioning honestly: EDUNEXUS does not send the invitation email and cannot create the identity. The operator does that in Supabase, and `INVALID_REFERENCE` means the identifier does not exist there yet. `INVITATION_STATE` means the request was already completed or cancelled, and `ALREADY_EXISTS` means either an open request for that email or an identity that already holds school access. Administrative officers see requests for any level but may only act on teacher ones.
 
-Recovery is already live on the sign-in page and uses the browser's Supabase client, not the API. Keep its reply identical whether or not an address is registered; a differentiated message would let a visitor probe which addresses exist. Authenticator reset is not available in the app.
+Recovery is already live on the sign-in page and uses the browser's Supabase client, not the API. Keep its reply identical whether or not an address is registered; a differentiated message would let a visitor probe which addresses exist.
 
 ## Learner registry and enrollment screens
 

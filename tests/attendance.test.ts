@@ -46,7 +46,7 @@ describe('Section 3B.1 reviewed classroom attendance', () => {
   const counts = async () => (await db.pg.query(`select (select count(*)::int from edunexus.attendance_days) days,(select count(*)::int from edunexus.attendance_marks) marks,
     (select count(*)::int from edunexus.attendance_review_events) reviews,(select count(*)::int from edunexus.audit_events) audits`)).rows;
   beforeAll(async () => {
-    db = await testDatabase(); app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token, aal: 'aal2' }; } } });
+    db = await testDatabase(); app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token }; } } });
     await db.pg.query("insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,2025,'2025-06-01','2026-03-31')", [year]);
     for (const [id, grade, actor] of [[a,1,ids.teacher],[b,1,ids.otherTeacher],[grade2,2,ids.otherTeacher]]) await db.pg.query('insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,$3,$4,$5)', [id, year, grade, id, actor]);
     await db.pg.query("insert into edunexus.reporting_periods(academic_year_id,ordinal,name,starts_on,ends_on) values($1,1,'Synthetic term','2025-06-01','2026-03-31')", [year]);

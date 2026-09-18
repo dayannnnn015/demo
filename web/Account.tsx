@@ -1,56 +1,31 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { message } from './api';
 import { StatusLine, type Status, idle } from './components/primitives';
 
-type Stage = 'loading' | 'signin' | 'set-password' | 'mfa' | 'ready';
+type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
 
-const steps: [Stage, string][] = [['signin', 'Sign in'], ['set-password', 'Password'], ['mfa', 'Authenticator']];
+const steps: [Stage, string][] = [['signin', 'Sign in'], ['set-password', 'Password']];
 
 /**
- * Sign-in, invitation completion and authenticator verification.
- * Supabase owns passwords, refresh tokens and MFA; this only drives its client.
+ * Sign-in and invitation completion.
+ * Supabase owns passwords and refresh tokens; this only drives its client.
  */
 export function Account({ client, onReady }: { client: SupabaseClient; onReady: () => void }) {
   const [stage, setStage] = useState<Stage>('loading');
   const [status, setStatus] = useState<Status>({ text: 'Connecting to the sign-in service…', kind: 'busy' });
-  const [qr, setQr] = useState('');
-  const [help, setHelp] = useState('');
   const [busy, setBusy] = useState(false);
-  const factor = useRef('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [code, setCode] = useState('');
 
   const fail = (error: unknown) => setStatus({ text: message(error), kind: 'error' });
 
-  async function beginMfa() {
-    const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (assurance.error) throw assurance.error;
-    if (assurance.data.currentLevel === 'aal2') { setStage('ready'); onReady(); return; }
-    const factors = await client.auth.mfa.listFactors();
-    if (factors.error) throw factors.error;
-    const existing = factors.data.totp.find(f => f.status === 'verified');
-    if (existing) {
-      factor.current = existing.id;
-      setQr('');
-      setHelp('Enter the current six-digit code from your authenticator app.');
-    } else {
-      // Remove only this user's own incomplete enrollments before starting again.
-      for (const pending of factors.data.all.filter(f => f.factor_type === 'totp' && f.status === 'unverified')) {
-        const removed = await client.auth.mfa.unenroll({ factorId: pending.id });
-        if (removed.error) throw removed.error;
-      }
-      const enrollment = await client.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'EDUNEXUS authenticator' });
-      if (enrollment.error) throw enrollment.error;
-      factor.current = enrollment.data.id;
-      setQr(enrollment.data.totp.qr_code);
-      setHelp('Scan this with your authenticator app, then enter the six digits it shows.');
-    }
-    setStage('mfa');
+  function finish() {
+    setStage('ready');
     setStatus(idle);
+    onReady();
   }
 
   useEffect(() => {
@@ -70,7 +45,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
             setStatus({ text: 'Choose a password to finish setting up your account.', kind: 'idle' });
             return;
           }
-          await beginMfa();
+          finish();
           return;
         }
         setStage('signin');
@@ -112,7 +87,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
               setPassword('');
               if (error) throw error;
-              await beginMfa();
+              finish();
             })}>
               <div className="field">
                 <label className="label" htmlFor="email">School email</label>
@@ -160,7 +135,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               const { error } = await client.auth.updateUser({ password: newPassword });
               setNewPassword(''); setConfirmation('');
               if (error) throw error;
-              await beginMfa();
+              finish();
             })}>
               <div className="field">
                 <label className="label" htmlFor="new-password">New password</label>
@@ -173,28 +148,6 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>
-              </div>
-            </form>
-          ) : null}
-
-          {stage === 'mfa' ? (
-            <form onSubmit={submit(async () => {
-              const challenge = await client.auth.mfa.challenge({ factorId: factor.current });
-              if (challenge.error) throw challenge.error;
-              const verified = await client.auth.mfa.verify({ factorId: factor.current, challengeId: challenge.data.id, code });
-              setCode('');
-              if (verified.error) throw verified.error;
-              setStage('ready');
-              onReady();
-            })}>
-              {qr ? <img className="qr" src={qr} alt="Set-up code for your authenticator app" /> : null}
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-700)' }}>{help}</p>
-              <div className="field">
-                <label className="label" htmlFor="code">Six-digit code</label>
-                <input id="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e => setCode(e.target.value)} />
-              </div>
-              <div className="form-actions">
-                <button type="submit" className="btn" disabled={busy}>{busy ? 'Checking…' : 'Verify and continue'}</button>
               </div>
             </form>
           ) : null}

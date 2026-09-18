@@ -15,6 +15,6 @@ app.use(createApp({
   origins: config.origins,
   logger: pino({ level: config.LOG_LEVEL }),
   publicAuth: { url: config.SUPABASE_URL, publishableKey: config.SUPABASE_PUBLISHABLE_KEY },
-  auth: createAuthenticator({ url: config.SUPABASE_URL, publishableKey: config.SUPABASE_PUBLISHABLE_KEY, requireMfa: config.REQUIRE_MFA }),
+  auth: createAuthenticator({ url: config.SUPABASE_URL, publishableKey: config.SUPABASE_PUBLISHABLE_KEY }),
 }));
 export default app;

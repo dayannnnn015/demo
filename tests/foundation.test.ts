@@ -17,7 +17,7 @@ describe('Section 1 API and PostgreSQL authorization', () => {
     app = createApp({ database: db.database, origins: ['http://localhost:3000'], logger: pino({ level: 'silent' }), auth: {
       async verify(token) {
         if (!Object.values(ids).includes(token)) throw new AppError(401, 'INVALID_TOKEN', 'Invalid token');
-        return { userId: token, aal: 'aal2' };
+        return { userId: token };
       },
     } });
   });

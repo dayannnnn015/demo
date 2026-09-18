@@ -31,7 +31,7 @@ describe('Section 2B.1 reviewed imports and LRN corrections', () => {
     (select count(*)::int from edunexus.audit_events) as audit`)).rows;
   beforeAll(async () => {
     db = await testDatabase();
-    app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token, aal: 'aal2' }; } } });
+    app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token }; } } });
     await db.pg.query("insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,2025,'2025-06-01','2026-03-31')", [year]);
     await db.pg.query("insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,1,'Synthetic import section',$3)", [section, year, ids.teacher]);
   });

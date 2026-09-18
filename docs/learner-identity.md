@@ -40,7 +40,7 @@ Roster import matching checks linked names but returns the retained profile as t
 
 The runtime cannot directly change identity pointers/revisions or insert, modify, or delete reconciliation events. Reviewed database commands create an event and update both profiles in one transaction; a failed final update rolls back the entire operation. History is manager-only. Read-access logs contain disclosed learner IDs; general audit logs contain field names, without copying the sensitive profile snapshots.
 
-Automated API/PostgreSQL tests cover authorization, preserved history, roster visibility, conflicts, imports, stale/competing requests, reversal, timeline interactions, closed years, and forced rollback. Hosted release evidence is recorded in [deployment](deployment.md). School acceptance, real MFA-authenticated workflows, concurrent hosted load, and restore testing remain outstanding. These endpoints are API-only; learner/reconciliation screens are still to be built.
+Automated API/PostgreSQL tests cover authorization, preserved history, roster visibility, conflicts, imports, stale/competing requests, reversal, timeline interactions, closed years, and forced rollback. Hosted release evidence is recorded in [deployment](deployment.md). School acceptance, real authenticated workflows, concurrent hosted load, and restore testing remain outstanding. These endpoints are API-only; learner/reconciliation screens are still to be built.
 
 Code predating API 0.5.0 does not understand retained identity mappings. After links exist, deploy a compatible release for rollback; never delete identity events or rewrite the original enrollment ownership to simulate rollback.
 

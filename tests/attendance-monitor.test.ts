@@ -44,7 +44,7 @@ describe('Section 3B.3 scoped absence monitoring',()=>{
     const url=`/api/v1/sections/${section}/attendance`,body={day_on:date(d),version,reason,changes:[{enrollment_id:id,am,pm}]};const p=await post(url+'/preview',body);expect(p.status,JSON.stringify(p.body)).toBe(201);
     const c=await post(url+'/corrections',{...body,review_hash:p.body.data.review_hash,reviewed:true});expect(c.status,JSON.stringify(c.body)).toBe(201);
   };
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');if(year)await db.pg.query("update edunexus.academic_years set status='closed' where id=$1 and status='active'",[year]);
     n++;year=randomUUID();section=randomUUID();other=randomUUID();

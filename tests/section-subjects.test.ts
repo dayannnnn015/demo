@@ -20,7 +20,7 @@ describe('Section 4A.2 subject offerings',()=>{
   const make=async(s:any,target=section)=>{const r=await add(s,{},target);expect(r.status,JSON.stringify(r.body)).toBe(201);expect(responses.offeringCreate!.safeParse(r.body.data).success).toBe(true);return r.body.data;};
   const change=(r:any,extra:object={},actor=ids.principal)=>request(app).patch('/api/v1/section-subjects/'+r.id).set('Authorization',`Bearer ${actor}`).send({version:r.version,active:r.active,display_order:r.display_order,refresh_subject:false,subject_version:null,reason,...extra});
   const activate=()=>db.pg.query("update edunexus.academic_years set status='active' where id=$1",[year]);
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');if(year)await db.pg.query("update edunexus.academic_years set status='closed' where id=$1 and status='active'",[year]);
     n++;year=randomUUID();section=randomUUID();other=randomUUID();await db.pg.query('insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,$2,$3,$4)',[year,n,`${n}-06-01`,`${n+1}-03-31`]);

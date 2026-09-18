@@ -4,7 +4,7 @@ This read-only API helps staff find recorded classroom absences and gaps in atte
 
 ## Access and request
 
-`GET /api/v1/sections/:id/attendance/monitor` requires active staff authentication and the existing deployed MFA assurance. Principals and administrative officers can read historical section membership. Teachers can read sections they currently advise and only learners still visible under current open-year roster rules. A withdrawn/transferred-away/voided learner is not disclosed through a teacher's historical monitor. Adviser changes and year closure update access immediately. Managers can read draft and closed years.
+`GET /api/v1/sections/:id/attendance/monitor` requires active staff authentication. Principals and administrative officers can read historical section membership. Teachers can read sections they currently advise and only learners still visible under current open-year roster rules. A withdrawn/transferred-away/voided learner is not disclosed through a teacher's historical monitor. Adviser changes and year closure update access immediately. Managers can read draft and closed years.
 
 Required query fields are `from` and `to`: an inclusive range of 1–31 dates within the section's school year, ending no later than today in Asia/Manila. There is no implicit clipping or lookback. The range may cross a month boundary. Today's missing marks can reflect sessions not yet recorded; they are never automatically absences.
 

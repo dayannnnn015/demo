@@ -39,7 +39,7 @@ describe('Section 3B.2 monthly attendance review and locks', () => {
   };
   const counts=async()=>(await db.pg.query(`select (select count(*)::int from edunexus.attendance_months) roots,(select count(*)::int from edunexus.attendance_month_snapshots) snapshots,
     (select count(*)::int from edunexus.attendance_month_events) events,(select count(*)::int from edunexus.audit_events) audits`)).rows;
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     // These business cases are independent of the limiter's separate test suite.
     await db.pg.query('delete from edunexus.request_buckets');

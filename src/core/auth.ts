@@ -2,13 +2,12 @@ import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import { z } from 'zod';
 import { AppError } from './errors.js';
 
-export interface Identity { userId: string; aal: 'aal1' | 'aal2'; }
+export interface Identity { userId: string; }
 export interface Authenticator { verify(token: string): Promise<Identity>; }
 
 export function createAuthenticator(options: {
   url: string;
   publishableKey: string;
-  requireMfa: boolean;
   keySet?: JWTVerifyGetKey;
   fetcher?: typeof fetch;
 }): Authenticator {
@@ -26,7 +25,6 @@ export function createAuthenticator(options: {
         throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
       }
       if (!z.uuid().safeParse(payload.sub).success || payload.role !== 'authenticated') throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
-      if (options.requireMfa && payload.aal !== 'aal2') throw new AppError(403, 'MFA_REQUIRED', 'Complete multi-factor authentication before accessing school records.');
       // Check the managed identity service too, so deleted/banned Auth users do
       // not remain usable until their signed access token expires.
       let response: Response;
@@ -39,7 +37,7 @@ export function createAuthenticator(options: {
       try { user = await response.json() as { id?: string }; }
       catch { throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.'); }
       if (user.id !== payload.sub) throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
-      return { userId: payload.sub!, aal: payload.aal === 'aal2' ? 'aal2' : 'aal1' };
+      return { userId: payload.sub! };
     },
   };
 }

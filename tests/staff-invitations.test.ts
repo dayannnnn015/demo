@@ -18,7 +18,7 @@ describe('Staff invitation records without a privileged runtime credential',()=>
   const cancel=(i:any,extra:object={},actor=ids.principal)=>post(`${base}/${i.id}/cancellation`,{version:i.version,reason,...extra},actor);
   // The Auth identity must already exist: EDUNEXUS never creates one.
   const identity=async()=>{const id=randomUUID();await db.pg.query('insert into auth.users(id) values($1)',[id]);return id;};
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');
     await db.pg.query('delete from edunexus.staff_invitation_events');

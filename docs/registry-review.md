@@ -29,7 +29,7 @@ After resolving issues, request another preview. A valid preview returns a UUID 
 
 ## Commit and receipts
 
-`POST /api/v1/roster-imports/:id/commit` takes the identical CSV, section, date, entry kind, and resolutions, plus `confirmed=true`. Only the preview's creator can commit it, with current manager/MFA authorization. CSV whitespace or line-ending changes invalidate the input fingerprint; resolution list order alone does not.
+`POST /api/v1/roster-imports/:id/commit` takes the identical CSV, section, date, entry kind, and resolutions, plus `confirmed=true`. Only the preview's creator can commit it, with current manager authorization. CSV whitespace or line-ending changes invalidate the input fingerprint; resolution list order alone does not.
 
 The token binds both the input and the reviewed plan, including relevant learner, section, and year versions. The API acquires the shared registry transaction lock, locks the school year, rechecks duplicates/enrollments, and rebuilds the plan before writing. All learner writes acquire the same lock before row locks; year closure cannot pass the locked year. [PostgreSQL transaction and row locks](https://www.postgresql.org/docs/current/explicit-locking.html).
 

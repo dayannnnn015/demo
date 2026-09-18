@@ -1,6 +1,6 @@
 # Section 2A: learner registry and enrollment
 
-This section adds the minimum learner profile, annual enrollment, and an immutable movement timeline. It builds on the existing staff authentication, MFA, role checks, school years, and sections. The user confirmed that principals and administrative officers make changes; teachers only read their assigned learners.
+This section adds the minimum learner profile, annual enrollment, and an immutable movement timeline. It builds on the existing staff authentication, role checks, school years, and sections. The user confirmed that principals and administrative officers make changes; teachers only read their assigned learners.
 
 ## Identity and duplicate handling
 
@@ -33,7 +33,7 @@ Movement history and ordinary change audit commit with the state change, or all 
 
 ## API
 
-All routes below use `/api/v1`, a Supabase bearer token, and deployed MFA. The complete request and response schemas are in `docs/openapi.json` and `/openapi.json`.
+All routes below use `/api/v1` and a Supabase bearer token. The complete request and response schemas are in `docs/openapi.json` and `/openapi.json`.
 
 | Route | Purpose |
 |---|---|

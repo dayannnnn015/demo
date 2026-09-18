@@ -53,4 +53,4 @@ That sameness has to include the rate limit. Supabase answers 200 for an unknown
 
 Supabase built-in mail also caps the whole project at a few messages an hour, which will not survive staff onboarding: configure a real SMTP provider first. An operator can issue a single link without mail through the Auth admin generate_link endpoint, which is not rate limited.
 
-Authenticator (MFA) reset is **not** covered. Removing a verified factor for someone who lost their device needs the admin API, so it remains an operator action in Supabase. That, and supervised device enrollment, still need a written operational process with the school.
+Sign-in is email and password only. The manuscript specifies no second authentication factor, and none is enforced.

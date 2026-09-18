@@ -30,7 +30,7 @@ describe('Section 2B.2 effective enrollment timelines and immutable corrections'
     (select count(*)::int from edunexus.audit_events) as audit`)).rows;
   beforeAll(async () => {
     db = await testDatabase();
-    app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token, aal: 'aal2' }; } } });
+    app = createApp({ database: db.database, logger: pino({ enabled: false }), origins: [], auth: { async verify(token) { return { userId: token }; } } });
     await db.pg.query("insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,2025,'2025-06-01','2026-03-31'),($2,2024,'2024-06-01','2025-03-31')", [year, otherYear]);
     for (const [id, y, grade, teacher] of [[sectionA, year, 1, ids.teacher], [sectionB, year, 1, ids.otherTeacher], [sectionC, year, 1, ids.otherTeacher], [wrongGrade, year, 2, ids.teacher], [wrongYear, otherYear, 1, ids.teacher]]) {
       await db.pg.query('insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,$3,$4,$5)', [id, y, grade, `Synthetic ${id}`, teacher]);

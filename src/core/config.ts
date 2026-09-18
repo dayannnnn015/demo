@@ -9,7 +9,6 @@ const schema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(10),
   ALLOWED_ORIGINS: z.string().min(1),
-  REQUIRE_MFA: booleanString.default(true),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   LOG_LEVEL: z.enum(['silent', 'error', 'warn', 'info', 'debug']).default('info'),
 });
@@ -34,8 +33,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     if (parsedOrigin.origin !== origin || !['http:', 'https:'].includes(parsedOrigin.protocol)) throw new Error('ALLOWED_ORIGINS must contain exact HTTP origins');
   }
   const deployed = c.NODE_ENV === 'production' || Boolean(env.VERCEL);
-  if (deployed && (!c.DATABASE_SSL || !c.REQUIRE_MFA || authUrl.protocol !== 'https:' || origins.some(o => !o.startsWith('https://')))) {
-    throw new Error('Deployed environments require database TLS, HTTPS origins/auth, and MFA');
+  if (deployed && (!c.DATABASE_SSL || authUrl.protocol !== 'https:' || origins.some(o => !o.startsWith('https://')))) {
+    throw new Error('Deployed environments require database TLS and HTTPS origins/auth');
   }
   return { ...c, SUPABASE_URL: authUrl.origin, origins };
 }

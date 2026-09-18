@@ -42,7 +42,7 @@ describe('Section 3B.4 manual attendance follow-up',()=>{
   };
   const counts=async()=>(await db.pg.query<{cases:number;events:number;audits:number}>(`select (select count(*)::int from edunexus.attendance_followups) cases,
     (select count(*)::int from edunexus.attendance_followup_events) events,(select count(*)::int from edunexus.audit_events) audits`)).rows;
-  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token,aal:'aal2'};}}});});
+  beforeAll(async()=>{db=await testDatabase();app=createApp({database:db.database,logger:pino({enabled:false}),origins:[],auth:{async verify(token){return {userId:token};}}});});
   beforeEach(async()=>{
     await db.pg.query('delete from edunexus.request_buckets');if(year)await db.pg.query("update edunexus.academic_years set status='closed' where id=$1 and status='active'",[year]);
     n++;year=randomUUID();section=randomUUID();other=randomUUID();

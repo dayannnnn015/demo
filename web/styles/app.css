@@ -332,7 +332,6 @@ details.row-detail > div { margin-top: var(--s3); padding: var(--s4); background
 .entry-steps li[data-state='current'] { color: var(--pine-700); font-weight: 600; }
 .entry-steps li[data-state='done'] { color: var(--ink-500); }
 .entry-steps .sep { color: var(--rule-strong); }
-img.qr { display: block; width: 190px; height: 190px; margin: 0 auto var(--s4); border: 1px solid var(--rule); border-radius: var(--radius); }
 
 /* ---------- Responsive ---------- */
 

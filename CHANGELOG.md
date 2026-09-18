@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.24.0 | Multi-factor authentication removed; sign-in is email and password | — |
 | 0.23.1 | Screen render tests, corrected working contract | — |
 | 0.23.0 | Learner registration and enrollment screens | — |
 | 0.22.0 | Workspace design system, grouped navigation, honest placeholders | — |
