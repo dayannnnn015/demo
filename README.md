@@ -170,7 +170,8 @@ The workspace at `/app` is a usability aid for backend review, not the final fro
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
 - **Every other module, listed honestly**: enrollment, roster import, calendars, attendance, academics and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
-- **Section 2A learner registry, read-only**: scoped search by name, exact LRN or birth date, with each learner's annual enrollment records loaded on request.
+- **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
+- **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
 
 Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion, authenticator enrollment and password recovery all run against Supabase from the browser.
 

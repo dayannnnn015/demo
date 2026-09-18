@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.23.0 | Learner registration and enrollment screens | — |
 | 0.22.0 | Workspace design system, grouped navigation, honest placeholders | — |
 | 0.21.0 | Workspace rebuilt on Vite + React | — |
 | 0.20.0 | Section 4B.1 — assessment tasks and raw score entry | 0021 |
@@ -29,6 +30,33 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.23.0 — Registering learners and recording movements
+
+The registry had no way to put anything in it, so every screen downstream had
+nothing to work with. A manager can now register a learner, correct their
+details, fill a pending LRN, enrol them into a section, and record the dated
+movements that follow.
+
+Registration keeps the rules the API enforces visible rather than hidden. A
+learner with no LRN yet is left blank instead of given a placeholder, and the
+field explains that EDUNEXUS never invents one. Assigning an LRN is offered
+only while it is still pending, and the form says it cannot be cleared or
+replaced afterwards.
+
+Movements are a dated form rather than a set of buttons, because which fields
+they need depends on what happened: a withdrawal records a reason and no
+section, while a move or a re-entry records a section and no reason. The
+section list offers only the same grade in the same school year, which is all
+the API accepts, and the date field says plainly that it is the first day of
+the new state. Movement history is shown as evidence and cannot be edited.
+
+Voided records are visible but closed to further movement, and a closed school
+year is read-only throughout.
+
+Both screens end with a note listing the reviewed workflows that exist in the
+API but still have no interface, so a walkthrough does not leave the impression
+that a missing screen means a missing capability.
 
 ## 0.22.0 — A workspace staff can be walked through
 

@@ -2,14 +2,15 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.22.0 · **Last commit:** `be83a11` · **Branch:** `master`, pushed, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.23.0 · **Last commit:** `pending` · **Branch:** `master`, pushed, working tree clean
 
 ## Just shipped
 
-The assessment chain is complete end to end — draft → adoption → binding → raw score entry — and the workspace was rebuilt on Vite + React.
+The workspace can now put data into the system: a manager registers learners, enrols them into sections and records dated movements. The assessment chain behind it is complete end to end — draft → adoption → binding → raw score entry — but has no interface yet.
 
 | Version | What |
 |---|---|
+| 0.23.0 | Learner registration and enrollment screens |
 | 0.22.0 | Workspace design system, grouped navigation, honest placeholders |
 | 0.21.0 | Workspace rebuilt on Vite + React, sessions in `sessionStorage` |
 | 0.20.0 | Section 4B.1 assessment tasks and raw score entry, migration 0021 |
@@ -23,11 +24,15 @@ The assessment chain is complete end to end — draft → adoption → binding �
 
 ## Next action
 
-**Build the learner registration and enrollment screens** (Section 2A mutations, manager-only, version-checked). The registry is empty, and nothing downstream is usable without learners. The route and its placeholder already exist in `web/routes.tsx`; replace the placeholder with a real screen.
+**Build the instructional calendar screen**, then daily attendance. Attendance cannot be recorded on a date the calendar does not describe, so the calendar comes first. Daily attendance is the highest-frequency screen in the system: 30 advisers, twice a day.
 
-Agreed frontend order after that: calendar setup → daily attendance → score entry → monthly workflows → imports and correction reviews. Daily attendance is the highest-frequency screen in the system: 30 teachers, twice a day.
+Frontend order after that: score entry → monthly consolidation → roster import and the reviewed correction workflows.
 
 Backend is **fully gated**: every remaining backend increment waits on a school decision. See below.
+
+### Known gap
+
+There are no automated frontend tests. Screens are verified by typecheck, build, and a server-side render of every route, which catches a crash on first render but not the data paths behind a fetch. A signed-in browser pass over the new screens has not happened, because no human has completed a sign-in yet. Worth adding a small render smoke test to the suite.
 
 ## In flight
 

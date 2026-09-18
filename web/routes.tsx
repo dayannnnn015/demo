@@ -5,6 +5,7 @@ import { School, SchoolYears, YearScoped } from './screens/Setup';
 import { Activity, Invitations, Staff } from './screens/Staff';
 import { Learners } from './screens/Learners';
 import { Upcoming } from './screens/Upcoming';
+import { Enrollment } from './screens/Enrollment';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number };
 
@@ -64,14 +65,11 @@ export const routes: Route[] = [
     render: p => <Learners {...p} />,
   },
   {
-    id: 'enrollment', nav: 'Enrollment', group: 'Learners', manager: true,
+    id: 'enrollment', nav: 'Enrollment', group: 'Learners', manager: true, built: true,
     title: 'Enrollment and movements',
     lede: 'Enrol a learner for a school year, move them between sections, withdraw and re-enter.',
     record: 'enrollments', feeds: 'movement columns of SF2 and SF4',
-    render: soon(
-      'Register learners and record dated movements.',
-      'The API supports annual enrolment, same-grade reassignment, withdrawal with a recorded reason, and re-entry, each keeping an immutable movement history. This screen is next to be built.',
-    ),
+    render: p => <Enrollment {...p} />,
   },
   {
     id: 'imports', nav: 'Roster import', group: 'Learners', manager: true,

@@ -71,6 +71,12 @@ Present provisioning honestly: EDUNEXUS does not send the invitation email and c
 
 Recovery is already live on the sign-in page and uses the browser's Supabase client, not the API. Keep its reply identical whether or not an address is registered; a differentiated message would let a visitor probe which addresses exist. Authenticator reset is not available in the app.
 
+## Learner registry and enrollment screens
+
+Registration, profile correction, LRN assignment, enrollment and movements are built, manager-only, and version-checked. Two rules carried into the interface are worth keeping if these screens are reworked. A pending LRN is left blank rather than given a placeholder, and assignment is offered only while it is still null, because the API accepts it once and never clears it. A movement is a dated event whose fields depend on the action, so it is a form rather than a row of buttons: withdrawal takes a reason and no section, a move or re-entry takes a section and no reason, and the section list is filtered to the same grade and year because nothing else is accepted.
+
+**Still API-only.** These screens deliberately do not offer: correcting an LRN that was already assigned, repairing a recorded movement or its dates, voiding and restoring an annual record, correcting a whole-year grade placement, merging duplicate learner records, or importing a class list from a file. Each is a reviewed workflow with preview, hash and confirmation semantics that a plain form would misrepresent. Both screens end with a note naming them, so a walkthrough does not read a missing screen as a missing capability.
+
 ## Learner registry screens
 
 The workspace has a read-only **Learners** tab for every role, built on [Section 2A](learner-registry.md). It searches `GET /learners` with the documented `search`, `lrn` and `birth_date` filters, pages 25 rows at a time by `offset`, and loads a learner's `GET /enrollments?learner_id=` records only when a staff member opens that row, because every successful read appends a record-access event.
