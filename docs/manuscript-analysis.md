@@ -50,6 +50,26 @@ The system is for school staff. Its roles are principal, administrative officer,
 
 Philippine privacy law treats education information as sensitive personal information. That supports data minimization, constrained staff access, and protected handling as design requirements. This analysis is not a certification of legal compliance. [National Privacy Commission: Data Privacy Act](https://privacy.gov.ph/data-privacy-act/).
 
+## Second full read, 18 September 2026
+
+A complete pass over all 731 extracted lines, after the backend and the workspace were built. It confirmed the findings above and added the following.
+
+**The paper is a Capstone 1 submission, and Chapter 3 stops exactly where this project now is.** Section 3.1 Requirements Planning is written in the past tense and is complete. Section 3.2 User Design begins and breaks off at 3.2.1 System Architecture Design. Its remaining stages name deliverables this repository has now produced: 3.2.2 Database Design calls for a finalized ERD and schema, and 3.2.3 User Interface Design calls for prototypes. Both stages say the school head, administrative officers and teachers review the output and that revisions continue until they approve it. Neither the [ERD](erd.md) nor the workspace has been through that review, so both are drafts in the paper's own terms.
+
+**The deployment approach was meant to be a client decision.** Section 2.4.1 says the approach, local network or cloud, is determined in coordination with the client based on their resources and preferred accessibility. EDUNEXUS runs on Vercel and Supabase, chosen by the operator. That is a reasonable choice and it works, but the school has not confirmed it, and cloud hosting of learner records interacts with the privacy gate. It is recorded as a decision awaiting confirmation rather than a settled one.
+
+**A grading period is about ten weeks.** The teacher interview gives that figure directly, which points at quarters rather than the three-term calendar the April 2026 order describes. It is evidence, not an answer: it is a description of current practice, not of the issuance the school will follow for the target year. It belongs in the grading request as a cross-check, not as a basis for building anything.
+
+**The section count is exactly 30.** Kindergarten has six classes and each of Grades 1 to 6 has four sections, which matches the 30 teaching personnel and the 27-concurrent-user target. Useful for load planning and for sizing roster screens.
+
+**SF9 is the sharpest pain point named by a user.** The teacher describes manually populating the SF9 template for each learner, and about one week spent per grading period preparing reports and averages. Section 6 is currently the least built part of the system and the one a teacher would feel most.
+
+**Data security is the principal's stated primary concern** about learner records, given in answer to a question about record-keeping challenges rather than about technology. The existing emphasis on scoped access, audit and protected history answers a concern the client actually raised.
+
+**Interventions are named programs.** At-risk learners are identified through grading, literacy and numeracy assessments, and referred to the National Learning Camp, remediation activities, and a school programme called "Pagbasa Mo, Tutukan Ko". The system records none of these, and nothing in the scope asks it to.
+
+**Two figures in the paper still disagree.** The interview says 30 teaching personnel; the non-functional requirement asks for at least 27 concurrent users. Neither is necessarily wrong, but the acceptance test should state which number it is testing.
+
 ## Manuscript improvements
 
 Reconcile the 30-teacher staffing figure with the minimum 27-concurrent-user target; neither number is necessarily wrong, but the acceptance load should be explicit. Clarify manager-versus-teacher class creation and how old advisers retain or lose historical access. Define report statuses, correction authority, and promotion exceptions. Specify measurable processing and recovery targets with the school.

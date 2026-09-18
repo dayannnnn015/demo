@@ -43,6 +43,7 @@ Recorded so they are not re-litigated each session.
 | Date | Decision |
 |---|---|
 | 2026-09-17 | "Assessment policies are drafts only" in the v0.15.0 briefing **described the state at that release**; it did not forbid building approval. Section 4A.4 adoption is in scope and stays. Section binding and grade calculations remain separate: binding is the next increment, calculations stay behind the grading gate. |
+| 2026-09-18 | Cloud hosting on Vercel and Supabase was chosen by the operator. The paper makes the deployment approach a client decision, so this awaits school confirmation and interacts with the privacy gate. |
 | 2026-09-18 | Frontend work is no longer deferred. The workspace is a Vite + React app with sessions in `sessionStorage`; the API is far ahead of the interface and the TAM evaluation measures the interface. |
 | 2026-09-17 | Staff invitations are tracked in EDUNEXUS, but identity creation stays with the operator. The runtime holds no service-role key. |
 | 2026-09-17 | Adoption records a school decision, not a correctness judgement. `adoption_reference` is the school's own record of the decision and is never treated as proof the content is right. |

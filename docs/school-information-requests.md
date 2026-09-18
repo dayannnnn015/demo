@@ -17,6 +17,22 @@ Ask in this order. Request 1 alone unblocks roughly ten increments and is the cr
 | 5 | Learner fields and class capacity | Registry acceptance and promotion capacity | Not sent |
 | 6 | Privacy owner and approved purposes | Importing any real learner data | Not sent |
 | 7 | Staff MFA enrollment and acceptance testing | Section 1 sign-off, Section 7 turnover | Not sent |
+| 8 | Design review of the ERD and the workspace | Closing User Design in the paper's own terms | Not sent |
+| 9 | Confirmation of cloud hosting | Recorded deployment decision | Not sent |
+
+## Request 8 — Design review of the ERD and the workspace
+
+**Why:** the methodology makes the database design and the interface prototypes reviewable deliverables, approved by the school head, administrative officers and teachers, with revisions until they agree. Neither has been through that review.
+
+**Ask for:** a session where the school walks through [the ERD](erd.md) and the deployed workspace, and says what is missing, misnamed or wrong. Record what they ask to change.
+
+**Sufficient answer:** an approval, or a list of changes, attributable to named staff on a date.
+
+## Request 9 — Confirmation of cloud hosting
+
+**Why:** the paper says the deployment approach is decided with the client. EDUNEXUS runs on Vercel and Supabase because the operator chose that; the school has not confirmed it, and it is inseparable from where learner data physically sits.
+
+**Ask for:** confirmation that cloud hosting is acceptable, or the constraint that would require a local deployment instead. This belongs in the same conversation as the privacy owner in Request 6.
 
 ## Handling what comes back
 
