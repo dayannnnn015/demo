@@ -2,6 +2,8 @@
 
 Generated from the live `edunexus` schema: 44 tables across 21 migrations. A single diagram at that size is unreadable, so this is an overview followed by one diagram per domain.
 
+For a document rather than a screen, use the rendered figures in [diagrams/](diagrams/): each diagram as SVG and as a double-resolution PNG, with suggested captions.
+
 ## How to read these
 
 Two patterns repeat throughout and explain most of the table count.
