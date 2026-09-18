@@ -55,7 +55,11 @@ untested as they were.
 
 ## The live site is current again
 
-**The live site serves 0.25.1** and is now one release behind again: 0.26.0 is committed but not deployed. Deploy with `npx vercel --prod`.
+**https://edunexus-balili.vercel.app serves 0.26.0**, deployment `dpl_798yTJdPyphBP9nhGCNTS32gvDom`.
+
+Verified after deploying: the live OpenAPI reports 0.26.0 across 80 paths and 109 operations and is byte-identical to `docs/openapi.json`, and the served bundle references the same `index-UCvhFvJG.js` and `index-CIrPJzaG.css` as the local build, so the redesign is what is actually running. Smoke checks pass — `/health/live` 200, `/health/ready` 200, `/api/v1/me` 401 unauthenticated, `/account/config` 200, `/app` 200.
+
+**Deploying needs `--scope joshs-projects-47d7b071`.** A bare `vercel deploy --prod` answers `Not authorized`, because the `orgId` recorded in `.vercel/project.json` does not resolve against the logged-in account — even though `vercel whoami` succeeds and `vercel project ls` lists the project. This cost one failed attempt; the flag is now in [deployment.md](deployment.md).
 
 It had been stuck on 0.23.0. A user hit a sign-in screen still asking for an authenticator code — a screen deleted in 0.24.0 — and the cause was not the code but the deployment: three releases were committed, pushed and CI-green while the running site stayed three behind. The live OpenAPI reported 79 operations against 80 locally, so `/api/v1/staff-invitations/{id}/identity` was absent and account creation had nothing to call.
 
@@ -65,8 +69,8 @@ Verified after deploying: the OpenAPI reports 0.25.1 and 80 operations, the iden
 
 ## Next action
 
-**Deploy 0.26.0 and complete the first real sign-in.** The redesign is only
-verified against server-rendered markup; nobody has seen it in a browser with a
+**Complete the first real sign-in.** 0.26.0 is deployed and the live bundle is
+confirmed to be the redesigned one, but nobody has seen it in a browser with a
 session behind it, and no human has ever completed an authenticated session
 against this system at all. That is the oldest open item in the project and the
 largest remaining unknown. Deploying the account service is the other operator

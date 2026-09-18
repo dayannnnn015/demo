@@ -124,10 +124,10 @@ For local development, merge `DATABASE_URL` from `.local/runtime.env` into `.env
 
 Never upload `MIGRATION_DATABASE_URL`, the database owner password, bootstrap fields, local development secrets, or Supabase service-role keys. Vercel uses Express, Node 24, the repository root, `npm run build`, and Singapore `sin1` from `vercel.json`. `src/index.ts` is the sole Vercel application entrypoint. The app factory lives in `src/http-app.ts` so framework detection cannot select it accidentally. [Express deployment](https://vercel.com/docs/frameworks/backend/express).
 
-After setting variables, deploy to the dedicated project:
+After setting variables, deploy to the dedicated project. **Pass `--scope` explicitly.** The `orgId` in `.vercel/project.json` does not resolve against the logged-in account, so a bare `vercel deploy --prod` fails with `Not authorized` even though `vercel whoami` succeeds and `vercel project ls` lists `edunexus`:
 
 ```powershell
-rtk proxy npm.cmd exec --yes --package=vercel -- vercel deploy --prod
+rtk proxy npm.cmd exec --yes --package=vercel -- vercel deploy --prod --scope joshs-projects-47d7b071
 ```
 
 Configure preview environments separately with development-only credentials and exact origins. Do not point preview builds at the school's real-data database. Configure edge abuse controls for anonymous traffic; the shared per-staff limiter applies after token verification. Keep migrations out of build hooks.
