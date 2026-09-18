@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.25.0 · **Last commit:** `56c442d` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-18 · **Version:** 0.25.0 · **Last commit:** `9b79d8b` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
@@ -11,6 +11,8 @@ Two changes, both settled by reading the manuscript itself rather than the docum
 **Multi-factor authentication is gone.** The paper never mentions MFA, an authenticator, TOTP, OTP or a second factor anywhere. Its only security requirements are Data Confidentiality and role-based Access Control, which the staff roles and RLS policies already carry. Sign-in is now email and password, which also removes the enrollment step that was blocking the first real sign-in. The paper does not mention passwords either, so this was put to the user as a judgement rather than a deduction, and the reasoning is recorded in [constraints.md](constraints.md).
 
 **A manager can create a faculty account.** That one *is* in the paper — Table 1's first functional requirement is that the Principal or Administrative Officer can manage authorized teacher accounts — and it was the only part of that requirement the system could not do. Minting an Auth identity needs a service-role key, and that key still does not go in the API runtime: it lives in an isolated Edge Function whose only reachable action is inviting one address, with no update, delete or read path over other identities.
+
+Three **process ERDs** were then added for the paper — class preparation, attendance record, academic record — cut along the processes the manuscript names rather than along implementation domains, and each standalone. Checking them against the migrations turned up eight errors in the existing diagrams (wrong column names, wrong enum values, two columns that do not exist). All corrected, every figure regenerated, and the regeneration recipe is now written down so the drift cannot recur silently. No schema change.
 
 | Version | What |
 |---|---|
