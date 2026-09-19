@@ -176,18 +176,18 @@ Three things in these documents are structural rather than personal, carry no le
 
 **Eight learning areas for Grades 4–6**, from the SF9's own table, as `kind=learning_area` against `grade_levels=[4,5,6]`. Codes are the catalog's to choose and are immutable once set, so agree them before the first write:
 
-| Name | Grades |
-|---|---|
-| Filipino | 4, 5, 6 |
-| English | 4, 5, 6 |
-| Mathematics | 4, 5, 6 |
-| Science | 4, 5, 6 |
-| Araling Panlipunan | 4, 5, 6 |
-| GMRC | 4, 5, 6 |
-| Edukasyong Pantahanan at Pangkabuhayan | 4, 5, 6 |
-| MAPEH | 4, 5, 6 |
-| Music & Arts | 4, 5, 6 |
-| Physical Education & Health | 4, 5, 6 |
+| Proposed code | Name | Grades |
+|---|---|---|
+| `FILIPINO` | Filipino | 4, 5, 6 |
+| `ENGLISH` | English | 4, 5, 6 |
+| `MATHEMATICS` | Mathematics | 4, 5, 6 |
+| `SCIENCE` | Science | 4, 5, 6 |
+| `AP` | Araling Panlipunan | 4, 5, 6 |
+| `GMRC` | GMRC | 4, 5, 6 |
+| `EPP` | Edukasyong Pantahanan at Pangkabuhayan | 4, 5, 6 |
+| `MAPEH` | MAPEH | 4, 5, 6 |
+| `MUSIC_ARTS` | Music & Arts | 4, 5, 6 |
+| `PE_HEALTH` | Physical Education & Health | 4, 5, 6 |
 
 MAPEH appears three times because the report card does: one graded line and two reported beneath it. Whether those are three subjects or one with two reported parts is the school's to say, and the catalog should not guess. The Kinder and Grades 1–3 lists are not in any supplied document.
 
@@ -196,3 +196,11 @@ This one has no dependency on the calendar or on staff accounts. It is the singl
 A fourth thing is half known. The SF9 reports four quarters, so the year has four reporting periods rather than three terms — but `periodCreate` takes each one's start and end dates, and those are in the school calendar, not on any of these forms.
 
 Listing a subject for a grade defines no assessment behavior. Seeding any of this through a migration would bypass the version check and the change journal that every write carries, so it goes in through the API as a manager, with a reason, or not at all.
+
+### Why the operator credential is not a way around the missing manager
+
+It is worth writing down, because it looks like a shortcut and is only one for two of the three.
+
+`edunexus.audit_events.actor_user_id` is nullable, so the school profile and the sections *can* be written by the operator directly — the row lands and the audit entry simply records nobody. `edunexus.subject_events.actor_user_id` is `not null` and references `edunexus.staff`, so `create_subject` **cannot** run without naming an active manager who did it. The catalog refuses an unattributed write by design, and that is the correct behavior rather than an obstacle: naming the invited principal as the actor for ten rows they never entered would put a false name in the journal of a system whose point is that the journal is true.
+
+So the honest options are a real sign-in, or an operator write that leaves the actor null and enters no subjects. `.local/apply-school-facts.ts` does whichever it is given, dry-runs by default, is idempotent, and invents no academic year: if 2026–2027 does not exist it skips the sections and says so, because the year needs term dates that no supplied form carries.
