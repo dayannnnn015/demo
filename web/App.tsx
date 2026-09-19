@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createApi, message, type Page, type Row } from './api';
 import { Account } from './Account';
 import { AppShell, PageHeader } from './components/AppShell';
-import { Icon } from './components/icons';
+import { BrandMark } from './components/brand';
 import { StatusLine, idle, yearName, type Status } from './components/primitives';
 import { routeFor } from './routes';
 
@@ -84,7 +84,7 @@ export function App() {
       <div className="auth">
         <div className="auth-card">
           <div className="auth-brand">
-            <span className="brand-mark"><Icon name="school" size={17} /></span>
+            <span className="brand-mark"><BrandMark size={28} /></span>
             <span className="brand-text">
               <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
               <span>Balili Elementary School</span>

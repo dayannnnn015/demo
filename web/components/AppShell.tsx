@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Row } from '../api';
 import { groups, routes, type Route } from '../routes';
+import { BrandMark } from './brand';
 import { Icon } from './icons';
 import { sentence } from './primitives';
 
@@ -152,7 +153,7 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
       <nav className="rail" aria-label="Sections">
         <div className="rail-head">
           <span className="brand">
-            <span className="brand-mark" aria-hidden="true"><Icon name="school" size={18} /></span>
+            <span className="brand-mark" aria-hidden="true"><BrandMark size={28} /></span>
             <span className="brand-text">
               <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
               <span>Learner records system</span>

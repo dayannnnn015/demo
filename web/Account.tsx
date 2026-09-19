@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { message } from './api';
-import { Icon } from './components/icons';
+import { BrandMark } from './components/brand';
 import { StatusLine, type Status, idle } from './components/primitives';
 
 type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
@@ -64,7 +64,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
     <div className="auth">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-mark"><Icon name="school" size={17} /></span>
+          <span className="brand-mark"><BrandMark size={28} /></span>
           <span className="brand-text">
             <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
             <span>Balili Elementary School</span>

@@ -120,7 +120,7 @@ export function Timeline({ from, to, spans, today }: {
   return (
     <div className="timeline">
       <svg viewBox="0 0 1000 48" preserveAspectRatio="none" role="img" aria-label={`School year ${from} to ${to}, ${spans.length} reporting periods`}>
-        <rect className="timeline-track" x="0" y="14" width="1000" height="20" rx="4" />
+        <rect className="timeline-track" x="0" y="14" width="1000" height="20" />
         {spans.map((span, index) => {
           const x = Math.max(0, at(span.from));
           const right = Math.min(1000, at(span.to));
@@ -132,11 +132,10 @@ export function Timeline({ from, to, spans, today }: {
               y="14"
               width={Math.max(right - x, 2).toFixed(2)}
               height="20"
-              rx="4"
             />
           );
         })}
-        {inside ? <rect className="timeline-now" x={Math.min(998, Math.max(0, at(today))).toFixed(2)} y="6" width="2" height="36" rx="1" /> : null}
+        {inside ? <rect className="timeline-now" x={Math.min(998, Math.max(0, at(today))).toFixed(2)} y="6" width="2" height="36" /> : null}
       </svg>
       <div className="timeline-ends">
         <span>{from}</span>

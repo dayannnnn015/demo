@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.27.1 | Square corners, a wider brighter rail, the EDUNEXUS mark as inline SVG | — |
 | 0.27.0 | Navy rail, collapsible navigation, top-bar profile, Overview screen | — |
 | 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen | — |
 | 0.25.1 | Dead MFA content-security directive removed from the workspace page | — |
@@ -36,6 +37,52 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.27.1 — Square corners, a brighter rail and the school's own mark
+
+Three requests from the user, all of them to the surface rather than to any
+record the system holds.
+
+**Every corner in the system is square.** The four radius tokens are `0`, and the
+corners that had bypassed them went with them: the brand tile, the DEV tag, the
+legend swatch, and four `999px` pills — the SOON badge, the profile trigger, the
+avatar and the loading skeleton. The timeline track, its bars and its today
+marker lost their `rx` so the figures match the chrome. The tokens keep their
+names so the whole scale still tunes from one place.
+
+**The rail is wider and its blue is more saturated**, 268px to 296px with the
+off-canvas drawer moved in proportion. The ramp shifted off the desaturated navy
+onto a true blue at the same five depths, and **rail text is now white** —
+`--rail-ink` and `--rail-dim` are both `#ffffff`, so navigation labels, group
+headings and the school name all read at full strength and hierarchy in the rail
+comes from size and weight rather than from dimming the text. `--rail-faint`
+stays a step down at `#b9d3f0` for icons and rules, which are not body text.
+White is 13.5:1 on the new base and 6.5:1 on the current-page fill, so the
+brighter blue costs none of the checked ratios.
+
+**The EDUNEXUS mark replaces the generic school glyph** in the rail, on the
+sign-in card and on the account screen. The user supplied it as a PNG, and it
+could not be used as one: the workspace policy is `default-src 'none'` with no
+`img-src`, so a file, a `data:` URL and a favicon are all dropped silently in
+production. Relaxing the policy would have been weakening a backend control for
+an interface convenience, so `web/components/brand.tsx` carries a vector redraw
+instead — traced from the supplied artwork's own measurements, with its three
+colours sampled from the file: navy `#02264d`, blue `#329df0`, sun `#fcb929`.
+That is the same reason the icon set and the charts are inline SVG. The original
+PNG and an export of the redraw sit in `docs/brand/`; anyone re-cutting the mark
+should compare the two. The mark carries its own navy, so `.brand-mark` is now a
+white tile — visible as one in the rail, invisible on the sign-in card, where the
+mark simply sits on the card as the artwork is drawn. There is still no favicon,
+and under this policy there cannot be one.
+
+**One alignment defect fixed in passing.** "Collapse sidebar" sat in the middle
+of the rail: a `<button>` centres its text by default and `.nav-label` is
+`flex: 1`. It predates this release; the wider rail made it obvious.
+
+Verified the same way as 0.27.0 — server-rendering the real components against
+the real built stylesheet and screenshotting the rail and the sign-in card — and
+by rendering the redrawn mark against the supplied PNG at each pass. No migration,
+no API change; the version moves only so the interface release is nameable.
 
 ## 0.27.0 — A navy rail, a collapsible sidebar and a landing screen
 

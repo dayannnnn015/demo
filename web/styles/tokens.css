@@ -18,14 +18,14 @@
   color-scheme: light;
 
   /* Rail — the one dark surface. Ink values are checked against --rail-900. */
-  --rail-900: #0b1f38; /* rail base */
-  --rail-800: #112c4c; /* raised block inside the rail */
-  --rail-700: #16385e; /* hover */
-  --rail-600: #1a4470; /* current page */
-  --rail-line: #1c3555;
-  --rail-ink: #e8eef6; /* 14.2:1 on --rail-900 */
-  --rail-dim: #93a9c4; /* 6.9:1 on --rail-900, 5.0:1 on --rail-700 hover */
-  --rail-faint: #6f88a6; /* 4.5:1 — icons and rules; never body text */
+  --rail-900: #0d2c5c; /* rail base */
+  --rail-800: #123a76; /* raised block inside the rail */
+  --rail-700: #17498f; /* hover */
+  --rail-600: #1d5bb0; /* current page */
+  --rail-line: #2a5490;
+  --rail-ink: #ffffff; /* 13.5:1 on --rail-900, 6.5:1 on --rail-600 */
+  --rail-dim: #ffffff; /* rail labels are white; hierarchy is size and weight */
+  --rail-faint: #b9d3f0; /* 8.5:1 — icons and rules; never body text */
 
   /* Accent */
   --accent-900: #0b2f52;
@@ -93,15 +93,17 @@
   --s6: 32px;
   --s7: 48px;
 
-  --r-sm: 6px;
-  --r: 8px;
-  --r-md: 10px;
-  --r-lg: 12px;
+  /* Square by design. The system reads as drawn with a ruler, so corners stay
+     sharp everywhere; these stay named so the whole scale tunes from one place. */
+  --r-sm: 0;
+  --r: 0;
+  --r-md: 0;
+  --r-lg: 0;
 
   --shadow-xs: 0 1px 2px rgba(15, 27, 42, .05);
   --shadow-pop: 0 1px 2px rgba(15, 27, 42, .06), 0 12px 28px -10px rgba(15, 27, 42, .28);
 
-  --rail-w: 268px;
+  --rail-w: 296px;
   --topbar-h: 64px;
   --measure: 1360px;
   --focus: var(--accent-600);
