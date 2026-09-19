@@ -547,9 +547,9 @@ erDiagram
   STAFF ||--o{ IMPORT_PREVIEWS : "stages a class list"
 
   STAFF {
-    uuid user_id PK "auth.users"
+    uuid user_id PK
     text display_name
-    enum role "principal, administrative_officer, teacher"
+    enum role
     boolean active
     integer version
   }
@@ -558,13 +558,13 @@ erDiagram
     integer start_year UK
     date starts_on
     date ends_on
-    enum status "draft, active, closed"
+    enum status
     integer version
   }
   REPORTING_PERIODS {
     uuid id PK
     uuid academic_year_id FK
-    smallint ordinal "unique per year"
+    smallint ordinal
     text name
     date starts_on
     date ends_on
@@ -648,12 +648,12 @@ erDiagram
   ACADEMIC_YEARS {
     uuid id PK
     integer start_year UK
-    enum status "draft, active, closed"
+    enum status
   }
   STAFF {
     uuid user_id PK
     text display_name
-    enum role "principal, administrative_officer, teacher"
+    enum role
     boolean active
   }
   SECTIONS {
@@ -667,45 +667,45 @@ erDiagram
     uuid id PK
     uuid learner_id FK
     uuid section_id FK
-    text status "enrolled, withdrawn"
-    text record_state "valid, voided"
+    text status
+    text record_state
   }
   INSTRUCTIONAL_CALENDARS {
-    uuid id PK "also the academic_year_id"
+    uuid id PK
     integer version
   }
   INSTRUCTIONAL_DAYS {
     uuid id PK
-    uuid academic_year_id FK "the calendar"
-    uuid section_id FK "null means school-wide"
+    uuid academic_year_id FK
+    uuid section_id FK
     date day_on
-    boolean configured "false means the date is unconfigured"
-    text am "classroom, alternative_delivery, no_class, suspended"
+    boolean configured
+    text am
     text pm
-    text day_type "regular, holiday, school_break, weekend, makeup, suspension, other"
+    text day_type
     text label
   }
   ATTENDANCE_DAYS {
     uuid id PK
     uuid section_id FK
-    date day_on "unique per section"
+    date day_on
     integer version
   }
   ATTENDANCE_MARKS {
     uuid id PK
     uuid attendance_day_id FK
     uuid enrollment_id FK
-    date day_on "unique per enrollment"
-    text am "present, absent; null means not recorded"
-    text pm "present, absent; null means not recorded"
+    date day_on
+    text am
+    text pm
     integer version
   }
   ATTENDANCE_MONTHS {
     uuid id PK
     uuid section_id FK
     uuid academic_year_id FK
-    date month_on "first of the month"
-    text status "draft, submitted, locked"
+    date month_on
+    text status
     uuid snapshot_id FK
     integer version
   }
@@ -713,7 +713,7 @@ erDiagram
     uuid id PK
     uuid section_id FK
     date month_on
-    jsonb payload "roster and marks as submitted"
+    jsonb payload
     text data_hash
   }
   ATTENDANCE_FOLLOWUPS {
@@ -721,14 +721,16 @@ erDiagram
     uuid enrollment_id FK
     uuid section_id FK
     date from_on
-    date to_on "window of at most 31 dates"
-    text category "absence, recording_gap"
-    text status "open, resolved, cancelled"
+    date to_on
+    text category
+    text status
     uuid assignee_user_id FK
-    date due_on "nullable, open cases only"
+    date due_on
     jsonb opening_evidence
   }
 ```
+
+The figure carries no note column, so the values it leaves out are here. An instructional day records `am` and `pm` as one of `classroom`, `alternative_delivery`, `no_class` or `suspended`, and a `day_type` of `regular`, `holiday`, `school_break`, `weekend`, `makeup`, `suspension` or `other`; `configured` is false exactly when the date has never been described. A day row with a null `section_id` is school-wide, and one with a section is that section's override. A mark records `am` and `pm` as `present` or `absent`, with null meaning not recorded. A month is `draft`, `submitted` or `locked`, keyed to the first of the month. A follow-up case has a `category` of `absence` or `recording_gap`, a `status` of `open`, `resolved` or `cancelled`, a due date only while open, and a window of at most 31 dates.
 
 Two absences of a record are meaningful here, and neither is a zero.
 

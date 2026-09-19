@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-18 · **Version:** 0.26.0 · **Last commit:** `1435a14` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-19 · **Version:** 0.26.0 · **Last commit:** `b9bbfec` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
@@ -52,6 +52,34 @@ untested as they were.
 | 0.20.0 | Section 4B.1 assessment tasks and raw score entry, migration 0021 |
 
 283 tests across 22 files. **All 21 migrations are applied**; none of these increments adds one. CI green on `master`.
+
+## Every ERD figure is portrait now
+
+All the diagram figures were reshaped to fit a portrait page, and the constraint
+behind each choice is written into [diagrams/README.md](diagrams/README.md) so it
+is not rediscovered.
+
+**The general ERD is two figures.** One figure for all twenty entities came out
+2188 x 1881 — almost square — and Mermaid's ER renderer gives no way to change
+that. `layoutDirection`, `nodeSpacing`, `rankSpacing` and `minEntityWidth` are
+accepted by the config and then ignored, in Mermaid 11 and 12 alike; a
+`direction LR` statement makes it wider; dropping the attribute blocks makes it
+wider again; ELK is not wired to ER diagrams. Splitting was the only thing that
+worked, so it is now records (1252 x 1349) and academics (1047 x 1943), each
+standalone, together carrying all 20 entities and all 24 relationships.
+
+**The three process views stay single figures.** Their width comes from the note
+column — enum values beside an attribute, which Mermaid never wraps — not from
+layout. Class preparation dropped notes only on the three entities it repeats for
+context and is now 1791 x 1865. Attendance record had to drop all of them, since
+its longest notes sit on its own core entities and nothing else reached portrait;
+it is now 1524 x 1618, and the values it no longer prints are written out in the
+prose under that figure in [erd.md](erd.md). Academic record was already portrait
+at 1612 x 2029 and is untouched.
+
+No schema change, and no other figure changed: the remaining nine were
+re-rendered from their new block indices and reproduce their committed
+dimensions exactly.
 
 ## The live site is current again
 
