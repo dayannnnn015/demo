@@ -122,11 +122,15 @@ fetch are exactly as untested as they were.
 
 ## Next action
 
-**Deploy 0.27.1 and complete the first real sign-in.** The live site still serves
-0.26.0. Deploy with `npx vercel --prod --scope joshs-projects-47d7b071` — a bare
-`vercel deploy --prod` answers `Not authorized`, and pushing to `master` runs CI
-but does not ship. Then open the recovery link, set a password, and sign in at
-https://edunexus-balili.vercel.app.
+**Complete the first real sign-in.** 0.27.1 is deployed — the live site served
+0.26.0 for two releases because **nothing deploys on a push**. The Vercel project
+is not git-connected, so `git push` runs CI and ships nothing; `npx vercel --prod
+--scope joshs-projects-47d7b071` is the only thing that releases, and a bare
+`vercel deploy --prod` answers `Not authorized`. Either connect the repository or
+treat the deploy as a manual step at the end of every release.
+
+What remains is the sign-in itself: open the recovery link, set a password, and
+sign in at https://edunexus-balili.vercel.app.
 
 That closes the oldest open item in the project: no human has ever completed an
 authenticated session against this system, and the Overview is the first screen
@@ -156,7 +160,7 @@ Nothing. No half-finished work, no uncommitted changes.
 
 ## Waiting on the user
 
-1. **Deploy 0.27.1.** The live site is two releases behind. `npx vercel --prod --scope joshs-projects-47d7b071`; steps are in [deployment.md](deployment.md).
+1. **Push `master`.** The deployed release was built from local source; `origin` is behind, so the live artifact cannot yet be reproduced from the repository.
 2. **Deploy the account service.** `supabase functions deploy create-staff-identity --no-verify-jwt`, set `EDUNEXUS_PROVISION_SECRET` and `EDUNEXUS_INVITE_REDIRECT` as function secrets, then put the same secret and the function URL into Vercel as `PROVISION_FUNCTION_SECRET` and `PROVISION_FUNCTION_URL`. Until then the endpoint answers `IDENTITY_SERVICE_DISABLED` and the operator link-by-UUID route stays as it was — nothing breaks, the button just refuses.
 3. **Decide whether the exact logo PNG matters more than the content policy.** The mark ships as a vector redraw, which renders under `default-src 'none'`. Using the supplied PNG itself would need `img-src 'self'` in `src/http-app.ts`, which re-opens image loading for the whole workspace. The redraw is in place either way, so this is not blocking anything.
 4. **Complete the first real sign-in.** One screen, now that there is no authenticator step. It closes the oldest open item in the project.
