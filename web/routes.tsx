@@ -7,6 +7,7 @@ import { Activity, Invitations, Staff } from './screens/Staff';
 import { Learners } from './screens/Learners';
 import { Upcoming } from './screens/Upcoming';
 import { Enrollment } from './screens/Enrollment';
+import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number };
 
@@ -25,6 +26,8 @@ export type Route = {
    *  this is the one piece of provenance the page header carries. */
   feeds?: string;
   group: string;
+  /** The screen draws its own heading, so the shared page header is skipped. */
+  ownHeader?: boolean;
   manager?: boolean;
   built?: boolean;
   render: (props: ScreenProps) => ReactNode;
@@ -34,6 +37,14 @@ const soon = (summary: string, detail: string, blocked?: string) =>
   (props: ScreenProps) => <Upcoming {...props} summary={summary} detail={detail} blocked={blocked} />;
 
 export const routes: Route[] = [
+  {
+    id: 'overview', nav: 'Overview', icon: 'overview', group: 'Workspace', built: true, ownHeader: true,
+    title: 'Overview',
+    lede: 'Where the school year stands, and what is set up so far.',
+    record: 'academic_years, sections, staff',
+    render: p => <Overview {...p} />,
+  },
+
   {
     id: 'school', nav: 'School profile', icon: 'school', group: 'Setup', built: true,
     title: 'School profile',
@@ -187,7 +198,7 @@ export const routes: Route[] = [
   },
 ];
 
-export const groups = ['Setup', 'Learners', 'Attendance', 'Academics', 'People'];
+export const groups = ['Workspace', 'Setup', 'Learners', 'Attendance', 'Academics', 'People'];
 
 export const routeFor = (id: string, manager: boolean) => {
   const route = routes.find(r => r.id === id);

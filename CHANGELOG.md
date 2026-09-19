@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.27.0 | Navy rail, collapsible navigation, top-bar profile, Overview screen | — |
 | 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen | — |
 | 0.25.1 | Dead MFA content-security directive removed from the workspace page | — |
 | 0.25.0 | Managers create faculty accounts; service-role key isolated in an Edge Function | — |
@@ -35,6 +36,73 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.27.0 — A navy rail, a collapsible sidebar and a landing screen
+
+A second overhaul against a second reference the user supplied: their own earlier
+prototype. The instruction was to take its colour and its shell — the dark
+sidebar and the profile in the top right — not its contents.
+
+**The rail is the only dark thing on screen.** Navigation is furniture, so it
+gets the deep navy; everything that holds a record stays white on a near-white
+canvas. The accent moves from pine green to blue, which is the same hue as the
+rail at a lighter depth, so the current navigation item, the primary button and
+the chart ramp are one colour seen at four strengths rather than four decisions.
+Rail text has its own tokens checked against the rail rather than against white,
+because `--ink-500` on navy is unreadable and would have been an easy mistake.
+
+**The sidebar collapses two ways.** Each group heading is a button that folds its
+items away; collapsing the group holding the current page is allowed, and a dot
+on the heading says where you are so the rail never loses your position. The rail
+itself also collapses to a 76px icon strip. Both preferences live in
+`sessionStorage` beside the session, because a staffroom machine is shared and
+one person's layout should not greet the next.
+
+**The identity block moved to the top bar**, which now carries the active school
+year, the page title and a profile menu holding sign-out. That also fixes the
+accessibility defect 0.26.0 patched by hand: sign-out can no longer be scrolled
+out of reach behind a seventeen-item list, because it is not in the list.
+
+**There is no notification bell.** The prototype has one. Nothing in this system
+may raise an alert — the absence-alert gate blocks any messaging on attendance —
+so a badge would be decoration imitating a signal, and it was left out.
+
+**A new Overview screen** is the landing page: a greeting, four counted tiles,
+the school year drawn with its reporting periods and today marked, sections by
+grade as a ring, the section-and-adviser list, and the latest recorded changes.
+
+Its numbers are the part worth explaining. The reference prototype led with a
+general average of 88.4, an academic-standing ring and a 97.6% attendance rate.
+None of those may exist here: grade arithmetic waits on the school's grading
+enclosure, and attendance counts are raw session counts until the mark-meanings
+gate opens. The screen keeps the layout and fills it with facts the system is
+allowed to state, then says plainly in a closing callout that no average,
+attendance rate, standing or ranking exists anywhere — so their absence reads as
+a decision rather than an oversight.
+
+**The Overview reads no learner record at all.** Every list under `/learners` and
+`/enrollments` writes a row into `record_access_events` naming the exact records
+returned. A dashboard that counted 897 enrolments per load would write nine such
+rows per visit, each carrying a hundred learner IDs, and bury the privacy audit
+under its own noise. The tiles are built from years, periods, sections, staff and
+the audit log instead.
+
+**Charts are hand-drawn SVG**, in `web/components/figures.tsx`. This is forced,
+not stylistic: under `default-src 'none'` a library that rasterises to a canvas
+or injects a background image has nothing to draw into, and one that sizes bars
+with `style={{ width }}` is dropped outright. SVG geometry attributes are not
+inline styles and are unaffected, so every data-dependent dimension is one.
+
+**Both content-policy traps are now tested.** `tests/web-shell.test.ts` renders
+the shell and every route and fails on any inline `style` attribute, any `data:`
+URL and any `<img>`. Each of those shipped once and neither was visible in
+development, which is exactly the class of bug a rendered-markup assertion
+catches and a typecheck cannot.
+
+Verified by server-rendering the real components against the real built
+stylesheet and screenshotting the rail, the collapsed rail, the mobile drawer,
+the profile menu and the sign-in card at 1440px and 390px. No signed-in browser
+pass has happened yet, so the data paths behind a fetch remain untested.
 
 ## 0.26.0 — A workspace that reads like the system it is
 

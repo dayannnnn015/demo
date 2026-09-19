@@ -1,11 +1,13 @@
 /**
- * The icon set, drawn inline rather than pulled from a package: seventeen
+ * The icon set, drawn inline rather than pulled from a package: eighteen
  * navigation glyphs and a handful of controls do not justify a dependency, and
  * an inline SVG needs no extra origin in the content-security policy.
  *
  * One visual language throughout — 24px grid, 1.75 stroke, round joins — so the
  * rail reads as one family. Icons sit beside their own visible label, so they
- * are decorative and stay out of the accessibility tree.
+ * are decorative and stay out of the accessibility tree. In the collapsed rail
+ * that label is hidden, so the button carries an `aria-label` instead; the icon
+ * itself never becomes the accessible name.
  */
 export type IconName = keyof typeof paths;
 
@@ -28,6 +30,8 @@ const paths = {
   invitations: <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2.5 6.5 8.4 5.6a2 2 0 0 0 2.2 0l8.4-5.6" /></>,
   activity: <><path d="M3.5 12a8.5 8.5 0 1 0 2.4-5.9" /><path d="M3 4.5V9h4.5" /><path d="M12 7.5V12l3 1.8" /></>,
 
+  overview: <><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>,
+
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
   close: <><path d="m6 6 12 12M18 6 6 18" /></>,
   signout: <><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" /><path d="M15.5 16.5 20 12l-4.5-4.5" /><path d="M20 12H9" /></>,
@@ -38,6 +42,12 @@ const paths = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.75h.01" /></>,
   alert: <><path d="M10.3 3.9 2.4 17.1A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 16.5h.01" /></>,
   stop: <><circle cx="12" cy="12" r="9" /><path d="m9 9 6 6M15 9l-6 6" /></>,
+  collapse: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 4v16" /><path d="m7.5 10-2 2 2 2" /></>,
+  expand: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 4v16" /><path d="m5.5 10 2 2-2 2" /></>,
+  caret: <><path d="m9 6 6 6-6 6" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5.2l3.2 1.9" /></>,
+  dot: <><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" /></>,
   plus: <><path d="M12 5v14M5 12h14" /></>,
   check: <><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>,
 } as const;

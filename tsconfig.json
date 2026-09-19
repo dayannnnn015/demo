@@ -22,6 +22,7 @@
     "vitest.config.ts"
   ],
   "exclude": [
-    "tests/web-screens.test.ts"
+    "tests/web-screens.test.ts",
+    "tests/web-shell.test.ts"
   ]
 }

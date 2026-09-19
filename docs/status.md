@@ -2,107 +2,109 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-19 · **Version:** 0.26.0 · **Last commit:** `7fc8b40` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-19 · **Version:** 0.27.0 · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
-**The workspace was redesigned** against a reference the user supplied: a
-professional administrative product, mostly white, organized so a screen says
-what it is in one line and then gets out of the way.
+**The workspace was overhauled a second time**, against a second reference: the
+user's own earlier prototype. The instruction was to take its colour and its
+shell — the dark sidebar, the profile in the top right — and explicitly *not* its
+contents.
 
-The dark green rail is gone. Surfaces are white on a near-white canvas with
-hairline separation, so learner records are the darkest thing on screen. Pine
-green stays as the single accent. Type is Inter with JetBrains Mono for
-identifiers — two variable files, 80 KB against the 135 KB of four static faces —
-still self-hosted. Every route description is now one clause, and the page header
-carries only the title, that clause and the DepEd form the records feed.
+The rail is now deep navy and is the only dark region on screen; everything
+holding a record stays white. The accent moved from pine green to blue, which is
+the rail's own hue at a lighter depth, so the current navigation item, the
+primary button and the chart ramp are one colour at four strengths. Rail text has
+its own tokens checked against the rail — `--ink-500` on navy is unreadable.
 
-Two structural changes came out of it rather than out of the styling. A table row
-opens into a panel spanning the full table width instead of a `<details>` inside
-the last cell, which is what six-field editors actually needed. And a learner
-reads as a name over its LRN in one cell, the way a class list prints.
+**The sidebar collapses two ways**, which is what the user asked for. Each group
+heading folds its items away, and the rail itself collapses to a 76px icon strip.
+Collapsing the group holding the current page is allowed; a dot on the heading
+says where you are. Both preferences sit in `sessionStorage` beside the session,
+so a shared staffroom machine does not keep one person's layout for the next.
 
-**Two content-policy violations were found on the way.** Every screen had been
-using inline `style={{ … }}` props, which `style-src 'self'` silently drops in
-the deployed app while they work under the Vite dev server — they are classes
-now. The redesign then nearly reintroduced the same bug with a `data:` URL
-chevron on selects; there is no `img-src` at all, so selects go through a
-`Select` primitive that draws an inline SVG. Both traps are now written into
-[AGENTS.md](../AGENTS.md).
+**The identity block moved into a top-bar profile menu**, which also closes the
+accessibility defect 0.26.0 patched by hand: sign-out can no longer be scrolled
+out of reach behind a seventeen-item list, because it is no longer in the list.
 
-Three accessibility defects were corrected: two greys that failed the 4.5:1 text
-minimum, and a rail whose identity block and sign-out could be scrolled out of
-reach behind a seventeen-item list.
+**There is no notification bell.** The prototype has one; the absence-alert gate
+blocks any messaging on attendance, so nothing may raise an alert and a badge
+would imitate a signal that does not exist.
 
-The redesign was verified by server-rendering the real components against the
-real built stylesheet and screenshotting them at 1440px and 390px. **No signed-in
-browser pass has still happened**, so the data paths behind a fetch are as
-untested as they were.
+**A new Overview screen** is the landing page — greeting, four counted tiles, the
+school year drawn with its reporting periods and today marked, sections by grade
+as a ring, the section-and-adviser list, and the latest recorded changes.
 
 | Version | What |
 |---|---|
+| 0.27.0 | Navy rail, collapsible navigation, top-bar profile, Overview screen |
 | 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen |
 | 0.25.1 | Dead MFA content-security directive removed from the workspace page |
 | 0.25.0 | Managers create faculty accounts; service-role key isolated in an Edge Function |
 | 0.24.0 | Multi-factor authentication removed; sign-in is email and password |
 | 0.23.1 | Screen render tests, corrected working contract |
 | 0.23.0 | Learner registration and enrollment screens |
-| 0.22.0 | Workspace design system, grouped navigation, honest placeholders |
-| 0.21.0 | Workspace rebuilt on Vite + React, sessions in `sessionStorage` |
-| 0.20.0 | Section 4B.1 assessment tasks and raw score entry, migration 0021 |
 
-283 tests across 22 files. **All 21 migrations are applied**; none of these increments adds one. CI green on `master`.
+291 tests across 23 files. **All 21 migrations are applied**; this increment adds none.
 
-## Every ERD figure is portrait now
+## Two things about the Overview worth not undoing
 
-All the diagram figures were reshaped to fit a portrait page, and the constraint
-behind each choice is written into [diagrams/README.md](diagrams/README.md) so it
-is not rediscovered.
+**It reproduces none of the prototype's headline numbers.** That reference led
+with a general average of 88.4, an academic-standing ring and a 97.6% attendance
+rate. Grade arithmetic sits behind the grading-enclosure gate and attendance
+rates behind the mark-meanings gate, so none of them may exist here. The screen
+keeps the layout, fills it with facts the system is allowed to state, and ends
+with a callout saying plainly that no average, rate, standing or ranking exists
+anywhere — so the absence reads as a decision, not an oversight. The user was
+shown the conflict and chose this over both showing the numbers and showing
+locked placeholder tiles.
 
-**The general ERD is two figures.** One figure for all twenty entities came out
-2188 x 1881 — almost square — and Mermaid's ER renderer gives no way to change
-that. `layoutDirection`, `nodeSpacing`, `rankSpacing` and `minEntityWidth` are
-accepted by the config and then ignored, in Mermaid 11 and 12 alike; a
-`direction LR` statement makes it wider; dropping the attribute blocks makes it
-wider again; ELK is not wired to ER diagrams. Splitting was the only thing that
-worked, so it is now records (1252 x 1349) and academics (1047 x 1943), each
-standalone, together carrying all 20 entities and all 24 relationships.
+**It reads no learner or enrollment record at all.** Every list under
+`/learners` and `/enrollments` writes a `record_access_events` row naming the
+exact records returned. Counting 897 enrolments on each dashboard load would
+write nine such rows per visit, each carrying a hundred learner IDs, and bury the
+privacy audit under its own noise. The tiles are built from years, periods,
+sections, staff and the audit log instead. A future tile needing a learner count
+needs an aggregate endpoint that returns a number without naming records.
 
-**The three process views stay single figures.** Their width comes from the note
-column — enum values beside an attribute, which Mermaid never wraps — not from
-layout. Class preparation dropped notes only on the three entities it repeats for
-context and is now 1791 x 1865. Attendance record had to drop all of them, since
-its longest notes sit on its own core entities and nothing else reached portrait;
-it is now 1524 x 1618, and the values it no longer prints are written out in the
-prose under that figure in [erd.md](erd.md). Academic record was already portrait
-at 1612 x 2029 and is untouched.
+## Charts had to be hand-drawn, and both CSP traps are now tested
 
-No schema change, and no other figure changed: the remaining nine were
-re-rendered from their new block indices and reproduce their committed
-dimensions exactly.
+Under `default-src 'none'` a charting library that rasterises to a canvas or
+injects a background image has nothing to draw into, and one that sizes a bar
+with `style={{ width }}` is dropped silently. SVG geometry attributes are not
+inline styles, so `web/components/figures.tsx` expresses every data-dependent
+dimension as one of those.
 
-## The live site is current again
+`tests/web-shell.test.ts` now renders the shell and every route and fails on any
+inline `style` attribute, any `data:` URL and any `<img>`. Both of those shipped
+once before and neither was visible under `npm run dev:web`, which is exactly the
+class of bug a rendered-markup assertion catches and a typecheck cannot.
 
-**https://edunexus-balili.vercel.app serves 0.26.0**, deployment `dpl_798yTJdPyphBP9nhGCNTS32gvDom`.
+A new web test must be listed in `tsconfig.web.json` **and** excluded from the
+root `tsconfig.json`, or the server typecheck fails on it with TS2835. That cost
+one failed `npm run check` this session.
 
-Verified after deploying: the live OpenAPI reports 0.26.0 across 80 paths and 109 operations and is byte-identical to `docs/openapi.json`, and the served bundle references the same `index-UCvhFvJG.js` and `index-CIrPJzaG.css` as the local build, so the redesign is what is actually running. Smoke checks pass — `/health/live` 200, `/health/ready` 200, `/api/v1/me` 401 unauthenticated, `/account/config` 200, `/app` 200.
+## Verification
 
-**Deploying needs `--scope joshs-projects-47d7b071`.** A bare `vercel deploy --prod` answers `Not authorized`, because the `orgId` recorded in `.vercel/project.json` does not resolve against the logged-in account — even though `vercel whoami` succeeds and `vercel project ls` lists the project. This cost one failed attempt; the flag is now in [deployment.md](deployment.md).
+Verified by server-rendering the real components against the real built
+stylesheet and screenshotting at 1440px and 390px: the full rail, the collapsed
+icon rail, the mobile off-canvas drawer, the open profile menu and the sign-in
+card. `npm run check` passes.
 
-It had been stuck on 0.23.0. A user hit a sign-in screen still asking for an authenticator code — a screen deleted in 0.24.0 — and the cause was not the code but the deployment: three releases were committed, pushed and CI-green while the running site stayed three behind. The live OpenAPI reported 79 operations against 80 locally, so `/api/v1/staff-invitations/{id}/identity` was absent and account creation had nothing to call.
-
-Verified after deploying: the OpenAPI reports 0.25.1 and 80 operations, the identity endpoint is present, the served bundle hash matches the local build, all three authenticator strings are gone from it, and the `Content-Security-Policy` no longer carries `img-src data:`. Smoke checks pass — `/health/live` 200, `/health/ready` 200, `/api/v1/me` 401 unauthenticated, `/account/config` 200, `/app` 200.
-
-**Vercel does not auto-deploy from GitHub.** Pushing to `master` runs CI but does not ship; deploy with `npx vercel --prod`. This gap went unnoticed for three releases because CI going green reads like shipping. Check the live version after any release that matters.
+**No signed-in browser pass has still happened**, so the data paths behind a
+fetch are exactly as untested as they were.
 
 ## Next action
 
-**Complete the first real sign-in.** 0.26.0 is deployed and the live bundle is
-confirmed to be the redesigned one, but nobody has seen it in a browser with a
-session behind it, and no human has ever completed an authenticated session
-against this system at all. That is the oldest open item in the project and the
-largest remaining unknown. Deploying the account service is the other operator
-step; both are short, and nothing in the repository is half-finished behind them.
+**Deploy 0.27.0 and complete the first real sign-in.** The live site still serves
+0.26.0. Deploy with `npx vercel --prod --scope joshs-projects-47d7b071` — a bare
+`vercel deploy --prod` answers `Not authorized`, and pushing to `master` runs CI
+but does not ship. Then open the recovery link, set a password, and sign in at
+https://edunexus-balili.vercel.app.
+
+That closes the oldest open item in the project: no human has ever completed an
+authenticated session against this system, and the Overview is the first screen
+that would prove the data paths work.
 
 After that, resume the frontend: **the instructional calendar screen**, then
 daily attendance. Attendance cannot be recorded on a date the calendar does not
@@ -111,8 +113,7 @@ screen in the system: 30 advisers, twice a day.
 
 Then score entry → monthly consolidation → roster import and the reviewed
 correction workflows. Read the design contract in
-[frontend-handoff.md](frontend-handoff.md) before building one — the two
-content-policy traps above are both easy to walk back into.
+[frontend-handoff.md](frontend-handoff.md) before building one.
 
 Backend is otherwise **fully gated**: every remaining backend increment waits on
 a school decision.
@@ -121,7 +122,7 @@ a school decision.
 
 The account service has never run. The Edge Function is written, its client is tested against a stubbed transport, and the endpoint is tested end to end against a stubbed provisioner — but no real Auth identity has been created through it, because deploying it needs the Supabase CLI and the project secrets. Treat the first real invitation as the verification step.
 
-Frontend tests remain shallow: `tests/web-screens.test.ts` renders every route once, which catches a crash on first render, but effects do not run in a server render, so the data paths behind a fetch are untested. No signed-in browser pass has happened yet.
+Frontend tests remain shallow. Every route renders once and the shell is asserted against the content policy, but effects do not run in a server render, so the data paths behind a fetch are untested.
 
 ## In flight
 
@@ -129,17 +130,19 @@ Nothing. No half-finished work, no uncommitted changes.
 
 ## Waiting on the user
 
-1. **Deploy the account service.** `supabase functions deploy create-staff-identity --no-verify-jwt`, set `EDUNEXUS_PROVISION_SECRET` and `EDUNEXUS_INVITE_REDIRECT` as function secrets, then put the same secret and the function URL into Vercel as `PROVISION_FUNCTION_SECRET` and `PROVISION_FUNCTION_URL`. Steps are in [deployment.md](deployment.md). Until then the endpoint answers `IDENTITY_SERVICE_DISABLED` and the operator link-by-UUID route stays as it was — nothing breaks, the button just refuses.
-2. **Complete the first real sign-in.** Open the recovery link, set a password, sign in at https://edunexus-balili.vercel.app. There is no authenticator step any more, so this is now one screen. It closes the oldest open item in the project: no human has ever completed an authenticated session.
-3. **Send Request 1 to the school** — the current DepEd grading enclosure plus two or three redacted ECR examples. This single gate blocks roughly ten increments: score arithmetic, transmutation, MPS, GWA, finalization, Kindergarten, promotion, SF9 and SF10. It is a request to another organisation, so the calendar cost is theirs. Wording is in [school-information-requests.md](school-information-requests.md).
-4. **Configure a real SMTP provider before staff onboarding.** Supabase built-in mail sends one link a minute per address and only a few an hour for the whole project, which will not survive 33 people. This now matters more, because account creation sends an invitation email per member of staff.
-5. **The service-role gate is narrower than it was.** It no longer blocks account creation, which is what it was written for. It now only covers putting the key in the API runtime itself, which nothing needs. Deleting or altering an existing identity is still an operator action in Supabase.
+1. **Deploy 0.27.0.** The live site is a release behind. `npx vercel --prod --scope joshs-projects-47d7b071`; steps are in [deployment.md](deployment.md).
+2. **Deploy the account service.** `supabase functions deploy create-staff-identity --no-verify-jwt`, set `EDUNEXUS_PROVISION_SECRET` and `EDUNEXUS_INVITE_REDIRECT` as function secrets, then put the same secret and the function URL into Vercel as `PROVISION_FUNCTION_SECRET` and `PROVISION_FUNCTION_URL`. Until then the endpoint answers `IDENTITY_SERVICE_DISABLED` and the operator link-by-UUID route stays as it was — nothing breaks, the button just refuses.
+3. **Complete the first real sign-in.** One screen, now that there is no authenticator step. It closes the oldest open item in the project.
+4. **Send Request 1 to the school** — the current DepEd grading enclosure plus two or three redacted ECR examples. This single gate blocks roughly ten increments: score arithmetic, transmutation, MPS, GWA, finalization, Kindergarten, promotion, SF9 and SF10. It is a request to another organisation, so the calendar cost is theirs. Wording is in [school-information-requests.md](school-information-requests.md).
+5. **Configure a real SMTP provider before staff onboarding.** Supabase built-in mail sends one link a minute per address and only a few an hour for the whole project, which will not survive 33 people.
 
 ## Recent decisions worth knowing
 
+- The workspace is a navy rail against white surfaces with a blue accent. This supersedes the pine-green decision of 2026-09-18 for colour only; the typography and hairline-separation rules still stand.
+- No notification bell exists, and none should be added until a rule exists that can fire one.
+- The Overview shows no computed grade, rate or standing, and reads no learner record.
 - The manuscript requires no second authentication factor; MFA was ours, not the school's, and is removed.
 - Account creation satisfies the paper's User Management requirement **without** opening the service-role gate, because the key never enters the API runtime.
 - "Assessment policies are drafts only" in the original briefing **described the state at v0.15.0**; it did not forbid building approval. Adoption, binding and score entry are all in scope. Calculation is not.
-- Frontend work is no longer deferred. The API is far ahead of the interface, and the TAM evaluation measures the interface.
 
 All of these are in the settled-decisions table in [constraints.md](constraints.md).

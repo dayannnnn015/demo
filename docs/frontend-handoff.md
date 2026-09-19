@@ -10,14 +10,20 @@ Keep `lede` to one clause. It is the only sentence a screen gets, and the page h
 
 `web/styles/tokens.css` holds colour, type, spacing and elevation. Use the tokens rather than literal values: the palette carries meaning, with ochre for "needs attention" and red reserved for blocked actions, so a red control in a new screen should mean something is genuinely stopped. Fonts are self-hosted in `web/fonts`; do not switch to a font CDN, because the policy is same-origin and staff addresses should not reach a third party.
 
-The interface is white: pure white surfaces on a near-white canvas, separated by hairlines rather than shadow, so the records are the darkest thing on screen. Pine green is the only accent. Type is Inter throughout, with JetBrains Mono reserved for identifiers — LRNs, school IDs, audit table names — because a twelve-digit LRN is transcribed from paper and `0`/`O` and `1`/`l` have to be told apart. Do not set body text in the mono face, and do not introduce a third family.
+The interface is a deep navy rail against white working surfaces. The rail is the only dark region on screen, because it carries navigation, which is furniture; everything that holds a record stays white on a near-white canvas, separated by hairlines rather than shadow. Navy and the blue accent are one hue at different depths, so the chart ramp, the current navigation item and the primary button read as one colour rather than four decisions.
+
+Rail colours are a separate set of tokens — `--rail-900` through `--rail-600`, with `--rail-ink`, `--rail-dim` and `--rail-faint` for text on them — checked for contrast against the rail, not against white. Do not use `--ink-*` inside the rail or `--rail-*` outside it. The sign-in card is the one place the wordmark sits on white, and it overrides those two values explicitly.
+
+Type is Inter throughout, with JetBrains Mono reserved for identifiers — LRNs, school IDs, audit table names, dates in a figure's axis — because a twelve-digit LRN is transcribed from paper and `0`/`O` and `1`/`l` have to be told apart. Do not set body text in the mono face, and do not introduce a third family.
 
 Two constraints come from the content policy, which is `default-src 'none'` with no `img-src` at all:
 
 - **No images, and no `data:` URLs.** A CSS `background-image: url(...)` is dropped silently. This is why every `<select>` goes through the `Select` primitive, which wraps it in `.select-wrap` and draws the chevron as an inline SVG. Use `Select`, never a bare `<select>`.
 - **No inline `style` attributes.** `style-src 'self'` covers them, so a `style={{ … }}` prop does nothing in the deployed app even though it works under `npm run dev:web`. Add a class instead. There is a `.rule` class for a divider and a `.field.inline` modifier for a control that sits in a header row.
 
-Icons live in `web/components/icons.tsx`, drawn inline on a 24px grid with a 1.75 stroke. They sit beside their own visible label, so they are decorative and are hidden from the accessibility tree. Add to that file rather than reaching for an icon package; the set is small on purpose.
+Both are now asserted in `tests/web-shell.test.ts`, which renders the shell and every route and fails on any `style="` attribute, any `data:` URL and any `<img>`. That test exists because each of these shipped once and neither was visible in development.
+
+Icons live in `web/components/icons.tsx`, drawn inline on a 24px grid with a 1.75 stroke. They sit beside their own visible label, so they are decorative and are hidden from the accessibility tree. The collapsed rail is the one place that label is hidden, and there the button carries an `aria-label` — an icon never becomes the accessible name by itself. Add to that file rather than reaching for an icon package; the set is small on purpose.
 
 `web/components/primitives.tsx` holds `Editor`, `Finder`, `Table`, `Cell`, `Select`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`. Prefer them over new markup so screens stay consistent, and give every table a real empty state: an empty screen is where a staff member decides whether the system is broken or simply new.
 
@@ -27,11 +33,37 @@ Icons live in `web/components/icons.tsx`, drawn inline on a 24px grid with a 1.7
 
 `tests/web-screens.test.ts` renders every route once against an API that returns nothing, and asserts that no column or field is labelled with a computed grade. Effects do not run in that pass, so it covers the empty and loading states rather than the data paths behind a fetch. A signed-in browser check is still the only way to exercise those.
 
-Add a screen by writing a component that takes `{ api, setStatus, reload, token }`, fetching in a `useEffect` keyed on `token` so a save refreshes it, and registering it in `web/Workspace.tsx`. Run `npm run dev:web` next to `npm run dev` for hot reload; the Vite dev server proxies `/api` to port 3001.
+Add a screen by writing a component that takes `{ api, setStatus, reload, token }`, fetching in a `useEffect` keyed on `token` so a save refreshes it, and registering it in the route table in `web/routes.tsx`. Run `npm run dev:web` next to `npm run dev` for hot reload; the Vite dev server proxies `/api` to port 3001.
 
 Sessions are kept in `sessionStorage` under `edunexus-session`. A refresh keeps the user signed in; closing the tab ends the session. Do not move this to `localStorage` — these are staff tokens for a system holding sensitive learner data, and the exposure window matters more than the convenience.
 
 Static bundle files are served before the CORS middleware, because a `type="module"` script is always fetched in CORS mode and the API origin allowlist would otherwise reject the workspace's own bundle.
+
+## The shell
+
+`web/components/AppShell.tsx` draws the rail, the top bar and the profile menu; `PageHeader` draws the line under the title and the form chip.
+
+The rail groups routes by `group`, and each group heading is a button that collapses its items. Collapsing the group that holds the current page is allowed — a dot on the heading says where you are, so the rail never loses your position. The whole rail also collapses to a 76px icon strip; in that state the group headings are dropped from the markup *and* hidden in CSS, so a narrow rail is correct either way. Both preferences live in `sessionStorage` beside the session, wrapped in `try`/`catch`, because a private window throws on access and a staffroom machine should not keep one person's layout for the next.
+
+Below 1000px the rail becomes an off-canvas drawer with a scrim, and always shows full labels there: collapsing only means something beside a full-width page.
+
+The rail names the school from the `/school` record rather than a literal, because that is the same name printed on every official form and the School profile screen can change it. The top bar carries the active school year, the page title and the profile menu, which holds sign-out. Both the school and the year are fetched once in `web/App.tsx` and passed down, so a screen never refetches them for its own furniture. There is deliberately **no notification bell**. Nothing in this system may raise an alert yet — the absence-alert gate blocks "any messaging on attendance" — so a badge would be decoration imitating a signal. Add one when a rule exists to fire it.
+
+## Figures
+
+`web/components/figures.tsx` holds `StatTile`, `Donut` and `Timeline`. They are hand-drawn inline SVG, and they have to be: a charting library that rasterises to a canvas or injects a background image has nothing to draw into under this content policy, and one that sizes bars with `style={{ width }}` is dropped outright. SVG geometry attributes — `x`, `width`, `r`, `stroke-dasharray` — are not inline styles and are unaffected, so every dimension that depends on data is one of those. Colour comes from `.slice-1` … `.slice-5`, which resolve to the chart ramp in tokens.css.
+
+`Donut` divides a ring with `stroke-dasharray` on concentric circles rather than arc paths, so each slice is one element and a zero-count slice disappears instead of drawing a degenerate wedge. `Timeline` lays dated spans across a 1000-unit track.
+
+None of these may be fed a mark, a score or anything derived from one. See the Overview note below.
+
+## The Overview screen
+
+`web/screens/Overview.tsx` is the landing screen. It reads school years, reporting periods, sections, staff, invitations and the audit log — and **reads no learner or enrollment record at all**.
+
+That is deliberate and worth preserving. Every list under `/learners` and `/enrollments` writes a row into `record_access_events` naming the exact records returned. A dashboard that counted 897 enrolments on each load would write nine such rows per visit, each carrying a hundred learner IDs, and bury the privacy audit under its own noise. If a future tile needs a learner count, add an aggregate endpoint that returns a number without naming records; do not page the registry to count it.
+
+Nothing on the screen is computed from a mark. The figures are calendar and roster facts — which stretch of the year today falls in, how many sections exist at each grade, who holds access. The screen ends with a callout stating plainly that no average, attendance rate, academic standing or ranking exists anywhere, so their absence reads as a decision rather than an omission.
 
 ## Authentication
 

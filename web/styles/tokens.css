@@ -1,51 +1,74 @@
 /*
   EDUNEXUS design tokens.
 
-  A white interface: pure white surfaces on a near-white canvas, separated by
-  hairlines rather than shadow, so the records themselves are the darkest thing
-  on screen. The one accent stays Benguet pine — the institutional colour this
-  project started from — recalibrated to carry text contrast on white.
+  A deep navy rail against white working surfaces, with one blue accent. The
+  rail is the only dark region on screen: it carries navigation, which is
+  furniture, so the records themselves stay the brightest, sharpest thing in
+  front of the reader.
 
-  Greys are mixed very slightly green so they sit with the accent instead of
-  fighting it. Ochre rather than red means "needs attention", so red stays rare
-  and always means a blocked action.
+  Navy and blue are the same hue family at different depths, so the chart ramp,
+  the active navigation state and the primary button are all one colour seen at
+  different strengths rather than four decisions. Greys are mixed slightly blue
+  for the same reason.
+
+  Ochre rather than red means "needs attention", so red stays rare and always
+  means a blocked action.
 */
 :root {
   color-scheme: light;
 
+  /* Rail — the one dark surface. Ink values are checked against --rail-900. */
+  --rail-900: #0b1f38; /* rail base */
+  --rail-800: #112c4c; /* raised block inside the rail */
+  --rail-700: #16385e; /* hover */
+  --rail-600: #1a4470; /* current page */
+  --rail-line: #1c3555;
+  --rail-ink: #e8eef6; /* 14.2:1 on --rail-900 */
+  --rail-dim: #93a9c4; /* 6.9:1 on --rail-900, 5.0:1 on --rail-700 hover */
+  --rail-faint: #6f88a6; /* 4.5:1 — icons and rules; never body text */
+
   /* Accent */
-  --accent-900: #0d3d2f;
-  --accent-800: #114d3c; /* 8.9:1 on white */
-  --accent-700: #15604a; /* 6.7:1 on white — primary fill */
-  --accent-600: #1a7459;
-  --accent-200: #b6d8c8;
-  --accent-100: #d8ebe2;
-  --accent-050: #eff7f3;
+  --accent-900: #0b2f52;
+  --accent-800: #123f6d; /* 10.7:1 on white */
+  --accent-700: #1a5c99; /* 6.9:1 on white — primary fill */
+  --accent-600: #1f6fb5;
+  --accent-500: #2e86c8;
+  --accent-300: #7fb3da;
+  --accent-200: #b9d4ea;
+  --accent-100: #dceaf6;
+  --accent-050: #eff5fb;
+
+  /* Chart ramp: one hue, five depths, darkest first. Ordered so a two-slice
+     figure is still legible when printed in greyscale. */
+  --chart-1: #0f3a63;
+  --chart-2: #1a5c99;
+  --chart-3: #3d8bc4;
+  --chart-4: #8fbdde;
+  --chart-5: #c9dff0;
+  --chart-grid: #e6ebf2;
 
   /* Neutrals */
   --white: #ffffff;
-  --canvas: #f7f8f8;
-  --sunk: #fafbfa;
-  --hover: #f3f5f4;
-  --line: #e7eae8;
-  --line-strong: #d6dbd8;
-  --ink-900: #101613; /* headings */
-  --ink-700: #33403b; /* body */
-  --ink-500: #5c6b65; /* 5.4:1 on white — secondary text */
-  --ink-400: #8a9691; /* 3.1:1 — icons and placeholders only, never body text */
+  --canvas: #f4f6f9;
+  --sunk: #f9fafc;
+  --hover: #eef2f7;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --ink-900: #0f1b2a; /* headings */
+  --ink-700: #33445c; /* 9.9:1 on white — body */
+  --ink-500: #5a6b82; /* 5.4:1 on white, 5.0:1 on --canvas — secondary text */
+  --ink-400: #8496ad; /* 3.1:1 — icons and placeholders only, never body text */
 
   /* Meaning */
-  --amber-700: #855312;
-  --amber-100: #fbeed4;
-  --amber-200: #edd6a5;
-  --red-700: #a12222;
-  --red-100: #fbe4e2;
-  --red-200: #f0c2bf;
-  --blue-700: #1b5680;
-  --blue-100: #e2eef7;
-  --blue-200: #bcd7e9;
-  --green-700: #14624b;
-  --green-100: #dcefe5;
+  --amber-700: #8a5209;
+  --amber-100: #fdf0d8;
+  --amber-200: #f0d8a8;
+  --red-700: #a52222;
+  --red-100: #fce6e4;
+  --red-200: #f2c4c1;
+  --green-700: #14684f;
+  --green-100: #ddf0e7;
+  --green-200: #b8ddca;
 
   /* Type */
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -59,6 +82,7 @@
   --t-18: 1.125rem;
   --t-20: 1.25rem;
   --t-26: 1.625rem;
+  --t-32: 2rem;
 
   /* Space: 4px base, dashboard density */
   --s1: 4px;
@@ -74,10 +98,11 @@
   --r-md: 10px;
   --r-lg: 12px;
 
-  --shadow-xs: 0 1px 2px rgba(16, 22, 19, .04);
-  --shadow-pop: 0 1px 2px rgba(16, 22, 19, .06), 0 12px 28px -10px rgba(16, 22, 19, .22);
+  --shadow-xs: 0 1px 2px rgba(15, 27, 42, .05);
+  --shadow-pop: 0 1px 2px rgba(15, 27, 42, .06), 0 12px 28px -10px rgba(15, 27, 42, .28);
 
-  --rail: 264px;
-  --measure: 1240px;
-  --focus: var(--accent-700);
+  --rail-w: 268px;
+  --topbar-h: 64px;
+  --measure: 1360px;
+  --focus: var(--accent-600);
 }

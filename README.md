@@ -165,8 +165,9 @@ Read [staff invitations](docs/staff-invitations.md). A manager records the reque
 
 ## What works in the school workspace
 
-The workspace at `/app` is a white, keyboard-navigable administrative interface. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:
+The workspace at `/app` is a keyboard-navigable administrative interface: a deep navy navigation rail against white working surfaces, so the records are the brightest thing on screen. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:
 
+- **An overview**: where the school year stands — its reporting periods with today marked, sections by grade, the section-and-adviser list, who holds access, and the latest recorded changes. No average, attendance rate or standing appears, and the screen says so.
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
 - **Every other module, listed honestly**: enrollment, roster import, calendars, attendance, academics and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
@@ -178,6 +179,8 @@ Sessions are held in `sessionStorage`, so a refresh keeps you signed in and clos
 Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed corrections, attendance, calendars and academic setup stay API-only.
 
 A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
+
+The rail groups the seventeen screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The signed-in identity and sign-out sit in the top bar. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
 
 Read [frontend integration](docs/frontend-handoff.md) before extending it.
 
