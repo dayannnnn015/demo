@@ -1,12 +1,13 @@
 /**
  * The EDUNEXUS mark, drawn as inline SVG.
  *
- * The workspace content policy is `default-src 'none'` with no `img-src`, so
- * the supplied PNG cannot be loaded here — not as a file, not as a `data:` URL
- * in CSS, and not as a favicon. This is a vector redraw of that artwork,
- * traced to its own measurements and colours, so the mark renders under the
- * policy exactly as the charts do. The original sits in `docs/brand/` next to
- * an export of this file; anyone re-cutting the mark should compare the two.
+ * The workspace content policy is `default-src 'none'`; its only `img-src` is
+ * `'self'`, added for the favicon and for nothing else. No screen loads an
+ * image file, so this is a vector redraw of the supplied artwork, traced to its
+ * own measurements and colours, and it renders under the policy exactly as the
+ * charts do. The original sits in `docs/brand/` next to an export of this file,
+ * and `web/public/favicon.svg` is a third cut of the same geometry; anyone
+ * re-cutting the mark should compare all three.
  *
  * The three brand colours are literals rather than tokens on purpose: they
  * belong to the logo and must not drift when the interface palette is retuned.

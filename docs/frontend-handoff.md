@@ -16,9 +16,9 @@ Rail colours are a separate set of tokens — `--rail-900` through `--rail-600`,
 
 Type is Inter throughout, with JetBrains Mono reserved for identifiers — LRNs, school IDs, audit table names, dates in a figure's axis — because a twelve-digit LRN is transcribed from paper and `0`/`O` and `1`/`l` have to be told apart. Do not set body text in the mono face, and do not introduce a third family.
 
-Two constraints come from the content policy, which is `default-src 'none'` with no `img-src` at all:
+Two constraints come from the content policy, which is `default-src 'none'` with a single `img-src 'self'`, added for `/favicon.svg` and for nothing else:
 
-- **No images, and no `data:` URLs.** A CSS `background-image: url(...)` is dropped silently. This is why every `<select>` goes through the `Select` primitive, which wraps it in `.select-wrap` and draws the chevron as an inline SVG. Use `Select`, never a bare `<select>`. It is also why the EDUNEXUS mark is a redrawn SVG rather than the supplied PNG, and why there is no favicon. Do not add `img-src` to make an interface job easier.
+- **No images, and no `data:` URLs.** A CSS `background-image: url(...)` is dropped silently. This is why every `<select>` goes through the `Select` primitive, which wraps it in `.select-wrap` and draws the chevron as an inline SVG. Use `Select`, never a bare `<select>`. It is also why the EDUNEXUS mark is a redrawn SVG rather than the supplied PNG. The favicon is the one image file the origin serves, cut as `web/public/favicon.svg`; do not widen `img-src` past `'self'`, and do not reach for it to make an interface job easier.
 - **No inline `style` attributes.** `style-src 'self'` covers them, so a `style={{ … }}` prop does nothing in the deployed app even though it works under `npm run dev:web`. Add a class instead. There is a `.rule` class for a divider and a `.field.inline` modifier for a control that sits in a header row.
 
 Both are now asserted in `tests/web-shell.test.ts`, which renders the shell and every route and fails on any `style="` attribute, any `data:` URL and any `<img>`. That test exists because each of these shipped once and neither was visible in development.

@@ -73,7 +73,7 @@ The workspace is a Vite + React + TypeScript app in `web/`, built into `public/`
 
 The rail is the only dark surface and has its own contrast-checked tokens — `--rail-ink`, `--rail-dim`, `--rail-faint`. Do not use the `--ink-*` scale inside it, or the rail scale outside it.
 
-The workspace content policy is `default-src 'none'`, which has two consequences worth knowing before writing a screen: there are **no images of any kind**, including `data:` URLs in CSS, so use the `Select` primitive rather than a bare `<select>` with a background-image chevron; and **`style={{ … }}` does nothing** in the deployed app, because `style-src 'self'` covers inline attributes, so use a class. Both work under `npm run dev:web`, which is how they get missed.
+The workspace content policy is `default-src 'none'`, which has two consequences worth knowing before writing a screen: the only image the origin serves is `/favicon.svg`, which the single `img-src 'self'` directive exists for, so **no screen loads an image** and a `data:` URL in CSS is still dropped — use the `Select` primitive rather than a bare `<select>` with a background-image chevron; and **`style={{ … }}` does nothing** in the deployed app, because `style-src 'self'` covers inline attributes, so use a class. Both work under `npm run dev:web`, which is how they get missed.
 
 Charts are hand-drawn SVG for the same reason: a library that rasterises to a canvas or injects a background image has nothing to draw into under this policy, and one that sizes a bar with `style={{ width }}` is dropped. SVG geometry attributes are not inline styles, so every data-dependent dimension is one of those.
 

@@ -2,30 +2,40 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-19 · **Version:** 0.27.1 · **Last commit:** `64ca932` · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-19 · **Version:** 0.27.2 · **Last commit:** see `git log -1` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
-**Three surface changes the user asked for, and the school's mark.** Every corner
-in the system is square — the four radius tokens are `0` and nothing rounds a
-corner independently of them. The rail is 296px instead of 268px, its blue is
-saturated rather than desaturated navy, and its text is white: `--rail-ink` and
-`--rail-dim` are both `#ffffff`, so hierarchy in the rail is size and weight, not
-dimmed text. White is 13.5:1 on the new base and 6.5:1 on the current-page fill.
+**The workspace has a favicon, and it is the school's mark.** 0.27.1 recorded
+that it could not have one and left the user a question: does the exact logo
+matter more than an unbroken `default-src 'none'`? The user asked for the
+favicon, so the policy now carries one extra directive, `img-src 'self'`, and
+nothing else changed about it.
 
-**The EDUNEXUS mark is now in the rail, the sign-in card and the account screen**
-— as inline SVG, not as the PNG the user supplied. Under `default-src 'none'`
-with no `img-src` a file, a `data:` URL and a favicon are all dropped silently in
-production, and relaxing the policy would weaken a backend control for an
-interface convenience. `web/components/brand.tsx` is a vector redraw traced from
-the artwork's own measurements, with its colours sampled from the file. The
-original and an export of the redraw are in `docs/brand/`, which is tracked —
-`public/` is build output, wiped by `emptyOutDir` and gitignored, so the PNG the
-user left there had already been deleted by the next build.
+That directive admits same-origin image files only — no `data:`, no remote host
+— and this origin serves only the built bundle, so nothing user-supplied can
+arrive through it. **No screen loads an image.** The rail mark, the icon set and
+every chart are still inline SVG, and the two CSP traps in
+`tests/web-shell.test.ts` still fail on an `<img>` or a `data:` URL anywhere in
+the rendered app.
 
-**If the exact PNG is wanted instead of the redraw**, that needs `img-src 'self'`
-in `src/http-app.ts` and re-opens image loading for the whole workspace. The user
-was shown the trade-off and has not answered; the redraw ships either way.
+The icon is `web/public/favicon.svg`, copied verbatim into `public/` by Vite and
+served at `/favicon.svg` by both Express and the Vercel CDN. It is a third cut of
+the same geometry as `web/components/brand.tsx` and `docs/brand/edunexus-mark.svg`
+— with a white ground, because the navy mountain and the white pages both vanish
+against a dark browser theme, and without the sub-pixel notches inside the peaks,
+which only turn to mud at 16px. Re-cut all three together.
+
+`tests/foundation.test.ts` now serves the shell and pins the policy: it still
+starts at `default-src 'none'`, its `img-src` is `'self'` with no `data:` and no
+remote origin, and the page links the icon. Widening that directive quietly now
+fails a test.
+
+**Deploying is part of finishing a change from now on.** The user asked that
+every change be synced to Vercel. The project is not git-connected, so a push
+ships nothing — `npx vercel --prod --scope joshs-projects-47d7b071` is the
+deploy, and it belongs at the end of every release rather than in the waiting-on
+list. Recorded in the settled-decisions table.
 
 ## Before that
 
@@ -60,6 +70,7 @@ as a ring, the section-and-adviser list, and the latest recorded changes.
 
 | Version | What |
 |---|---|
+| 0.27.2 | The mark as the browser tab icon; `img-src 'self'` for that one file |
 | 0.27.1 | Square corners, a wider brighter rail, the EDUNEXUS mark as inline SVG |
 | 0.27.0 | Navy rail, collapsible navigation, top-bar profile, Overview screen |
 | 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen |
@@ -69,7 +80,7 @@ as a ring, the section-and-adviser list, and the latest recorded changes.
 | 0.23.1 | Screen render tests, corrected working contract |
 | 0.23.0 | Learner registration and enrollment screens |
 
-291 tests across 23 files. **All 21 migrations are applied**; this increment adds none.
+292 tests across 23 files. **All 21 migrations are applied**; this increment adds none.
 
 ## Two things about the Overview worth not undoing
 
@@ -122,12 +133,12 @@ fetch are exactly as untested as they were.
 
 ## Next action
 
-**Complete the first real sign-in.** 0.27.1 is deployed — the live site served
-0.26.0 for two releases because **nothing deploys on a push**. The Vercel project
-is not git-connected, so `git push` runs CI and ships nothing; `npx vercel --prod
---scope joshs-projects-47d7b071` is the only thing that releases, and a bare
-`vercel deploy --prod` answers `Not authorized`. Either connect the repository or
-treat the deploy as a manual step at the end of every release.
+**Complete the first real sign-in.** 0.27.2 is deployed. **Nothing deploys on a
+push** — the Vercel project is not git-connected, so `git push` runs CI and ships
+nothing; `npx vercel --prod --scope joshs-projects-47d7b071` from the repository
+root is the only thing that releases, and a bare `vercel deploy --prod` answers
+`Not authorized`. Since 0.27.2 that command is part of finishing a release, not
+an optional follow-up. Connecting the repository would retire the step.
 
 What remains is the sign-in itself: open the recovery link, set a password, and
 sign in at https://edunexus-balili.vercel.app.
@@ -162,16 +173,16 @@ Nothing. No half-finished work, no uncommitted changes.
 
 1. **Push `master`.** The deployed release was built from local source; `origin` is behind, so the live artifact cannot yet be reproduced from the repository.
 2. **Deploy the account service.** `supabase functions deploy create-staff-identity --no-verify-jwt`, set `EDUNEXUS_PROVISION_SECRET` and `EDUNEXUS_INVITE_REDIRECT` as function secrets, then put the same secret and the function URL into Vercel as `PROVISION_FUNCTION_SECRET` and `PROVISION_FUNCTION_URL`. Until then the endpoint answers `IDENTITY_SERVICE_DISABLED` and the operator link-by-UUID route stays as it was — nothing breaks, the button just refuses.
-3. **Decide whether the exact logo PNG matters more than the content policy.** The mark ships as a vector redraw, which renders under `default-src 'none'`. Using the supplied PNG itself would need `img-src 'self'` in `src/http-app.ts`, which re-opens image loading for the whole workspace. The redraw is in place either way, so this is not blocking anything.
-4. **Complete the first real sign-in.** One screen, now that there is no authenticator step. It closes the oldest open item in the project.
-5. **Send Request 1 to the school** — the current DepEd grading enclosure plus two or three redacted ECR examples. This single gate blocks roughly ten increments: score arithmetic, transmutation, MPS, GWA, finalization, Kindergarten, promotion, SF9 and SF10. It is a request to another organisation, so the calendar cost is theirs. Wording is in [school-information-requests.md](school-information-requests.md).
-6. **Configure a real SMTP provider before staff onboarding.** Supabase built-in mail sends one link a minute per address and only a few an hour for the whole project, which will not survive 33 people.
+3. **Complete the first real sign-in.** One screen, now that there is no authenticator step. It closes the oldest open item in the project.
+4. **Send Request 1 to the school** — the current DepEd grading enclosure plus two or three redacted ECR examples. This single gate blocks roughly ten increments: score arithmetic, transmutation, MPS, GWA, finalization, Kindergarten, promotion, SF9 and SF10. It is a request to another organisation, so the calendar cost is theirs. Wording is in [school-information-requests.md](school-information-requests.md).
+5. **Configure a real SMTP provider before staff onboarding.** Supabase built-in mail sends one link a minute per address and only a few an hour for the whole project, which will not survive 33 people.
 
 ## Recent decisions worth knowing
 
 - The workspace is a navy rail against white surfaces with a blue accent. This supersedes the pine-green decision of 2026-09-18 for colour only; the typography and hairline-separation rules still stand. Since 0.27.1 the rail is wider, its blue is saturated, and its text is white.
 - Every corner in the system is square, and the radius tokens are the only place that changes.
-- The EDUNEXUS mark is a vector redraw in `web/components/brand.tsx`, because the content policy loads no image file. `img-src` was not added. The artwork lives in `docs/brand/`, never in `public/`.
+- The EDUNEXUS mark is a vector redraw in `web/components/brand.tsx`, because no screen loads an image file. The artwork lives in `docs/brand/`, never in `public/`. Since 0.27.2 the policy carries one `img-src 'self'`, for `/favicon.svg` alone, on the user's instruction.
+- Every release is deployed to Vercel before the session ends. A push does not deploy; `npx vercel --prod --scope joshs-projects-47d7b071` does.
 - No notification bell exists, and none should be added until a rule exists that can fire one.
 - The Overview shows no computed grade, rate or standing, and reads no learner record.
 - The manuscript requires no second authentication factor; MFA was ours, not the school's, and is removed.

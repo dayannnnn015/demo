@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.27.2 | The mark as the browser tab icon; `img-src 'self'` for that one file | — |
 | 0.27.1 | Square corners, a wider brighter rail, the EDUNEXUS mark as inline SVG | — |
 | 0.27.0 | Navy rail, collapsible navigation, top-bar profile, Overview screen | — |
 | 0.26.0 | Workspace redesigned: white surfaces, Inter, one line per screen | — |
@@ -37,6 +38,34 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.27.2 — The mark as the browser tab icon
+
+**The workspace now has a favicon**, and it is the school's own mark. 0.27.1
+recorded that it could not have one and asked the user to decide whether the
+logo mattered more than an unbroken `default-src 'none'`. The user asked for the
+favicon, so the policy gains exactly one directive: `img-src 'self'`.
+
+That directive is the whole of the change to the backend control. It admits
+same-origin image files and nothing else — no `data:`, no remote host — and this
+origin serves only the built bundle, so nothing user-supplied can arrive through
+it. The workspace itself still renders no image: the rail mark, the icon set and
+every chart remain inline SVG, both because they follow the theme and because a
+raster would be wrong at the sizes they are drawn.
+
+The icon is `web/public/favicon.svg`, which Vite copies verbatim into `public/`
+and both Express and the Vercel CDN serve at `/favicon.svg`. It is a third cut of
+the same geometry as `web/components/brand.tsx` and `docs/brand/edunexus-mark.svg`,
+with two changes a 16px tab needs: an opaque white ground, because the navy
+mountain and the white pages both disappear against a dark browser theme, and
+none of the sub-pixel notches inside the peaks, which only turn to grey mud at
+that size. Re-cut the three together. SVG was chosen over an `.ico` so the mark
+stays sharp on a high-density display and stays a text file in review.
+
+`tests/foundation.test.ts` now serves the workspace shell and asserts the policy
+still starts at `default-src 'none'`, that its `img-src` is `'self'` with no
+`data:` or remote origin, and that the page links the icon — so a later
+relaxation of the directive has to be deliberate.
 
 ## 0.27.1 — Square corners, a brighter rail and the school's own mark
 

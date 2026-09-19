@@ -4,8 +4,9 @@ import type { ReactNode } from 'react';
  * The workspace figures, drawn as inline SVG.
  *
  * Two constraints shape everything here. The content policy is
- * `default-src 'none'` with no `img-src`, so a charting library that rasterises
- * to a canvas or injects a background image has nothing to draw into; and
+ * `default-src 'none'`, and its one `img-src 'self'` covers the favicon and
+ * nothing else, so a charting library that rasterises to a canvas or injects a
+ * background image has nothing to draw into; and
  * `style-src 'self'` drops inline `style` attributes, so a bar cannot be sized
  * with `style={{ width }}`. SVG geometry attributes — `x`, `width`, `r`,
  * `stroke-dasharray` — are not inline styles and are unaffected, so every

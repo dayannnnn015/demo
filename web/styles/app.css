@@ -575,8 +575,8 @@ code, .mono {
 .field input, .field select { height: 36px; }
 .field input[type='date'] { min-width: 9.5rem; }
 /* The chevron is a real SVG element rather than a background image: the
-   workspace content policy is `default-src 'none'` with no `img-src` at all,
-   so a data-URL background would simply be dropped. Every select therefore
+   workspace content policy is `default-src 'none'`, and its one `img-src 'self'`
+   admits the favicon but no `data:` URL, so a data-URL background is dropped. Every select therefore
    sits inside a .select-wrap that carries its own icon. */
 .field select { appearance: none; padding-right: var(--s6); }
 .select-wrap { position: relative; display: block; }

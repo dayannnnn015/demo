@@ -120,8 +120,11 @@ export function createApp(deps: Dependencies) {
   if (deps.publicAuth) {
     app.get(['/', '/account/setup', '/app'], (_req, res) => {
       // The bundle is hashed and same-origin; styles and fonts ship as files.
-      // Nothing relaxes default-src for images: the workspace renders none.
-      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+      // `img-src 'self'` exists for one file, /favicon.svg, which a browser
+      // fetches as an image and default-src would otherwise block. It stays at
+      // 'self' with no `data:`: the workspace itself still renders no image,
+      // and nothing user-supplied is ever served from this origin.
+      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.type('html').send(appPage());
     });

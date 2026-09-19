@@ -4,6 +4,7 @@ import pino from 'pino';
 import { createApp } from '../src/http-app.js';
 import { ids, testDatabase } from './helpers/database.js';
 import { AppError } from '../src/core/errors.js';
+import { readFileSync } from 'node:fs';
 
 describe('Section 1 API and PostgreSQL authorization', () => {
   let db: Awaited<ReturnType<typeof testDatabase>>;
@@ -46,6 +47,23 @@ describe('Section 1 API and PostgreSQL authorization', () => {
     expect((await request(app).get('/api/v1/me').set(header()).set('Origin', 'https://untrusted.example')).status).toBe(403);
     const preflight = await request(app).options('/api/v1/me').set('Origin', 'http://localhost:3000').set('Access-Control-Request-Method', 'GET');
     expect(preflight.status).toBe(204);
+  });
+  it('serves the workspace shell with a favicon its content policy admits', async () => {
+    // The shell is only mounted when public auth is configured, and the policy
+    // is the whole reason the workspace draws its own marks. `img-src 'self'`
+    // was added for the favicon alone, so it must stay at 'self' with no
+    // `data:` and no remote origin, and the page must actually link the file.
+    const workspace = createApp({ database: db.database, origins: [], logger: pino({ level: 'silent' }), auth: { async verify() { throw new AppError(401, 'INVALID_TOKEN', 'Invalid token'); } }, publicAuth: { url: 'https://project.supabase.co', publishableKey: 'sb_publishable_test' } });
+    const page = await request(workspace).get('/app');
+    expect(page.status).toBe(200);
+    const policy = page.headers['content-security-policy']!;
+    expect(policy).toContain("default-src 'none'");
+    expect(policy).toContain("img-src 'self'");
+    expect(policy).not.toMatch(/img-src[^;]*(data:|https?:)/);
+    expect(page.text).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml">');
+    // public/ is a build artefact and absent on a fresh clone, so the file is
+    // asserted at its source, which the Vite public directory copies verbatim.
+    expect(readFileSync('web/public/favicon.svg', 'utf8')).toContain('<svg');
   });
   it('rejects malformed, unknown, oversize, and invalid date fields', async () => {
     expect((await request(app).post('/api/v1/academic-years').set(header()).send({ start_year: 2026, starts_on: '2026-02-30', ends_on: '2027-03-31' })).status).toBe(422);
