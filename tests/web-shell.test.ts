@@ -3,7 +3,9 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { AppShell } from '../web/components/AppShell';
 import { Donut, Timeline } from '../web/components/figures';
-import { routes, groups } from '../web/routes';
+import { CommandPalette } from '../web/components/palette';
+import { Unrecorded } from '../web/components/primitives';
+import { routes, groups, type Route } from '../web/routes';
 
 /**
  * The shell, and the two content-policy traps that have caught this project
@@ -21,6 +23,7 @@ describe('workspace shell', () => {
     school: { name: 'Synthetic Elementary School', school_code: '135617' },
     current: routes[0]!,
     context: '2026–2027 school year',
+    contextTone: 'active' as const,
     onNavigate: () => {},
     onSignOut: () => {},
     children: createElement('p', null, 'body'),
@@ -34,6 +37,12 @@ describe('workspace shell', () => {
     expect(html).toContain('Collapse sidebar');
     expect(html, 'the rail names the school from its record, not a literal').toContain('Synthetic Elementary School');
     expect(html, 'sign-out lives in the profile menu, which is closed until opened').not.toContain('Sign out');
+  });
+
+  it('offers the keyboard route to every screen without opening it', () => {
+    const html = shell('principal');
+    expect(html, 'the top bar states how to reach the palette').toContain('Go to a screen');
+    expect(html, 'the palette itself is not mounted until it is asked for').not.toContain('cmdk-box');
   });
 
   it('hides manager-only navigation from a teacher', () => {
@@ -55,14 +64,17 @@ describe('workspace shell', () => {
   // are asserted against the rendered markup rather than trusted to review.
   it('emits no inline style attribute and no image anywhere', () => {
     const api = (async () => ({ items: [], pagination: {} })) as never;
-    const props = (manager: boolean) => ({
+    const props = (manager: boolean, route: Route) => ({
       api, me: me(manager ? 'principal' : 'teacher'), manager,
-      setStatus: () => {}, reload: () => {}, token: 0,
+      setStatus: () => {}, reload: () => {}, token: 0, route,
     });
     const html = [
       shell('principal'),
       shell('teacher'),
-      ...routes.map(route => renderToString(route.render(props(true)) as never)),
+      ...routes.map(route => renderToString(route.render(props(true, route)) as never)),
+      renderToString(createElement(CommandPalette, {
+        routes, current: 'overview', onNavigate: () => {}, onClose: () => {},
+      })),
       renderToString(createElement(Donut, {
         slices: [{ label: 'Grade 1', count: 2 }, { label: 'Grade 2', count: 1 }],
         centreValue: 3, centreLabel: 'sections',
@@ -76,6 +88,42 @@ describe('workspace shell', () => {
     expect(html.match(/style="[^"]*"/g) ?? [], 'style-src drops inline style attributes').toEqual([]);
     expect(html.match(/data:[a-z/]+;/g) ?? [], 'there is no img-src, so no data URL renders').toEqual([]);
     expect(html).not.toContain('<img');
+  });
+});
+
+describe('command palette', () => {
+  /** `Subjects & offerings` reaches the markup escaped, so it is not a literal. */
+  const label = (text: string) => `>${text.replaceAll('&', '&amp;')}<`;
+  const palette = (list = routes) => renderToString(createElement(CommandPalette, {
+    routes: list, current: 'overview', onNavigate: () => {}, onClose: () => {},
+  }));
+
+  it('lists every screen it is given, grouped as the rail groups them', () => {
+    const html = palette();
+    for (const route of routes) expect(html, `${route.nav} is reachable`).toContain(label(route.nav));
+    for (const group of groups) expect(html).toContain(label(group));
+  });
+
+  it('offers a teacher only the screens a teacher may open', () => {
+    const html = palette(routes.filter(r => !r.manager));
+    for (const route of routes.filter(r => r.manager)) {
+      expect(html, `${route.nav} is not offered`).not.toContain(label(route.nav));
+    }
+  });
+
+  it('says what it searches, because it deliberately does not search learners', () => {
+    // A palette that searched the registry would write a record_access_events
+    // row per keystroke and bury the privacy audit it exists to serve.
+    expect(palette()).toContain('Searches screens, never learner records');
+  });
+});
+
+describe('the unrecorded mark', () => {
+  it('says a record is missing in words, not with a dash', () => {
+    const html = renderToString(createElement(Unrecorded, { label: 'LRN not issued' }));
+    expect(html, 'the reason is readable, including by a screen reader').toContain('LRN not issued');
+    expect(html, 'an em dash reads as a value someone typed').not.toContain('—');
+    expect(html, 'the hatch is a CSS class, never an inline style or an image').toContain('class="unrecorded"');
   });
 });
 

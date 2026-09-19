@@ -50,6 +50,15 @@ const paths = {
   dot: <><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" /></>,
   plus: <><path d="M12 5v14M5 12h14" /></>,
   check: <><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>,
+
+  /* Palette and print affordances. `enter` and `updown` label the two keys the
+     palette footer names, so the hint is a glyph rather than a spelled-out word
+     in a strip that is already three phrases long. */
+  enter: <><path d="M20 6v5a3 3 0 0 1-3 3H4" /><path d="m8 10-4 4 4 4" /></>,
+  updown: <><path d="M8 9.5 12 5l4 4.5" /><path d="m8 14.5 4 4.5 4-4.5" /></>,
+  eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  'eye-off': <><path d="m3 3 18 18" /><path d="M10.6 6.1A8.7 8.7 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3.2 3.9" /><path d="M6.3 8.2A16 16 0 0 0 2.5 12S6 18 12 18a9.2 9.2 0 0 0 3.4-.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
+  print: <><path d="M7 9V3h10v6" /><path d="M7 19H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="7" y="14" width="10" height="7" /></>,
 } as const;
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { message } from '../api';
+import { ApiError, message } from '../api';
 import { Icon } from './icons';
+import { Confirm, Sheet } from './overlay';
+import type { Route } from '../routes';
 
 export type Field = {
   key: string;
@@ -15,6 +17,9 @@ export type Field = {
   maxLength?: number;
   pattern?: string;
   hint?: string;
+  /** Takes the full width of the form grid. A reason is 10–500 characters and
+   *  must not be typed into a box the width of a two-digit ordinal. */
+  wide?: boolean;
 };
 
 export type Status = { text: string; kind: 'idle' | 'busy' | 'error' | 'done' };
@@ -31,25 +36,70 @@ export function StatusLine({ status }: { status: Status }) {
   );
 }
 
-export function Button({ label, onRun, setStatus, variant = 'secondary', size, confirm }: {
+/**
+ * A record that does not exist, drawn rather than left blank.
+ *
+ * This is the one rule the whole system is built around: an unmarked
+ * attendance session and an unentered score are null, never zero and never
+ * "present". An em dash reads as something a person typed and an empty cell
+ * reads as a page that failed to load, so a missing record gets its own mark —
+ * ruled diagonally, the way a clerk strikes an unused box on a paper form.
+ */
+export function Unrecorded({ label = 'Not recorded' }: { label?: string }) {
+  return <span className="unrecorded">{label}</span>;
+}
+
+/** The workspace prints: a section list is carried to a classroom on paper. */
+export function PrintButton({ label = 'Print' }: { label?: string }) {
+  return (
+    <button type="button" className="btn secondary" onClick={() => window.print()}>
+      <Icon name="print" size={15} />{label}
+    </button>
+  );
+}
+
+export function Button({ label, onRun, setStatus, variant = 'secondary', size, confirm, confirmTitle, confirmLabel, icon }: {
   label: string;
   onRun: () => Promise<unknown> | unknown;
   setStatus: (status: Status) => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'small' | undefined;
-  confirm?: string | undefined;
+  /** The consequence, stated in the screen's own words. Its presence opens a
+   *  confirmation before the action runs. */
+  confirm?: ReactNode | undefined;
+  confirmTitle?: string | undefined;
+  confirmLabel?: string | undefined;
+  icon?: Parameters<typeof Icon>[0]['name'] | undefined;
 }) {
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
   const classes = ['btn', variant === 'primary' ? '' : variant, size ?? ''].filter(Boolean).join(' ');
+
+  const run = async () => {
+    setBusy(true);
+    try { await onRun(); } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
+    finally { if (alive.current) { setBusy(false); setAsking(false); } }
+  };
+
   return (
-    <button type="button" className={classes} disabled={busy} onClick={async () => {
-      if (confirm && !window.confirm(confirm)) return;
-      setBusy(true);
-      try { await onRun(); } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
-      finally { if (alive.current) setBusy(false); }
-    }}>{label}</button>
+    <>
+      <button type="button" className={classes} disabled={busy} onClick={() => (confirm ? setAsking(true) : void run())}>
+        {icon ? <Icon name={icon} size={15} /> : null}{label}
+      </button>
+      {asking ? (
+        <Confirm
+          title={confirmTitle ?? label}
+          body={confirm}
+          confirmLabel={confirmLabel ?? label}
+          tone={variant === 'danger' ? 'danger' : 'plain'}
+          busy={busy}
+          onConfirm={() => void run()}
+          onClose={() => setAsking(false)}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -72,33 +122,63 @@ export function Select({ children, ...props }: React.ComponentProps<'select'>) {
  * placeholder rather than a line beneath it, so every field in the row is the
  * same height and the labels sit on one line.
  */
-function Control({ field, value, onChange, compact }: { field: Field; value: string; onChange: (value: string) => void; compact?: boolean }) {
-  const id = useId();
+function Control({ field, id, value, error, onChange, compact }: {
+  field: Field;
+  id: string;
+  value: string;
+  error?: string | undefined;
+  onChange: (value: string) => void;
+  compact?: boolean;
+}) {
+  const hintId = field.hint && !compact ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
+  const shared = {
+    id,
+    name: field.key,
+    required: !field.optional,
+    'aria-invalid': error ? true : undefined,
+    'aria-describedby': describedBy,
+  };
   return (
-    <div className="field">
-      <label className="label" htmlFor={id}>{field.label}</label>
+    <div className={`field${field.wide ? ' wide' : ''}${error ? ' bad' : ''}`}>
+      <label className="label" htmlFor={id}>
+        {field.label}
+        {field.optional && !compact ? <span className="optional">Optional</span> : null}
+      </label>
       {field.options
-        ? <Select id={id} name={field.key} required={!field.optional} value={value} onChange={e => onChange(e.target.value)}>
+        ? <Select {...shared} value={value} onChange={e => onChange(e.target.value)}>
             {field.options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
           </Select>
-        : <input
-            id={id}
-            name={field.key}
-            required={!field.optional}
-            type={field.type ?? 'text'}
-            value={value}
-            min={field.min}
-            max={field.max}
-            minLength={field.minLength}
-            maxLength={field.maxLength}
-            pattern={field.pattern}
-            placeholder={compact ? field.hint : undefined}
-            onChange={e => onChange(e.target.value)}
-          />}
-      {field.hint && !compact ? <span className="hint">{field.hint}</span> : null}
+        : field.type === 'textarea'
+          ? <textarea
+              {...shared}
+              value={value}
+              minLength={field.minLength}
+              maxLength={field.maxLength}
+              placeholder={compact ? field.hint : undefined}
+              onChange={e => onChange(e.target.value)}
+            />
+          : <input
+              {...shared}
+              type={field.type ?? 'text'}
+              value={value}
+              min={field.min}
+              max={field.max}
+              minLength={field.minLength}
+              maxLength={field.maxLength}
+              pattern={field.pattern}
+              placeholder={compact ? field.hint : undefined}
+              onChange={e => onChange(e.target.value)}
+            />}
+      {error ? <span className="field-error" id={errorId}><Icon name="alert" size={14} />{error}</span> : null}
+      {field.hint && !compact ? <span className="hint" id={hintId}>{field.hint}</span> : null}
     </div>
   );
 }
+
+/** Zod reports `items.0.score`; the control is keyed on the field name alone. */
+const fieldKey = (path: string) => path.split('.').filter(part => part && !/^\d+$/.test(part)).pop() ?? path;
 
 /** A versioned save form. Values stay strings until submit, where numbers coerce. */
 export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit, setStatus, onSaved, note }: {
@@ -110,17 +190,39 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   onSaved?: (() => void) | undefined;
   note?: ReactNode;
 }) {
+  const scope = useId();
+  const controlId = (key: string) => `${scope}-${key}`;
   const start = useCallback(() => Object.fromEntries(fields.map(f => {
     const raw = initial?.[f.key];
     return [f.key, raw === null || raw === undefined ? (f.options ? (f.options[0]?.[0] ?? '') : '') : String(raw)];
   })), [fields, initial]);
   const [values, setValues] = useState<Record<string, string>>(start);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setValues(start()); }, [start]);
+  const [bad, setBad] = useState<{ key: string; label: string; message: string }[]>([]);
+  const [lede, setLede] = useState('');
+  const [rejected, setRejected] = useState(0);
+  const summary = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setValues(start()); setBad([]); }, [start]);
+
+  // A failed save can reject several fields at once in a form taller than the
+  // window, so the reader is put in one place that names every problem and
+  // leads to each field. Moving focus here is the whole point of the summary.
+  useEffect(() => { if (rejected) summary.current?.focus(); }, [rejected]);
+
+  const problem = (key: string) => bad.find(f => f.key === key)?.message;
+
   return (
-    <form onSubmit={async event => {
+    // `noValidate` hands validation to the server, which is the authority here
+    // anyway. A native browser bubble shows one field at a time, cannot be
+    // styled, disappears on the next click and says "Please match the requested
+    // format" where the API says "must be exactly twelve digits". The
+    // attributes stay on the controls, so a screen reader still announces
+    // required and the format hint still reads.
+    <form noValidate onSubmit={async event => {
       event.preventDefault();
       setBusy(true);
+      setBad([]);
       setStatus({ text: 'Saving…', kind: 'busy' });
       const payload: Record<string, unknown> = {};
       for (const field of fields) {
@@ -132,12 +234,56 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
         setStatus({ text: 'Saved.', kind: 'done' });
         onSaved?.();
       } catch (error) {
-        setStatus({ text: message(error), kind: 'error' });
+        // A rejection that names fields belongs beside those fields. Anything
+        // else — a version conflict, a refusal, a network failure — is about
+        // the record rather than the typing, and stays on the page's own line.
+        const named = error instanceof ApiError
+          ? error.fields
+              .map(f => ({ key: fieldKey(f.path), message: f.message }))
+              .flatMap(f => { const field = fields.find(x => x.key === f.key); return field ? [{ ...f, label: field.label }] : []; })
+          : [];
+        if (named.length) {
+          setBad(named);
+          setLede(error instanceof ApiError ? error.message : '');
+          setRejected(n => n + 1);
+          setStatus(idle);
+        } else {
+          setStatus({ text: message(error), kind: 'error' });
+        }
       } finally { setBusy(false); }
     }}>
+      {bad.length ? (
+        <div className="error-summary" role="alert" tabIndex={-1} ref={summary}>
+          <h3><Icon name="alert" size={16} />{bad.length === 1 ? 'One field needs attention' : `${bad.length} fields need attention`}</h3>
+          {lede ? <p>{lede}</p> : null}
+          <ul>
+            {bad.map(f => (
+              <li key={f.key}>
+                {/* A button, not an anchor: the address bar is the router here,
+                    so a `#field` href would navigate away from the screen. */}
+                <button type="button" onClick={() => document.getElementById(controlId(f.key))?.focus()}>
+                  {f.label}: {f.message}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="form-grid">
         {fields.map(field => (
-          <Control key={field.key} field={field} value={values[field.key] ?? ''} onChange={next => setValues(v => ({ ...v, [field.key]: next }))} />
+          <Control
+            key={field.key}
+            field={field}
+            id={controlId(field.key)}
+            value={values[field.key] ?? ''}
+            error={problem(field.key)}
+            onChange={next => {
+              setValues(v => ({ ...v, [field.key]: next }));
+              // Editing a rejected field clears its mark: the message described
+              // what was there a moment ago, not what is there now.
+              setBad(list => list.filter(f => f.key !== field.key));
+            }}
+          />
         ))}
       </div>
       <div className="form-actions">
@@ -148,6 +294,42 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   );
 }
 
+/**
+ * A sheet holding exactly one form — the shape every "add a record" action in
+ * the workspace takes.
+ *
+ * It keeps its own status line. A refusal has to be read where it happened,
+ * and the page's line is behind the panel: the version conflict that stopped
+ * the save would otherwise be announced to an empty room.
+ */
+export function FormSheet({ title, note, wide, submitLabel, fields, initial, onSubmit, onSaved, onClose }: {
+  title: string;
+  note?: string | undefined;
+  wide?: boolean | undefined;
+  submitLabel: string;
+  fields: Field[];
+  initial?: Record<string, unknown> | undefined;
+  onSubmit: (values: Record<string, unknown>) => Promise<unknown>;
+  /** Called only after the server accepted the change. Close the sheet here. */
+  onSaved: () => void;
+  onClose: () => void;
+}) {
+  const [status, setStatus] = useState<Status>(idle);
+  return (
+    <Sheet title={title} note={note} wide={wide} onClose={onClose}>
+      <StatusLine status={status} />
+      <Editor
+        fields={fields}
+        initial={initial}
+        submitLabel={submitLabel}
+        setStatus={setStatus}
+        onSubmit={onSubmit}
+        onSaved={onSaved}
+      />
+    </Sheet>
+  );
+}
+
 /** The same controls as an editor, but laid out as one filter row above a list. */
 export function Finder({ fields, initial, onApply, onClear }: {
   fields: Field[];
@@ -155,13 +337,14 @@ export function Finder({ fields, initial, onApply, onClear }: {
   onApply: (values: Record<string, string>) => void;
   onClear?: (() => void) | undefined;
 }) {
+  const scope = useId();
   const [values, setValues] = useState(initial);
   const filled = Object.values(values).some(Boolean);
   return (
     <form className="toolbar" onSubmit={event => { event.preventDefault(); onApply(values); }}>
       <div className="form-grid">
         {fields.map(field => (
-          <Control key={field.key} compact field={field} value={values[field.key] ?? ''} onChange={next => setValues(v => ({ ...v, [field.key]: next }))} />
+          <Control key={field.key} compact field={field} id={`${scope}-${field.key}`} value={values[field.key] ?? ''} onChange={next => setValues(v => ({ ...v, [field.key]: next }))} />
         ))}
       </div>
       <div className="form-actions">
@@ -177,9 +360,31 @@ export function Finder({ fields, initial, onApply, onClear }: {
 export type Column<T> = { header: string; cell: (row: T) => ReactNode; numeric?: boolean };
 
 /**
+ * A placeholder shaped like the table it stands in. Three grey bars said
+ * nothing about what was coming and the page jumped when the rows landed.
+ */
+export function TableSkeleton({ columns = 4, rows = 4 }: { columns?: number; rows?: number }) {
+  return (
+    <div className="skeleton-table" aria-hidden="true">
+      {Array.from({ length: rows + 1 }, (_, row) => (
+        <div className="skeleton-row" key={row}>
+          {Array.from({ length: columns }, (_, column) => (
+            <span className={`skeleton${column === 0 ? ' s2' : ''}`} key={column} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
  * One open row at a time, and its panel spans the full width of the table
  * rather than being squeezed into the last column. The editors these panels
  * hold are multi-field forms; a 260px cell was never enough room for one.
+ *
+ * Columns are not sortable. Sorting would reorder the twenty-five rows on
+ * screen and leave the other eight hundred where they are, which looks like an
+ * answer and is not one. Narrowing a list is the filter row's job.
  */
 export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', actionsLabel = 'Actions', rowKey, loading }: {
   rows: T[];
@@ -193,7 +398,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
 }) {
   const scope = useId();
   const [open, setOpen] = useState<string | null>(null);
-  if (loading) return <div className="card-body"><div className="skeleton" /><div className="skeleton" /><div className="skeleton" /></div>;
+  if (loading) return <TableSkeleton columns={columns.length + (detail ? 1 : 0)} />;
   if (!rows.length) return <>{empty ?? <EmptyState title="Nothing here yet" body="Records you add will appear in this list." />}</>;
   const span = columns.length + (detail ? 1 : 0);
   return (
@@ -240,6 +445,25 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
   );
 }
 
+/**
+ * One of several things a reader could do to a record, folded away until it is
+ * chosen. An invitation panel used to stack three whole forms — create the
+ * account, link one made by hand, cancel the request — so the two nobody
+ * wanted were always in the way of the one they did.
+ */
+export function Task({ title, note, tone, children }: { title: string; note?: string; tone?: 'warn'; children: ReactNode }) {
+  return (
+    <details className={`task${tone === 'warn' ? ' warn' : ''}`}>
+      <summary>
+        <Icon name="caret" size={13} />
+        {title}
+        {note ? <span className="task-note">{note}</span> : null}
+      </summary>
+      <div className="task-body">{children}</div>
+    </details>
+  );
+}
+
 /** A record and the identifier it is filed under, stacked the way a register reads. */
 export function Cell({ title, meta }: { title: ReactNode; meta?: ReactNode }) {
   return (
@@ -251,7 +475,14 @@ export function Cell({ title, meta }: { title: ReactNode; meta?: ReactNode }) {
 }
 
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
-  return <div className="empty"><h3>{title}</h3><p>{body}</p>{action ? <div className="form-actions centred">{action}</div> : null}</div>;
+  return (
+    <div className="empty">
+      <span className="empty-mark" aria-hidden="true" />
+      <h3>{title}</h3>
+      <p>{body}</p>
+      {action ? <div className="form-actions centred">{action}</div> : null}
+    </div>
+  );
 }
 
 const calloutIcon = { info: 'info', attention: 'alert', stopped: 'stop' } as const;
@@ -275,7 +506,7 @@ export function Pager({ offset, count, hasMore, onChange, size = 25 }: {
   if (!offset && !hasMore) return null;
   return (
     <div className="pager">
-      <span>Showing {count ? offset + 1 : 0}–{offset + count}</span>
+      <span>Showing <b className="num">{count ? offset + 1 : 0}–{offset + count}</b></span>
       <div className="pager-nav">
         <button type="button" className="btn secondary small" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - size))}>
           <Icon name="back" size={14} />Previous
@@ -289,9 +520,36 @@ export function Pager({ offset, count, hasMore, onChange, size = 25 }: {
 }
 
 export const value = (row: Record<string, unknown>, key: string) => (row[key] == null ? '' : String(row[key]));
+/** A value, or the mark that says no record exists — never an em dash. */
+export const shown = (row: Record<string, unknown>, key: string, label?: string) =>
+  row[key] == null || row[key] === '' ? <Unrecorded label={label ?? 'Not recorded'} /> : String(row[key]);
 export const sentence = (text: string) => (text ? text[0]!.toUpperCase() + text.slice(1).replaceAll('_', ' ') : '');
 export const gradeName = (grade: unknown) => (Number(grade) === 0 ? 'Kindergarten' : `Grade ${Number(grade)}`);
 export const yearName = (row: Record<string, unknown>) => `${row.start_year}–${Number(row.start_year) + 1}`;
 export const learnerName = (row: Record<string, unknown>) =>
   [value(row, 'last_name'), [value(row, 'first_name'), value(row, 'middle_name'), value(row, 'name_extension')].filter(Boolean).join(' ')]
     .filter(Boolean).join(', ');
+
+/**
+ * The line under the title, and the DepEd form these records end up on. The
+ * title itself sits in the top bar, so this carries only what the top bar
+ * cannot: the one clause explaining the screen, and the screen's own actions.
+ *
+ * Creating a record is one of those actions. It used to be a second full-width
+ * form parked permanently below the list it added to; it is now a button here
+ * that opens a sheet, so a screen is the register it is named after.
+ *
+ * `Route` is imported as a type only, so this file never pulls the route table
+ * — and the screens it declares — back in at runtime.
+ */
+export function PageHeader({ route, actions }: { route: Route; actions?: ReactNode }) {
+  return (
+    <div className="view-head">
+      <div className="view-titles">
+        <p className="view-sub">{route.lede}</p>
+        {route.feeds ? <span className="form-chip">Feeds<b>{route.feeds}</b></span> : null}
+      </div>
+      {actions ? <div className="view-actions">{actions}</div> : null}
+    </div>
+  );
+}

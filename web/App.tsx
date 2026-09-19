@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createApi, message, type Page, type Row } from './api';
 import { Account } from './Account';
-import { AppShell, PageHeader } from './components/AppShell';
+import { AppShell } from './components/AppShell';
 import { BrandMark } from './components/brand';
-import { StatusLine, idle, yearName, type Status } from './components/primitives';
+import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
 import { routeFor } from './routes';
 
 const currentHash = () => location.hash.replace(/^#\/?/, '') || 'overview';
@@ -112,12 +112,13 @@ export function App() {
       school={school}
       current={route}
       context={year ? `${yearName(year)} school year` : 'No active school year'}
+      contextTone={year ? 'active' : 'none'}
       onNavigate={navigate}
       onSignOut={() => void client.auth.signOut()}
     >
       {route.ownHeader ? null : <PageHeader route={route} />}
       <StatusLine status={status} />
-      {route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token })}
+      {route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token, route })}
     </AppShell>
   );
 }

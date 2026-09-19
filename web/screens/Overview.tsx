@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
-import { Badge, Callout, EmptyState, Table, gradeName, sentence, value, yearName, type Status } from '../components/primitives';
+import {
+  Badge, EmptyState, PrintButton, Table, TableSkeleton, Unrecorded,
+  gradeName, sentence, value, yearName, type Status,
+} from '../components/primitives';
 import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
 
 /**
@@ -18,7 +21,7 @@ import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
  * roster facts: which stretch of the year today falls in, how many sections
  * exist at each grade, who holds access. Averages, attendance rates and
  * academic standing stay behind their gates in docs/constraints.md, and the
- * screen says so rather than leaving their absence to be guessed at.
+ * screen draws their absence rather than leaving it to be guessed at.
  */
 
 /** The browser's own date, not UTC: at 7am in Benguet, `toISOString` is still yesterday. */
@@ -41,6 +44,14 @@ const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
 const covering = (periods: Row[], today: string) =>
   periods.find(p => String(p.starts_on) <= today && today <= String(p.ends_on));
+
+/** The figures EDUNEXUS is not allowed to state, and the decision each waits on. */
+const GATED: [string, string][] = [
+  ['General average', 'Waits on the grading enclosure'],
+  ['Attendance rate', 'Waits on the mark meanings'],
+  ['Academic standing', 'Waits on the grading enclosure'],
+  ['Class ranking', 'Never requested by the school'],
+];
 
 export function Overview({ api, me, manager, token }: {
   api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number;
@@ -100,25 +111,23 @@ export function Overview({ api, me, manager, token }: {
   const staffName = (id: unknown) => staff.find(s => s.user_id === id)?.display_name;
 
   const adviser = (row: Row) => {
-    if (row.adviser_user_id == null) return <Badge tone="attention">No adviser</Badge>;
-    if (row.adviser_user_id === me.user_id) return 'You';
+    if (row.adviser_user_id == null) return <Unrecorded label="No adviser" />;
+    if (row.adviser_user_id === me.user_id) return <b>You</b>;
     const named = staffName(row.adviser_user_id);
     return named ? String(named) : <span className="muted">Assigned</span>;
   };
 
   if (loading) {
-    return <div className="card"><div className="card-body"><div className="skeleton" /><div className="skeleton" /><div className="skeleton" /></div></div>;
+    return <div className="card"><TableSkeleton columns={4} rows={5} /></div>;
   }
 
   if (!year) {
     return (
       <div className="card">
-        <div className="card-body">
-          <EmptyState
-            title="No school year exists yet"
-            body="EDUNEXUS records everything against a school year. Create one under School years, add its reporting periods, then activate it."
-          />
-        </div>
+        <EmptyState
+          title="No school year exists yet"
+          body="EDUNEXUS records everything against a school year. Create one under School years, add its reporting periods, then activate it."
+        />
       </div>
     );
   }
@@ -215,16 +224,19 @@ export function Overview({ api, me, manager, token }: {
       </div>
 
       <div className="card">
-        <div className="card-head"><div>
-          <h2>{manager ? 'Sections and advisers' : 'Your sections'}</h2>
-          <p className="card-note">
-            {unassigned
-              ? `${unassigned} ${unassigned === 1 ? 'section has' : 'sections have'} no adviser. Attendance cannot be recorded for a section until one is assigned.`
-              : !rooms.length ? 'Nothing is set up for this school year yet.'
-              : manager ? 'Every section in this school year has an adviser.'
-              : 'The sections you currently advise in this school year.'}
-          </p>
-        </div></div>
+        <div className="card-head">
+          <div>
+            <h2>{manager ? 'Sections and advisers' : 'Your sections'}</h2>
+            <p className="card-note">
+              {unassigned
+                ? `${unassigned} ${unassigned === 1 ? 'section has' : 'sections have'} no adviser. Attendance cannot be recorded for a section until one is assigned.`
+                : !rooms.length ? 'Nothing is set up for this school year yet.'
+                : manager ? 'Every section in this school year has an adviser.'
+                : 'The sections you currently advise in this school year.'}
+            </p>
+          </div>
+          {rooms.length ? <div className="card-head-actions"><PrintButton /></div> : null}
+        </div>
         <Table
           rows={[...rooms].sort((a, b) => Number(a.grade_level) - Number(b.grade_level) || String(a.name).localeCompare(String(b.name)))}
           rowKey={r => String(r.id)}
@@ -255,17 +267,34 @@ export function Overview({ api, me, manager, token }: {
               { header: 'When', cell: r => new Date(String(r.occurred_at)).toLocaleString() },
               { header: 'Record', cell: r => <code>{value(r, 'entity_table')}</code> },
               { header: 'Action', cell: r => sentence(value(r, 'operation')) },
-              { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) ? r.changed_fields.join(', ') : <span className="muted">—</span> },
+              { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) && r.changed_fields.length
+                ? r.changed_fields.join(', ')
+                : <Unrecorded label="None listed" /> },
             ]}
           />
         </div>
       ) : null}
 
-      <Callout tone="info" title="What this screen does not show">
-        No average, attendance rate, academic standing or ranking appears anywhere in EDUNEXUS. Those depend on rules only the school can supply —
-        the current DepEd grading enclosure, and the approved meanings of each attendance mark. Until they arrive, the system records what was
-        entered and computes nothing from it.
-      </Callout>
+      {/* Drawn, not omitted. A reader who expects a general average on a school
+          dashboard should see that its absence was decided — and by whom. */}
+      <div className="card">
+        <div className="gated">
+          <h3>Nothing in EDUNEXUS computes a grade or a rate</h3>
+          <div className="gated-row">
+            {GATED.map(([figure, waiting]) => (
+              <div className="gated-box" key={figure}>
+                <b>{figure}</b>
+                <span>{waiting}</span>
+              </div>
+            ))}
+          </div>
+          <p>
+            These depend on rules only the school can supply — the current DepEd grading enclosure, and the approved meaning of each
+            attendance mark. Until those arrive, the system records what was entered and works nothing out from it. An unmarked session
+            and an unentered score stay unknown rather than counting as zero.
+          </p>
+        </div>
+      </div>
     </>
   );
 }

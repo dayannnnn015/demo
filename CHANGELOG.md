@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.28.0 | Workspace overhauled: field-level errors, sheets, command palette, the unrecorded mark | — |
 | 0.27.2 | The mark as the browser tab icon; `img-src 'self'` for that one file | — |
 | 0.27.1 | Square corners, a wider brighter rail, the EDUNEXUS mark as inline SVG | — |
 | 0.27.0 | Navy rail, collapsible navigation, top-bar profile, Overview screen | — |
@@ -38,6 +39,99 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.28.0 — The workspace overhauled
+
+The user asked for a complete overhaul of the interface, with the typefaces left
+alone. Four settled decisions were kept because they are the user's own and are
+recorded with their reasons — the navy rail, the single blue accent, square
+corners everywhere, and Inter with JetBrains Mono for identifiers. Everything
+above those was rebuilt.
+
+**Errors now have a home.** This was the real defect. The API has always
+returned `error.fields[]` with a path and a message per field; `web/api.ts`
+joined them into one string and the screen printed that blob in a single status
+line at the top of the page. A manager who mistyped a birth date and an LRN was
+told both things at once, in one paragraph, a long way from either box. Saving a
+form now marks each rejected field, prints the server's own message beneath it,
+wires `aria-describedby` and `aria-invalid`, and focuses a summary listing every
+problem with a control that jumps to its field. Editing a marked field clears
+its mark, because the message described what was there a moment ago. Anything
+the server does not attribute to a field — a version conflict, a refusal, a lost
+network — still goes to the page line, where it belongs.
+
+**Creating a record is no longer a second form bolted under a list.** Every
+screen used to be a table card followed by a permanent "add one" card, which is
+the lazy admin layout GOV.UK's own guidance names as the thing not to do. There
+is now a `Sheet`: a focus-trapped side panel, opened by a primary action in the
+page header, carrying its own status line so a refusal is read where it
+happened rather than announced to the page behind it. The invitation panel,
+which stacked three whole forms on top of each other, folds each into a
+disclosure so the two nobody wanted are out of the way of the one they did.
+
+**`window.confirm` is gone.** Closing a school year is irreversible from the
+interface, and a browser dialog cannot say what it costs, cannot be read in the
+interface's own words, and can be suppressed outright — which turns an
+irreversible change into a silent yes. `Confirm` states the consequence in the
+same sentence the screen used, and its two buttons are "Keep as it is" and
+"Close year" rather than Cancel and OK.
+
+**There is a command palette on Ctrl/Cmd+K.** Seventeen screens behind six
+collapsible groups is a lot of pointing for an adviser who opens the same three
+every morning. It searches the route table — label, title, group and
+description — and nothing else, and says so in its own footer. That is a privacy
+property rather than a limitation: every list under `/learners` and
+`/enrollments` writes a `record_access_events` row naming the exact records it
+returned, so a palette that searched learners would write one per keystroke and
+bury the audit it exists to serve.
+
+**A missing record is drawn rather than left blank.** The rule the whole system
+is built on is that absence of a record is not evidence: an unmarked session and
+an unentered score are null, never zero. An em dash reads as a value somebody
+typed and an empty cell reads as a page that failed to load, so a missing record
+now carries a ruled diagonal hatch and says what is missing — "LRN not issued",
+"No adviser", "None listed". It is a CSS gradient, because the content policy
+serves one image file and drops a `data:` URL. The same mark sizes up: it is the
+figure on an empty state, the block on an unbuilt screen, and the ground of the
+four struck-out boxes on the Overview that name the general average, attendance
+rate, academic standing and class ranking this system may not state, and what
+each waits on. Their absence was a decision and now looks like one.
+
+**The frame carries the scope.** The active school year was an 11px grey eyebrow
+above the page title; it is the scope every record in the system is filed under,
+so it is now a chip in the top bar with its state, ochre when nothing is active.
+The rail lost 32px and a block of padding, the type scale gained the steps it
+was missing, and the table heading rule is heavier than the row rules the way a
+paper register's is.
+
+**The workspace prints.** This school runs on paper — a section list is printed
+and carried to a classroom — and printing it previously produced the navigation
+rail and a wall of chrome. A print stylesheet drops the furniture, keeps the
+register, repeats table headings across pages, avoids breaking a row, and
+replaces the hatch with its words, because a diagonal rule does not survive a
+greyscale laser.
+
+Smaller, and each one a specific complaint: the password field can be read back,
+because mistyping twelve characters twice on a shared keyboard is as real a risk
+as the shoulder behind you and only the person at the keyboard knows which they
+are in; a loading table is a skeleton shaped like that table rather than three
+grey bars; a reason field is a textarea across the full row instead of a
+single-line box the width of a two-digit ordinal; an optional field says so;
+dates and LRNs no longer break across two lines on a narrow screen, the table
+scrolls sideways instead, the way a class list does on paper; and the school
+profile reads as a definition list rather than as a form somebody is locked out
+of.
+
+Columns are still not sortable, deliberately. Sorting would reorder the
+twenty-five rows on screen and leave the other eight hundred where they are,
+which looks like an answer and is not one.
+
+`tests/web-shell.test.ts` and `tests/web-screens.test.ts` grew to cover the
+palette, the unrecorded mark, and the assertion that no sheet, dialog or
+confirmation reaches the markup until it is asked for — an overlay that merely
+hid itself with CSS would put the text of a destructive action into the page and
+leave its fields in the tab order. The two content-policy traps are unchanged and
+still pass: no inline `style` attribute and no image anywhere in the rendered app.
 
 ## 0.27.2 — The mark as the browser tab icon
 

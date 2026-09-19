@@ -165,7 +165,7 @@ Read [staff invitations](docs/staff-invitations.md). A manager records the reque
 
 ## What works in the school workspace
 
-The workspace at `/app` is a keyboard-navigable administrative interface: a deep navy navigation rail against white working surfaces, so the records are the brightest thing on screen. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:
+The workspace at `/app` is a keyboard-navigable administrative interface: a deep navy navigation rail against white working surfaces, so the records are the brightest thing on screen. It is drawn as a register — square corners, hairline rules between rows and a heavier rule under the column heads — because every form it feeds is a ruled sheet and that is the structure the staff already read. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:
 
 - **An overview**: where the school year stands — its reporting periods with today marked, sections by grade, the section-and-adviser list, who holds access, and the latest recorded changes. No average, attendance rate or standing appears, and the screen says so.
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
@@ -174,19 +174,27 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
 - **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
 
+**A record that does not exist is drawn, not left blank.** An unmarked attendance session and an unentered score are null, never zero and never "present", so a missing value carries a ruled diagonal mark and says what is missing — "LRN not issued", "No adviser". The same mark, at panel size, is what the Overview uses to name the general average, attendance rate, academic standing and class ranking this system may not state, and what each of them waits on. An em dash would read as a value somebody typed.
+
+**Ctrl+K opens a command palette** onto all seventeen screens. It searches their names, sections and descriptions and nothing else: every learner and enrollment list writes an access-log row naming the exact records returned, so a palette that searched the registry would write one per keystroke.
+
+**Errors sit beside the field that caused them.** A rejected save marks each field, prints the server's own message under it, and focuses a summary that lists every problem and jumps to each one. Creating a record opens a side panel rather than a second form parked under the list, and anything irreversible is confirmed in a dialog that states the consequence rather than asking "are you sure".
+
+**The workspace prints.** A section list is carried to a classroom on paper, so printing drops the navigation and the chrome, keeps the register, and repeats table headings across pages.
+
 Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
 
 Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed corrections, attendance, calendars and academic setup stay API-only.
 
 A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
 
-The rail groups the seventeen screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The signed-in identity and sign-out sit in the top bar. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
+The rail groups the seventeen screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The top bar carries the page title, the active school year — the scope every record is filed under — the palette and the signed-in identity. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
 
 Read [frontend integration](docs/frontend-handoff.md) before extending it.
 
 ## Release history
 
-[CHANGELOG.md](CHANGELOG.md) lists every released increment, its manuscript section and its database migration. The current release is **0.26.0**.
+[CHANGELOG.md](CHANGELOG.md) lists every released increment, its manuscript section and its database migration. The current release is **0.28.0**.
 
 ## Development
 

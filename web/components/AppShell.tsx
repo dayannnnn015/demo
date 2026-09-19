@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Row } from '../api';
 import { groups, routes, type Route } from '../routes';
 import { BrandMark } from './brand';
 import { Icon } from './icons';
+import { CommandPalette } from './palette';
 import { sentence } from './primitives';
 
 /** Two letters is enough to tell 33 people apart, and it needs no photograph. */
@@ -56,7 +57,7 @@ function ProfileMenu({ me, onSignOut }: { me: Row; onSignOut: () => void }) {
           <b>{name}</b>
           <span>{sentence(String(me.role))}</span>
         </span>
-        <Icon name="chevron" size={15} />
+        <Icon name="chevron" size={14} />
       </button>
       {open ? (
         <div className="menu" role="menu">
@@ -87,7 +88,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
     <div className="nav" data-open={open}>
       {collapsed ? <hr className="nav-rule" /> : (
         <button type="button" className="nav-group" aria-expanded={open} onClick={onToggle}>
-          <Icon name="caret" size={13} />
+          <Icon name="caret" size={12} />
           <span>{group}</span>
           {/* Collapsing the group that holds the current page is allowed; a dot
               says where you are, so the rail never loses your position. */}
@@ -106,7 +107,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
               aria-label={collapsed ? route.nav : undefined}
               onClick={() => onNavigate(route.id)}
             >
-              <Icon name={route.icon} />
+              <Icon name={route.icon} size={17} />
               <span className="nav-label">{route.nav}</span>
               {route.built ? null : <span className="soon">Soon</span>}
             </button>
@@ -117,7 +118,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
   );
 }
 
-export function AppShell({ me, school, current, context, onNavigate, onSignOut, children }: {
+export function AppShell({ me, school, current, context, contextTone, onNavigate, onSignOut, children }: {
   me: Row;
   /** The school profile record. The rail states what it reads, never a literal:
    *  this is the same name printed on every official form, and it is editable. */
@@ -125,11 +126,14 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
   current: Route;
   /** The active school year, or whatever else names the records on screen. */
   context?: string | undefined;
+  /** Whether that year is open for new records. Ochre when nothing is. */
+  contextTone?: 'active' | 'none' | undefined;
   onNavigate: (id: string) => void;
   onSignOut: () => void;
   children: ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
+  const [palette, setPalette] = useState(false);
   const [collapsed, setCollapsed] = useState(() => remembered('rail-collapsed', false));
   const [shut, setShut] = useState(() => remembered<string[]>('nav-shut', []));
   const manager = me.role !== 'teacher';
@@ -142,6 +146,18 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
     return next;
   });
 
+  // The one global shortcut. Held here rather than in the palette so it works
+  // from any screen without the palette being mounted and listening.
+  const openPalette = useCallback((event: KeyboardEvent) => {
+    if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+    event.preventDefault();
+    setPalette(true);
+  }, []);
+  useEffect(() => {
+    addEventListener('keydown', openPalette);
+    return () => removeEventListener('keydown', openPalette);
+  }, [openPalette]);
+
   return (
     <div className="app" data-rail={collapsed ? 'collapsed' : 'full'} data-drawer={drawer}>
       <a className="skip" href="#main">Skip to content</a>
@@ -153,10 +169,10 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
       <nav className="rail" aria-label="Sections">
         <div className="rail-head">
           <span className="brand">
-            <span className="brand-mark" aria-hidden="true"><BrandMark size={28} /></span>
+            <span className="brand-mark" aria-hidden="true"><BrandMark size={24} /></span>
             <span className="brand-text">
               <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
-              <span>Learner records system</span>
+              <span>Learner records</span>
             </span>
           </span>
           <button type="button" className="rail-close" aria-label="Hide sections" onClick={() => setDrawer(false)}>
@@ -165,10 +181,10 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
         </div>
 
         <div className="rail-school">
-          <span className="rail-school-mark" aria-hidden="true"><Icon name="staff" size={16} /></span>
+          <span className="rail-school-mark" aria-hidden="true"><Icon name="school" size={15} /></span>
           <span className="rail-school-text">
             <b>{school ? String(school.name) : 'School profile'}</b>
-            <span>{school?.school_code ? `School ID ${String(school.school_code)}` : 'Not set'}</span>
+            <span>{school?.school_code ? `School ID ${String(school.school_code)}` : 'School ID not set'}</span>
           </span>
         </div>
 
@@ -199,7 +215,7 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={collapsed ? 'Expand sidebar' : undefined}
           >
-            <Icon name={collapsed ? 'expand' : 'collapse'} size={17} />
+            <Icon name={collapsed ? 'expand' : 'collapse'} size={16} />
             <span className="nav-label">Collapse sidebar</span>
           </button>
         </div>
@@ -211,32 +227,40 @@ export function AppShell({ me, school, current, context, onNavigate, onSignOut, 
             <Icon name="menu" size={20} />
           </button>
           <div className="topbar-title">
-            {context ? <span className="topbar-context">{context}</span> : null}
             <h1>{current.title}</h1>
           </div>
           <div className="topbar-right">
+            {/* The scope every record on screen is filed under. A statement,
+                not a control: a year is activated on the School years screen,
+                where what that means is spelled out. */}
+            {context ? (
+              <span className={`scope${contextTone === 'none' ? ' none' : ''}`}>
+                {contextTone === 'none'
+                  ? <Icon name="alert" size={14} />
+                  : <span className="scope-dot" aria-hidden="true" />}
+                {context}
+              </span>
+            ) : null}
+            <span className="topbar-sep" aria-hidden="true" />
+            <button type="button" className="search-trigger" onClick={() => setPalette(true)} aria-label="Go to a screen">
+              <Icon name="search" size={15} />
+              <span>Go to a screen</span>
+              <kbd className="kbd">Ctrl K</kbd>
+            </button>
             <ProfileMenu me={me} onSignOut={onSignOut} />
           </div>
         </header>
         <main className="view" id="main">{children}</main>
       </div>
-    </div>
-  );
-}
 
-/**
- * The line under the title, and the DepEd form these records end up on. The
- * title itself now sits in the top bar, so this carries only what the top bar
- * cannot: the one clause explaining the screen, and any screen-level action.
- */
-export function PageHeader({ route, actions }: { route: Route; actions?: ReactNode }) {
-  return (
-    <div className="view-head">
-      <div className="view-titles">
-        <p className="view-sub">{route.lede}</p>
-        {route.feeds ? <span className="form-chip">Feeds<b>{route.feeds}</b></span> : null}
-      </div>
-      {actions ? <div className="view-actions">{actions}</div> : null}
+      {palette ? (
+        <CommandPalette
+          routes={visible}
+          current={current.id}
+          onNavigate={onNavigate}
+          onClose={() => setPalette(false)}
+        />
+      ) : null}
     </div>
   );
 }

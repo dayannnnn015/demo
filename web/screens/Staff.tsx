@@ -1,30 +1,47 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
-import { Badge, Callout, Editor, EmptyState, Pager, Select, Table, sentence, value, type Field, type Status } from '../components/primitives';
+import type { Route } from '../routes';
+import { Icon } from '../components/icons';
+import {
+  Badge, Callout, Editor, EmptyState, FormSheet, PageHeader, Pager, Select, Table, Task,
+  Unrecorded, sentence, value, type Field, type Status,
+} from '../components/primitives';
 
-type Props = { api: Api; me?: Row; setStatus: (s: Status) => void; reload: () => void; token: number };
+type Props = { api: Api; me?: Row; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
 const roles: [string, string][] = [['teacher', 'Teacher'], ['administrative_officer', 'Administrative officer'], ['principal', 'Principal']];
 const nameField: Field = { key: 'display_name', label: 'Full name', maxLength: 150 };
-const reasonField: Field = { key: 'reason', label: 'Reason', minLength: 10, maxLength: 500, hint: 'Kept in the permanent record of this change.' };
+/** A reason is 10–500 characters and belongs in a box that admits a sentence. */
+const reasonField: Field = { key: 'reason', label: 'Reason', type: 'textarea', minLength: 10, maxLength: 500, wide: true, hint: 'Kept in the permanent record of this change.' };
+const idField: Field = { key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}', wide: true };
 
-export function Staff({ api, me, setStatus, reload, token }: Props & { me: Row }) {
+export function Staff({ api, me, setStatus, reload, token, route }: Props & { me: Row }) {
   const [rows, setRows] = useState<Page | null>(null);
   const [offset, setOffset] = useState(0);
+  const [granting, setGranting] = useState(false);
   useEffect(() => { setRows(null); void api<Page>(`/staff${query({ limit: 25, offset })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, offset, token]);
   const allowed = me.role === 'principal' ? roles : roles.slice(0, 1);
+
   return (
     <>
+      <PageHeader
+        route={route}
+        actions={<button type="button" className="btn" onClick={() => setGranting(true)}><Icon name="plus" size={15} />Grant access</button>}
+      />
+
       <div className="card">
-        <div className="card-head"><div><h2>People with access</h2><p className="card-note">Suspending blocks someone immediately without deleting anything they recorded.</p></div></div>
+        <div className="card-head"><div>
+          <h2>People with access</h2>
+          <p className="card-note">Suspending blocks someone immediately without deleting anything they recorded.</p>
+        </div></div>
         <Table
           loading={rows === null}
           rows={rows?.items ?? []}
           rowKey={r => String(r.user_id)}
-          empty={<EmptyState title="No staff yet" body="Authorize an account below, or request an invitation for a colleague." />}
+          empty={<EmptyState title="No staff yet" body="Grant access to an account the operator already created, or request an invitation for a colleague." />}
           columns={[
-            { header: 'Name', cell: r => value(r, 'display_name') },
+            { header: 'Name', cell: r => <b>{value(r, 'display_name')}</b> },
             { header: 'Permission level', cell: r => sentence(value(r, 'role')) },
             { header: 'Access', cell: r => r.active ? <Badge tone="good">Active</Badge> : <Badge tone="stopped">Suspended</Badge> },
           ]}
@@ -47,24 +64,34 @@ export function Staff({ api, me, setStatus, reload, token }: Props & { me: Row }
         <Pager offset={offset} count={rows?.items.length ?? 0} hasMore={Boolean(rows?.pagination?.has_more)} onChange={setOffset} />
       </div>
 
-      <div className="card">
-        <div className="card-head"><div><h2>Authorize an existing account</h2><p className="card-note">For an identity the operator already created. To start from scratch, use Invitations.</p></div></div>
-        <div className="card-body">
-          <Editor submitLabel="Grant access" setStatus={setStatus} onSaved={reload}
-            fields={[{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}' }, nameField, { key: 'role', label: 'Permission level', options: allowed }]}
-            onSubmit={data => api('/staff', 'POST', data)} />
-        </div>
-      </div>
+      {granting ? (
+        <FormSheet
+          title="Grant access to an existing account"
+          note="For an identity the operator already created in Supabase. To start from scratch, use Invitations instead."
+          submitLabel="Grant access"
+          fields={[idField, nameField, { key: 'role', label: 'Permission level', options: allowed }]}
+          onSubmit={data => api('/staff', 'POST', data)}
+          onSaved={() => { setGranting(false); reload(); setStatus({ text: 'Access granted.', kind: 'done' }); }}
+          onClose={() => setGranting(false)}
+        />
+      ) : null}
     </>
   );
 }
 
-export function Invitations({ api, setStatus, reload, token }: Props) {
+export function Invitations({ api, setStatus, reload, token, route }: Props) {
   const [rows, setRows] = useState<Page | null>(null);
   const [status, setFilter] = useState('requested');
+  const [asking, setAsking] = useState(false);
   useEffect(() => { setRows(null); void api<Page>(`/staff-invitations${query({ status, limit: 50 })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, status, token]);
+
   return (
     <>
+      <PageHeader
+        route={route}
+        actions={<button type="button" className="btn" onClick={() => setAsking(true)}><Icon name="plus" size={15} />Request an invitation</button>}
+      />
+
       <Callout tone="info" title="How an invitation works">
         Record who should get an account, then open the request and create it. Your colleague is emailed an invitation and chooses their own password.
       </Callout>
@@ -87,8 +114,8 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
           rowKey={r => String(r.id)}
           empty={<EmptyState title="Nothing in this state" body="Requests you record appear here until the operator creates the account." />}
           columns={[
-            { header: 'Email', cell: r => value(r, 'email') },
-            { header: 'Name', cell: r => value(r, 'display_name') },
+            { header: 'Email', cell: r => <span className="mono">{value(r, 'email')}</span> },
+            { header: 'Name', cell: r => <b>{value(r, 'display_name')}</b> },
             { header: 'Permission level', cell: r => sentence(value(r, 'role')) },
             { header: 'State', cell: r => r.status === 'provisioned'
               ? <Badge tone="good">Completed</Badge>
@@ -99,36 +126,46 @@ export function Invitations({ api, setStatus, reload, token }: Props) {
             if (row.status !== 'requested') return <p className="muted">Completed and cancelled invitations are kept as a record and cannot be changed.</p>;
             return (
               <>
-                <Editor submitLabel="Create the account" setStatus={setStatus} onSaved={reload}
-                  fields={[{ ...reasonField, hint: 'An invitation email goes to this address and they choose their own password.' }]}
-                  onSubmit={data => api(`/staff-invitations/${row.id}/identity`, 'POST', { ...data, version: row.version })} />
-                <hr className="rule" />
-                <Editor submitLabel="Link an account the operator made" setStatus={setStatus} onSaved={reload}
-                  fields={[{ key: 'user_id', label: 'Supabase Auth user ID', pattern: '[0-9a-fA-F-]{36}', hint: 'Only needed when the operator created the identity in Supabase by hand.' }, reasonField]}
-                  onSubmit={data => api(`/staff-invitations/${row.id}/provision`, 'POST', { ...data, version: row.version })} />
-                <hr className="rule" />
-                <Editor submitLabel="Cancel invitation" setStatus={setStatus} onSaved={reload}
-                  fields={[reasonField]}
-                  onSubmit={data => api(`/staff-invitations/${row.id}/cancellation`, 'POST', { ...data, version: row.version })} />
+                {/* Three whole forms used to sit open on top of each other here,
+                    so the two nobody wanted were always in the way of the one
+                    they did. Each is now folded away until it is chosen. */}
+                <Task title="Create the account" note="Sends an invitation email">
+                  <Editor submitLabel="Create the account" setStatus={setStatus} onSaved={reload}
+                    fields={[{ ...reasonField, hint: 'An invitation email goes to this address and they choose their own password.' }]}
+                    onSubmit={data => api(`/staff-invitations/${row.id}/identity`, 'POST', { ...data, version: row.version })} />
+                </Task>
+                <Task title="Link an account the operator made by hand" note="Needs the Supabase Auth user ID">
+                  <Editor submitLabel="Link the account" setStatus={setStatus} onSaved={reload}
+                    fields={[{ ...idField, hint: 'Only needed when the operator created the identity in Supabase by hand.' }, reasonField]}
+                    onSubmit={data => api(`/staff-invitations/${row.id}/provision`, 'POST', { ...data, version: row.version })} />
+                </Task>
+                <Task title="Cancel this invitation" note="Kept as a record" tone="warn">
+                  <Editor submitLabel="Cancel invitation" setStatus={setStatus} onSaved={reload}
+                    fields={[reasonField]}
+                    onSubmit={data => api(`/staff-invitations/${row.id}/cancellation`, 'POST', { ...data, version: row.version })} />
+                </Task>
               </>
             );
           }}
         />
       </div>
 
-      <div className="card">
-        <div className="card-head"><div><h2>Request an invitation</h2><p className="card-note">Recorded so the request, who made it and why stay traceable.</p></div></div>
-        <div className="card-body">
-          <Editor submitLabel="Record request" setStatus={setStatus} onSaved={reload}
-            fields={[
-              { key: 'email', label: 'School email address', type: 'email', maxLength: 254 },
-              nameField,
-              { key: 'role', label: 'Permission level', options: roles },
-              reasonField,
-            ]}
-            onSubmit={data => api('/staff-invitations', 'POST', data)} />
-        </div>
-      </div>
+      {asking ? (
+        <FormSheet
+          title="Request an invitation"
+          note="Recorded so the request, who made it and why stay traceable."
+          submitLabel="Record request"
+          fields={[
+            { key: 'email', label: 'School email address', type: 'email', maxLength: 254 },
+            nameField,
+            { key: 'role', label: 'Permission level', options: roles },
+            reasonField,
+          ]}
+          onSubmit={data => api('/staff-invitations', 'POST', data)}
+          onSaved={() => { setAsking(false); reload(); setStatus({ text: 'Invitation request recorded.', kind: 'done' }); }}
+          onClose={() => setAsking(false)}
+        />
+      ) : null}
     </>
   );
 }
@@ -139,7 +176,10 @@ export function Activity({ api, token }: { api: Api; token: number }) {
   useEffect(() => { setRows(null); void api<Page>(`/audit-events${query({ limit: 25, before_id: before })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, before, token]);
   return (
     <div className="card">
-      <div className="card-head"><div><h2>Recorded changes</h2><p className="card-note">Field names only. Values, learner names and credentials are never copied here.</p></div></div>
+      <div className="card-head"><div>
+        <h2>Recorded changes</h2>
+        <p className="card-note">Field names only. Values, learner names and credentials are never copied here.</p>
+      </div></div>
       <Table
         loading={rows === null}
         rows={rows?.items ?? []}
@@ -149,7 +189,9 @@ export function Activity({ api, token }: { api: Api; token: number }) {
           { header: 'When', cell: r => new Date(String(r.occurred_at)).toLocaleString() },
           { header: 'Record', cell: r => <code>{value(r, 'entity_table')}</code> },
           { header: 'Action', cell: r => sentence(value(r, 'operation')) },
-          { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) ? r.changed_fields.join(', ') : <span className="muted">—</span> },
+          { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) && r.changed_fields.length
+            ? r.changed_fields.join(', ')
+            : <Unrecorded label="None listed" /> },
         ]}
       />
       <div className="pager">

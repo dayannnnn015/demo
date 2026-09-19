@@ -69,7 +69,16 @@ Work lands as one reviewable increment per commit. Every module in `src/modules/
 
 ### Frontend
 
-The workspace is a Vite + React + TypeScript app in `web/`, built into `public/` and served by the API at `/app`. `web/api.ts` throws an `ApiError` carrying the server's own `code`, so screens react to specific codes rather than message text. `web/components/primitives.tsx` holds the shared `Editor`, `Finder`, `Table`, `Cell`, `Select`, `Badge`, `Callout`, `EmptyState`, `Pager`, `Button` and `StatusLine`; `web/components/figures.tsx` holds `StatTile`, `Donut` and `Timeline`; `web/components/icons.tsx` holds the inline icon set and `web/components/brand.tsx` the EDUNEXUS mark, a vector redraw of the supplied artwork in `docs/brand/` because the content policy loads no image file; `web/components/AppShell.tsx` holds the rail, top bar and profile menu; `web/styles/tokens.css` holds the design tokens. Screens are declared in the route table in `web/routes.tsx`, take `{ api, setStatus, reload, token }` and refetch on `token`. Adding a screen means adding a route and a component; a module with no screen yet renders an honest placeholder rather than disappearing from the navigation.
+The workspace is a Vite + React + TypeScript app in `web/`, built into `public/` and served by the API at `/app`. `web/api.ts` throws an `ApiError` carrying the server's own `code`, so screens react to specific codes rather than message text. `web/components/primitives.tsx` holds the shared `Editor`, `FormSheet`, `Finder`, `Table`, `TableSkeleton`, `Task`, `Cell`, `Select`, `Badge`, `Callout`, `EmptyState`, `Unrecorded`, `Pager`, `Button`, `PrintButton`, `PageHeader` and `StatusLine`; `web/components/overlay.tsx` holds `Sheet` and `Confirm`; `web/components/palette.tsx` holds the Ctrl+K command palette; `web/components/figures.tsx` holds `StatTile`, `Donut` and `Timeline`; `web/components/icons.tsx` holds the inline icon set and `web/components/brand.tsx` the EDUNEXUS mark, a vector redraw of the supplied artwork in `docs/brand/` because the content policy loads no image file; `web/components/AppShell.tsx` holds the rail, top bar and profile menu; `web/styles/tokens.css` holds the design tokens. Screens are declared in the route table in `web/routes.tsx`, take `{ api, me, manager, setStatus, reload, token, route }` and refetch on `token`. Adding a screen means adding a route and a component; a module with no screen yet renders an honest placeholder rather than disappearing from the navigation.
+
+Four rules the workspace will not bend on, each replacing something that was wrong before:
+
+- **A missing record is drawn, never blanked and never an em dash.** `Unrecorded` names what is absent. Absence of a record is not evidence, and the interface has to say so as plainly as the database does.
+- **A field rejection belongs beside its field.** `Editor` maps `ApiError.fields[]` onto the controls, marks them, and focuses a summary that jumps to each. Only an error the server does not attribute to a field goes to the page's `StatusLine`.
+- **Creating a record opens a `Sheet`**, never a second form parked under the list it adds to. The primary action lives in `PageHeader`'s `actions` slot.
+- **Anything irreversible goes through `Confirm`**, never `window.confirm`, and says what it costs in the screen's own words.
+
+The command palette searches the route table and nothing else. Every learner and enrollment list writes a `record_access_events` row naming the records it returned, so a palette that searched the registry would write one per keystroke.
 
 The rail is the only dark surface and has its own contrast-checked tokens — `--rail-ink`, `--rail-dim`, `--rail-faint`. Do not use the `--ink-*` scale inside it, or the rail scale outside it.
 
@@ -80,6 +89,8 @@ Charts are hand-drawn SVG for the same reason: a library that rasterises to a ca
 **The Overview reads no learner or enrollment record.** Every list under `/learners` and `/enrollments` writes a `record_access_events` row naming the exact records returned, so counting the roster on each dashboard load would bury the privacy audit in its own noise. A tile needing a learner count needs an aggregate endpoint, not a paged read.
 
 `tests/web-screens.test.ts` renders every route once. It catches a crash on first render, which a typecheck cannot, but effects do not run so it does not cover the data paths behind a fetch. `tests/web-shell.test.ts` renders the shell and asserts the two traps above are absent from the markup. Both files are excluded from the root `tsconfig.json` and listed in `tsconfig.web.json`; a new web test must be added to both or the server typecheck will fail on it. See [docs/frontend-handoff.md](docs/frontend-handoff.md) for every unbuilt screen and the rules it must respect.
+
+The workspace prints: the `@media print` block in `app.css` drops the rail, top bar, filters and actions and keeps the register, because a section list is carried to a classroom on paper. New furniture goes in that block.
 
 Sessions live in `sessionStorage`. Do not move them to `localStorage`. Interface preferences — the collapsed rail, the folded navigation groups — live there too, under `edunexus-ui-*` and wrapped in `try`/`catch`, because a private window throws on access and a shared staffroom machine should not keep one person's layout for the next.
 

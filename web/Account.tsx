@@ -2,9 +2,55 @@ import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { message } from './api';
 import { BrandMark } from './components/brand';
+import { Icon } from './components/icons';
 import { StatusLine, type Status, idle } from './components/primitives';
 
 type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
+
+/**
+ * A password field that can be read back.
+ *
+ * Hiding what was typed defends against someone standing behind you, which in
+ * a staffroom is a real threat — and so is mistyping a twelve-character
+ * password twice on a shared keyboard. The toggle lets the person decide which
+ * risk they are in, which is the only way that judgement can be made correctly.
+ */
+function Password({ id, label, hint, autoComplete, value, onChange }: {
+  id: string;
+  label: string;
+  hint?: string;
+  autoComplete: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="field">
+      <label className="label" htmlFor={id}>{label}</label>
+      <span className="password-wrap">
+        <input
+          id={id}
+          type={shown ? 'text' : 'password'}
+          autoComplete={autoComplete}
+          minLength={autoComplete === 'new-password' ? 12 : undefined}
+          required
+          value={value}
+          onChange={event => onChange(event.target.value)}
+        />
+        <button
+          type="button"
+          className="password-peek"
+          aria-pressed={shown}
+          aria-label={shown ? 'Hide password' : 'Show password'}
+          onClick={() => setShown(v => !v)}
+        >
+          <Icon name={shown ? 'eye-off' : 'eye'} size={16} />
+        </button>
+      </span>
+      {hint ? <span className="hint">{hint}</span> : null}
+    </div>
+  );
+}
 
 /**
  * Sign-in and invitation completion.
@@ -64,7 +110,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
     <div className="auth">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="brand-mark"><BrandMark size={28} /></span>
+          <span className="brand-mark"><BrandMark size={30} /></span>
           <span className="brand-text">
             <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
             <span>Balili Elementary School</span>
@@ -94,12 +140,9 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
           })}>
             <div className="field">
               <label className="label" htmlFor="email">School email</label>
-              <input id="email" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} />
+              <input id="email" type="email" autoComplete="username" inputMode="email" required value={email} onChange={e => setEmail(e.target.value)} />
             </div>
-            <div className="field">
-              <label className="label" htmlFor="password">Password</label>
-              <input id="password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} />
-            </div>
+            <Password id="password" label="Password" autoComplete="current-password" value={password} onChange={setPassword} />
             <div className="form-actions">
               <button type="submit" className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
               <button type="button" className="btn ghost" disabled={busy} onClick={async () => {
@@ -140,17 +183,13 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
             if (error) throw error;
             finish();
           })}>
-            <div className="field">
-              <label className="label" htmlFor="new-password">New password</label>
-              <input id="new-password" type="password" autoComplete="new-password" minLength={12} required value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-              <span className="hint">At least 12 characters.</span>
-            </div>
-            <div className="field">
-              <label className="label" htmlFor="confirm-password">Confirm password</label>
-              <input id="confirm-password" type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={e => setConfirmation(e.target.value)} />
-            </div>
+            <Password id="new-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={newPassword} onChange={setNewPassword} />
+            <Password id="confirm-password" label="Confirm password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
             <div className="form-actions">
               <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>
+            </div>
+            <div className="auth-foot">
+              <p>Your password is held by the sign-in service, never by EDUNEXUS. Nobody at the school can read it back to you.</p>
             </div>
           </form>
         ) : null}

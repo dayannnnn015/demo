@@ -9,7 +9,7 @@ import { Upcoming } from './screens/Upcoming';
 import { Enrollment } from './screens/Enrollment';
 import { Overview } from './screens/Overview';
 
-export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number };
+export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
 export type Route = {
   id: string;
@@ -46,28 +46,28 @@ export const routes: Route[] = [
   },
 
   {
-    id: 'school', nav: 'School profile', icon: 'school', group: 'Setup', built: true,
+    id: 'school', nav: 'School profile', icon: 'school', group: 'Setup', built: true, ownHeader: true,
     title: 'School profile',
     lede: 'Name and address printed on every official form.',
     record: 'school_profile', feeds: 'SF2, SF4, SF9, SF10',
     render: p => <School {...p} />,
   },
   {
-    id: 'years', nav: 'School years', icon: 'years', group: 'Setup', built: true,
+    id: 'years', nav: 'School years', icon: 'years', group: 'Setup', built: true, ownHeader: true,
     title: 'School years',
     lede: 'Draft, activate and close a school year.',
     record: 'academic_years',
     render: p => <SchoolYears {...p} />,
   },
   {
-    id: 'periods', nav: 'Reporting periods', icon: 'periods', group: 'Setup', built: true,
+    id: 'periods', nav: 'Reporting periods', icon: 'periods', group: 'Setup', built: true, ownHeader: true,
     title: 'Reporting periods',
     lede: 'The grading periods a school year is divided into.',
     record: 'reporting_periods', feeds: 'SF9, SF10',
     render: p => <YearScoped {...p} page="Reporting periods" />,
   },
   {
-    id: 'sections', nav: 'Sections & advisers', icon: 'sections', group: 'Setup', built: true,
+    id: 'sections', nav: 'Sections & advisers', icon: 'sections', group: 'Setup', built: true, ownHeader: true,
     title: 'Sections and advisers',
     lede: 'Classes for a school year, each with one adviser.',
     record: 'sections', feeds: 'SF2',
@@ -75,14 +75,14 @@ export const routes: Route[] = [
   },
 
   {
-    id: 'learners', nav: 'Learner registry', icon: 'learners', group: 'Learners', built: true,
+    id: 'learners', nav: 'Learner registry', icon: 'learners', group: 'Learners', built: true, ownHeader: true,
     title: 'Learner registry',
     lede: 'One permanent record per learner, carried across years.',
     record: 'learners', feeds: 'SF9, SF10',
     render: p => <Learners {...p} />,
   },
   {
-    id: 'enrollment', nav: 'Enrollment', icon: 'enrollment', group: 'Learners', manager: true, built: true,
+    id: 'enrollment', nav: 'Enrollment', icon: 'enrollment', group: 'Learners', manager: true, built: true, ownHeader: true,
     title: 'Enrollment and movements',
     lede: 'Enrol, move, withdraw and re-enter a learner.',
     record: 'enrollments', feeds: 'SF2, SF4',
@@ -176,14 +176,14 @@ export const routes: Route[] = [
   },
 
   {
-    id: 'staff', nav: 'Staff access', icon: 'staff', group: 'People', manager: true, built: true,
+    id: 'staff', nav: 'Staff access', icon: 'staff', group: 'People', manager: true, built: true, ownHeader: true,
     title: 'Staff access',
     lede: 'Who can use EDUNEXUS, and at what permission level.',
     record: 'staff',
     render: p => <Staff {...p} />,
   },
   {
-    id: 'invitations', nav: 'Invitations', icon: 'invitations', group: 'People', manager: true, built: true,
+    id: 'invitations', nav: 'Invitations', icon: 'invitations', group: 'People', manager: true, built: true, ownHeader: true,
     title: 'Staff invitations',
     lede: 'Request an account, then link it once it exists.',
     record: 'staff_invitations',

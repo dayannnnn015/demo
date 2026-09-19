@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { message, query } from '../api';
+import type { Route } from '../routes';
+import { Icon } from '../components/icons';
+import { Sheet } from '../components/overlay';
 import {
-  Badge, Callout, Cell, Editor, EmptyState, Finder, Select, Table,
-  gradeName, learnerName, sentence, value, yearName, type Status,
+  Badge, Callout, Cell, Editor, EmptyState, Finder, PageHeader, PrintButton, Select, StatusLine, Table,
+  TableSkeleton, Unrecorded, gradeName, idle, learnerName, sentence, value, yearName, type Status,
 } from '../components/primitives';
 
-type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number };
+type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
 const exitReasons: [string, string][] = [
   ['transfer_out', 'Transferred to another school'],
@@ -14,6 +17,10 @@ const exitReasons: [string, string][] = [
   ['dropout', 'Stopped attending'],
   ['death', 'Death'],
 ];
+
+/** The LRN on a learner record, or the mark that says none has been issued. */
+const lrnOf = (learner: Row | undefined) =>
+  learner?.lrn ? `LRN ${String(learner.lrn)}` : <Unrecorded label="LRN not issued" />;
 
 /**
  * A movement is a dated event, and which fields it needs depends on the action,
@@ -49,7 +56,7 @@ function MovementForm({ api, enrollment, sections, setStatus, reload }: {
           section_id: action === 'withdrawn' ? null : section,
           exit_reason: action === 'withdrawn' ? reason : null,
         });
-        setStatus({ text: 'Recorded.', kind: 'done' });
+        setStatus({ text: 'Movement recorded.', kind: 'done' });
         reload();
       } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
       finally { setBusy(false); }
@@ -98,7 +105,7 @@ function History({ api, enrollment }: { api: Api; enrollment: Row }) {
     if (!open) return;
     void api<Page>(`/enrollments/${enrollment.id}/history${query({ limit: 50 })}`).then(setRows).catch(() => setRows({ items: [] }));
   }, [api, enrollment.id, open]);
-  if (!open) return <button type="button" className="btn ghost small" onClick={() => setOpen(true)}>Show movement history</button>;
+  if (!open) return <button type="button" className="btn ghost small" onClick={() => setOpen(true)}><Icon name="activity" size={14} />Show movement history</button>;
   return (
     <Table
       loading={rows === null}
@@ -106,7 +113,7 @@ function History({ api, enrollment }: { api: Api; enrollment: Row }) {
       rowKey={r => String(r.id)}
       empty={<p className="muted">No movements recorded.</p>}
       columns={[
-        { header: 'Effective', cell: r => value(r, 'effective_on') },
+        { header: 'Effective', cell: r => <span className="mono">{value(r, 'effective_on')}</span> },
         { header: 'What', cell: r => sentence(value(r, 'reason') || value(r, 'action')) },
         { header: 'Recorded', cell: r => new Date(String(r.recorded_at ?? r.created_at)).toLocaleDateString() },
       ]}
@@ -114,15 +121,91 @@ function History({ api, enrollment }: { api: Api; enrollment: Row }) {
   );
 }
 
-export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
+/**
+ * Finding a learner and enrolling them is two steps, so it gets a panel of its
+ * own rather than a permanent second form under the class list. The registry
+ * search happens here, deliberately, and writes its own access-log row: this
+ * is the one place in the workspace where naming learners is the task.
+ */
+function EnrolSheet({ api, sectionId, sectionLabel, reload, onClose, onDone }: {
+  api: Api;
+  sectionId: string;
+  sectionLabel: string;
+  reload: () => void;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [status, setStatus] = useState<Status>(idle);
+  const [found, setFound] = useState<Row[] | null>(null);
+  const [chosen, setChosen] = useState<Row | null>(null);
+
+  return (
+    <Sheet title="Enrol a learner" note={`Into ${sectionLabel}. Search the registry, then set the first day in this section.`} wide onClose={onClose}>
+      <StatusLine status={status} />
+
+      {chosen ? (
+        <>
+          <dl className="facts">
+            <div><dt>Learner</dt><dd>{learnerName(chosen)}</dd></div>
+            <div><dt>Reference number</dt><dd>{lrnOf(chosen)}</dd></div>
+          </dl>
+          <hr className="rule" />
+          <Editor
+            submitLabel="Enrol this learner"
+            setStatus={setStatus}
+            onSaved={() => { onDone(); reload(); }}
+            fields={[
+              { key: 'enrolled_on', label: 'First day in this section', type: 'date', hint: 'Must fall inside the school year and after the learner’s birth date.' },
+              { key: 'entry_kind', label: 'Joining as', options: [['regular', 'Regular enrollment'], ['transfer_in', 'Transferred in from another school']] },
+            ]}
+            onSubmit={data => api('/enrollments', 'POST', { ...data, learner_id: chosen.id, section_id: sectionId })}
+            note={<button type="button" className="btn ghost small" onClick={() => setChosen(null)}>Choose someone else</button>}
+          />
+        </>
+      ) : (
+        <>
+          <Finder
+            initial={{ search: '', lrn: '' }}
+            onApply={async values => {
+              setFound(null);
+              try {
+                const result = await api<Page>(`/learners${query({ ...values, limit: 25 })}`);
+                setFound(result.items);
+              } catch (error) { setStatus({ text: message(error), kind: 'error' }); setFound([]); }
+            }}
+            onClear={() => setFound(null)}
+            fields={[
+              { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
+              { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9]{12}', maxLength: 12 },
+            ]}
+          />
+          <hr className="rule" />
+          {found === null
+            ? <p className="muted">Search the registry to find the learner. Nothing is read until you do.</p>
+            : <Table
+                rows={found}
+                rowKey={r => String(r.id)}
+                empty={<EmptyState title="No learner found" body="Check the spelling, or register the learner first on the Learner registry screen." />}
+                columns={[
+                  { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={lrnOf(r)} /> },
+                  { header: 'Birth date', cell: r => <span className="mono">{value(r, 'birth_date')}</span> },
+                  { header: '', cell: r => <button type="button" className="btn secondary small" onClick={() => setChosen(r)}>Choose</button> },
+                ]}
+              />}
+        </>
+      )}
+    </Sheet>
+  );
+}
+
+export function Enrollment({ api, manager, setStatus, reload, token, route }: Props) {
   const [years, setYears] = useState<Row[] | null>(null);
   const [yearId, setYearId] = useState('');
   const [sections, setSections] = useState<Row[]>([]);
   const [sectionId, setSectionId] = useState('');
   const [rows, setRows] = useState<Page | null>(null);
   const [learners, setLearners] = useState<Record<string, Row>>({});
-  const [found, setFound] = useState<Row[] | null>(null);
-  const [enrolling, setEnrolling] = useState<Row | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     void api<Page>('/academic-years').then(r => {
@@ -159,16 +242,35 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
       .catch(() => setRows({ items: [] }));
   }, [api, sectionId, manager, token]);
 
-  if (years === null) return <div className="card"><div className="card-body"><div className="skeleton" /><div className="skeleton" /></div></div>;
-  if (!years.length) return <div className="card"><EmptyState title="No school year yet" body="Enrollment belongs to a school year. Create one from the School years screen first." /></div>;
+  if (years === null) return <><PageHeader route={route} /><div className="card"><TableSkeleton columns={5} /></div></>;
+  if (!years.length) {
+    return (
+      <>
+        <PageHeader route={route} />
+        <div className="card"><EmptyState title="No school year yet" body="Enrollment belongs to a school year. Create one from the School years screen first." /></div>
+      </>
+    );
+  }
 
   const year = years.find(y => y.id === yearId);
   const section = sections.find(s => s.id === sectionId);
   const closed = year?.status === 'closed';
+  const label = section ? `${gradeName(section.grade_level)} · ${String(section.name)}` : 'this section';
   const named = (row: Row) => { const learner = learners[String(row.learner_id)]; return learner ? learnerName(learner) : 'Loading…'; };
+  const listed = rows?.items.length ?? 0;
 
   return (
     <>
+      <PageHeader
+        route={route}
+        actions={<>
+          {listed ? <PrintButton label="Print class list" /> : null}
+          {manager && !closed && section
+            ? <button type="button" className="btn" onClick={() => setEnrolling(true)}><Icon name="plus" size={15} />Enrol a learner</button>
+            : null}
+        </>}
+      />
+
       <div className="card">
         <div className="card-head">
           <div className="toolbar">
@@ -187,22 +289,23 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
               </Select>
             </div>
           </div>
-          {closed ? <Badge tone="neutral">Closed year — read only</Badge> : null}
+          <div className="card-head-actions">
+            {closed ? <Badge tone="neutral">Closed year — read only</Badge> : null}
+          </div>
         </div>
 
         <Table
           loading={rows === null}
           rows={rows?.items ?? []}
           rowKey={r => String(r.id)}
-          empty={<EmptyState title="Nobody enrolled here yet" body={closed ? 'This year is closed and its enrollment can no longer change.' : 'Find a learner below and enrol them into this section.'} />}
+          empty={<EmptyState title="Nobody enrolled here yet" body={closed ? 'This year is closed and its enrollment can no longer change.' : 'Find a learner in the registry and enrol them into this section.'} />}
           columns={[
-            { header: 'Learner', cell: r => { const l = learners[String(r.learner_id)];
-              return <Cell title={named(r)} meta={l?.lrn ? `LRN ${String(l.lrn)}` : <Badge tone="attention">LRN pending</Badge>} />; } },
+            { header: 'Learner', cell: r => <Cell title={named(r)} meta={lrnOf(learners[String(r.learner_id)])} /> },
             { header: 'Status', cell: r => r.status === 'withdrawn'
               ? <Badge tone="stopped">{sentence(value(r, 'last_reason'))}</Badge>
               : <Badge tone="good">Enrolled</Badge> },
-            { header: 'Enrolled', cell: r => value(r, 'enrolled_on') },
-            { header: 'Latest change', cell: r => value(r, 'effective_on') },
+            { header: 'Enrolled', cell: r => <span className="mono">{value(r, 'enrolled_on')}</span> },
+            { header: 'Latest change', cell: r => <span className="mono">{value(r, 'effective_on')}</span> },
             { header: 'Record', cell: r => r.record_state === 'voided' ? <Badge tone="stopped">Voided</Badge> : <Badge tone="neutral">Valid</Badge> },
           ]}
           detailLabel="Open"
@@ -222,70 +325,20 @@ export function Enrollment({ api, manager, setStatus, reload, token }: Props) {
         />
       </div>
 
-      {manager && !closed && section ? (
-        <div className="card">
-          <div className="card-head"><div>
-            <h2>Enrol a learner into {gradeName(section.grade_level)} · {String(section.name)}</h2>
-            <p className="card-note">Search the registry, then set the first day in this section.</p>
-          </div></div>
-          <div className="card-body">
-            <Finder
-              initial={{ search: '', lrn: '' }}
-              onApply={async values => {
-                setEnrolling(null);
-                setFound(null);
-                try {
-                  const result = await api<Page>(`/learners${query({ ...values, limit: 25 })}`);
-                  setFound(result.items);
-                } catch (error) { setStatus({ text: message(error), kind: 'error' }); setFound([]); }
-              }}
-              onClear={() => { setFound(null); setEnrolling(null); }}
-              fields={[
-                { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
-                { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9]{12}', maxLength: 12 },
-              ]}
-            />
-
-            {found === null ? null : enrolling ? (
-              <>
-                <hr className="rule" />
-                <p><strong>{learnerName(enrolling)}</strong>{enrolling.lrn ? <> · LRN {String(enrolling.lrn)}</> : ' · LRN pending'}</p>
-                <Editor
-                  submitLabel="Enrol this learner"
-                  setStatus={setStatus}
-                  onSaved={() => { setEnrolling(null); setFound(null); reload(); }}
-                  fields={[
-                    { key: 'enrolled_on', label: 'First day in this section', type: 'date', hint: 'Must fall inside the school year and after the learner’s birth date.' },
-                    { key: 'entry_kind', label: 'Joining as', options: [['regular', 'Regular enrollment'], ['transfer_in', 'Transferred in from another school']] },
-                  ]}
-                  onSubmit={data => api('/enrollments', 'POST', { ...data, learner_id: enrolling.id, section_id: sectionId })}
-                />
-                <div className="form-actions">
-                  <button type="button" className="btn ghost small" onClick={() => setEnrolling(null)}>Choose someone else</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <hr className="rule" />
-                <Table
-                  rows={found}
-                  rowKey={r => String(r.id)}
-                  empty={<EmptyState title="No learner found" body="Check the spelling, or register the learner first from the Learner registry screen." />}
-                  columns={[
-                    { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={r.lrn ? `LRN ${String(r.lrn)}` : <Badge tone="attention">LRN pending</Badge>} /> },
-                    { header: 'Birth date', cell: r => value(r, 'birth_date') },
-                    { header: '', cell: r => <button type="button" className="btn secondary small" onClick={() => setEnrolling(r)}>Choose</button> },
-                  ]}
-                />
-              </>
-            )}
-          </div>
-        </div>
-      ) : null}
-
       <Callout tone="info" title="Not on this screen yet">
         Correcting a recorded movement, voiding an enrollment entered by mistake and correcting a grade placement exist in the API but have no screen. Promotion to the next grade is not built at all.
       </Callout>
+
+      {enrolling && section ? (
+        <EnrolSheet
+          api={api}
+          sectionId={sectionId}
+          sectionLabel={label}
+          reload={reload}
+          onClose={() => setEnrolling(false)}
+          onDone={() => { setEnrolling(false); setStatus({ text: 'Learner enrolled.', kind: 'done' }); }}
+        />
+      ) : null}
     </>
   );
 }
