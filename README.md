@@ -4,7 +4,7 @@ EDUNEXUS supports learner attendance and academic records for Balili Elementary 
 
 Picking this project up, as a person or an agent? Start with [AGENTS.md](AGENTS.md), the working contract, and [where things stand](docs/status.md). `CLAUDE.md` points at the same file, so Claude Code and Codex read identical instructions.
 
-The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision, and [school information requests](docs/school-information-requests.md) lists what to ask the school to unblock it. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
+The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision, and [school information requests](docs/school-information-requests.md) lists what to ask the school to unblock it, against what [the school's own forms](docs/school-forms.md) already establish. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
 ## What works in Section 1
 
@@ -259,6 +259,7 @@ docs/status.md           Where the last session stopped and what is next
 docs/constraints.md      Standing rules, blocking gates and settled decisions
 docs/erd.md              Entity relationship diagram of all 44 tables
 docs/school-information-requests.md  What to ask the school, in priority order
+docs/school-forms.md     What the school's own SF2, SF4 and SF9 specify
 docs/                    Requirements, decisions, deployment, API handoff
 CHANGELOG.md             Released increments, sections and migrations
 ```

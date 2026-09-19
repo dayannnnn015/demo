@@ -61,6 +61,14 @@ register, repeats `thead` across pages and prints the hatch as its words.
 
 298 tests across 23 files. **All 21 migrations are applied**; this increment adds none and changes no endpoint. The only backend file touched is `src/openapi.ts`, for the version string.
 
+## The school sent three forms
+
+After 0.28.0 and unasked: a blank Grades 4–6 SF9, a blank LIS SF2 for one Grade 3 section, and a **filled** SF4 for July of School Year 2026–2027. They are in `.local/school-files/` and stay there — the SF4 names 33 real Balili staff and, in hidden template sheets, teachers from four other schools.
+
+[school-forms.md](school-forms.md) is the committed record of what they specify. In short: the official SF2 marks and arithmetic are now known, the school is 30 sections and 893 learners against 33 staff, and the form templates gate is most of the way open. **No other gate opened.** The SF9's descriptor table and passing mark are an output scale, not the arithmetic that reaches it, so grading stays shut; its General Average box authorizes nothing. Two contradictions went back to the school rather than being resolved here — the SF2 obliges intervention at five consecutive absences while the settled record says there is no approved threshold, and three teachers on the SF4 teach across sections EDUNEXUS would give them no access to.
+
+Nothing was written to the database. The two things that could be — thirty sections, and the eight Grades 4–6 learning areas — need an authenticated manager, and there still is not one.
+
 ## What not to undo
 
 **The two content-policy traps are unchanged and still tested.** No inline
@@ -107,6 +115,14 @@ What remains is the sign-in itself: open the recovery link, set a password, and
 sign in at https://edunexus-balili.vercel.app. That closes the oldest open item
 in the project, and it is now also the only way to see the field-error path,
 the sheets and the palette against real data.
+
+It is now blocking something concrete as well. The school's forms give thirty
+real sections and eight real learning areas that carry no learner or staff
+identity and need no gate opened, and they cannot be entered because there is no
+manager to enter them as. Both lists are ready at the end of
+[school-forms.md](school-forms.md). Enter them through the API with a reason,
+never through a migration, which would bypass the version check and the change
+journal that every catalog write carries.
 
 After that, resume the frontend: **the instructional calendar screen**, then
 daily attendance. Attendance cannot be recorded on a date the calendar does not
