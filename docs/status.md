@@ -2,7 +2,7 @@
 
 Short, current, and rewritten at the end of every session. The durable records are the git history, [CHANGELOG.md](../CHANGELOG.md) and [constraints.md](constraints.md); this file only says where the last session stopped and what to pick up.
 
-**Updated:** 2026-09-19 · **Version:** 0.27.0 · **Branch:** `master`, working tree clean
+**Updated:** 2026-09-19 · **Version:** 0.27.0 · **Last commit:** `0b64175` · **Branch:** `master`, working tree clean
 
 ## Just shipped
 
