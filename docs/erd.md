@@ -1,12 +1,20 @@
 # Entity relationship diagram
 
-Generated from the live `edunexus` schema: 44 tables across 21 migrations. A single diagram at that size is unreadable, so this is an overview followed by one diagram per domain, then three process views cut the same schema a second way, along the school processes the manuscript names.
+Generated from the live `edunexus` schema: 44 tables across 21 migrations. A single diagram at that size is unreadable, so this is a general view in two parts, followed by an overview and one diagram per domain, then three process views cut the same schema a second way, along the school processes the manuscript names.
 
 For a document rather than a screen, use the rendered figures in [diagrams/](diagrams/): each diagram as SVG and as a double-resolution PNG, with suggested captions.
 
 ## General view
 
-One figure for the whole system, showing only the entities that hold current state. It omits the 14 change journals, the two audit logs and the rate limiter, which together account for most of the table count and none of the meaning. Those appear in the domain diagrams below.
+The whole system in two figures, showing only the entities that hold current state. They omit the 14 change journals, the two audit logs and the rate limiter, which together account for most of the table count and none of the meaning. Those appear in the domain diagrams below.
+
+The cut is along the seam the school already works to: what is recorded about a learner day to day, and what is recorded about their academic work. Each part repeats the entities it needs, so each stands on its own, the same way the process views do. Between them they carry all 20 entities and all 24 relationships.
+
+One figure for all twenty comes out almost square, at 2188 x 1881, because the entity boxes are wider than they are tall and six of them are roots with no parent. Mermaid's ER renderer offers no way to change that: `layoutDirection`, `nodeSpacing`, `rankSpacing` and `minEntityWidth` are all accepted and then ignored, a `direction LR` statement makes it wider still, and dropping the attribute blocks makes it wider again. A near-square figure has to be shrunk to illegibility to fit a portrait page, which is why this is two.
+
+### Records
+
+School, staff, the school year and its sections; learners and their annual enrollment; the instructional calendar and everything recorded against it.
 
 ```mermaid
 erDiagram
@@ -22,17 +30,6 @@ erDiagram
   ATTENDANCE_DAYS ||--o{ ATTENDANCE_MARKS : holds
   ENROLLMENTS ||--o{ ATTENDANCE_MARKS : "marked learner"
   SECTIONS ||--o{ ATTENDANCE_MONTHS : consolidates
-  SUBJECTS ||--o{ SECTION_SUBJECTS : "offered as"
-  SECTIONS ||--o{ SECTION_SUBJECTS : takes
-  ASSESSMENT_POLICY_DRAFTS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : "adopted as"
-  ACADEMIC_YEARS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : scopes
-  ASSESSMENT_POLICY_ADOPTIONS ||--o{ ASSESSMENT_POLICY_BINDINGS : governs
-  SECTION_SUBJECTS ||--o| ASSESSMENT_POLICY_BINDINGS : "bound to"
-  ASSESSMENT_POLICY_BINDINGS ||--o{ ASSESSMENT_TASKS : "component source"
-  SECTION_SUBJECTS ||--o{ ASSESSMENT_TASKS : assesses
-  REPORTING_PERIODS ||--o{ ASSESSMENT_TASKS : "falls within"
-  ASSESSMENT_TASKS ||--o{ ASSESSMENT_SCORES : "raw marks"
-  ENROLLMENTS ||--o{ ASSESSMENT_SCORES : "marked learner"
   ENROLLMENTS ||--o{ ATTENDANCE_FOLLOWUPS : "case against"
 
   SCHOOL_PROFILE {
@@ -111,6 +108,57 @@ erDiagram
     text category
     text status
     date due_on
+  }
+```
+
+### Academics
+
+The subject catalog and section offerings, the assessment policy chain from draft to binding, and the tasks and raw marks recorded against an annual enrollment.
+
+```mermaid
+erDiagram
+  ACADEMIC_YEARS ||--o{ SECTIONS : contains
+  ACADEMIC_YEARS ||--o{ REPORTING_PERIODS : divides
+  ACADEMIC_YEARS ||--o{ ENROLLMENTS : scopes
+  SECTIONS ||--o{ ENROLLMENTS : places
+  SUBJECTS ||--o{ SECTION_SUBJECTS : "offered as"
+  SECTIONS ||--o{ SECTION_SUBJECTS : takes
+  ASSESSMENT_POLICY_DRAFTS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : "adopted as"
+  ACADEMIC_YEARS ||--o{ ASSESSMENT_POLICY_ADOPTIONS : scopes
+  ASSESSMENT_POLICY_ADOPTIONS ||--o{ ASSESSMENT_POLICY_BINDINGS : governs
+  SECTION_SUBJECTS ||--o| ASSESSMENT_POLICY_BINDINGS : "bound to"
+  ASSESSMENT_POLICY_BINDINGS ||--o{ ASSESSMENT_TASKS : "component source"
+  SECTION_SUBJECTS ||--o{ ASSESSMENT_TASKS : assesses
+  REPORTING_PERIODS ||--o{ ASSESSMENT_TASKS : "falls within"
+  ASSESSMENT_TASKS ||--o{ ASSESSMENT_SCORES : "raw marks"
+  ENROLLMENTS ||--o{ ASSESSMENT_SCORES : "marked learner"
+
+  ACADEMIC_YEARS {
+    uuid id PK
+    integer start_year UK
+    date starts_on
+    date ends_on
+    enum status
+  }
+  REPORTING_PERIODS {
+    uuid id PK
+    integer ordinal
+    text name
+    date starts_on
+    date ends_on
+  }
+  SECTIONS {
+    uuid id PK
+    integer grade_level
+    text name
+    uuid adviser_user_id FK
+  }
+  ENROLLMENTS {
+    uuid id PK
+    integer grade_level
+    date enrolled_on
+    text status
+    text record_state
   }
   SUBJECTS {
     uuid id PK
