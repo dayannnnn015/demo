@@ -37,3 +37,18 @@ export const step = (month: Month, by: 1 | -1): Month =>
   by === 1
     ? (month.m === 12 ? { y: month.y + 1, m: 1 } : { y: month.y, m: month.m + 1 })
     : (month.m === 1 ? { y: month.y - 1, m: 12 } : { y: month.y, m: month.m - 1 });
+
+/**
+ * A date moved by whole days, pinned to UTC at both ends so it never touches
+ * the browser's offset. `Date.setUTCDate` carries month and year boundaries,
+ * including leap days, which is why this is arithmetic rather than string work.
+ */
+export const shift = (date: string, by: number) => {
+  const base = new Date(`${date}T00:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + by);
+  return base.toISOString().slice(0, 10);
+};
+
+/** How many dates an inclusive range covers. `2026-06-01`–`2026-06-01` is one. */
+export const span = (from: string, to: string) =>
+  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000) + 1;

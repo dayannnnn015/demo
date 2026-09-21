@@ -1,6 +1,6 @@
 # Section 3B.3: classroom absence monitoring
 
-This read-only API helps staff find recorded classroom absences and gaps in attendance recording. It computes live evidence from corrected enrollment timelines, explicit calendars and current marks. It creates no alert cases, changes no attendance, sends no messages, assigns no dropout/risk labels and calculates no official attendance credits or rates. School-approved thresholds and follow-up procedures remain separate work.
+This read-only module helps staff find recorded classroom absences and gaps in attendance recording. Its screen is `web/screens/Monitor.tsx`, at `/monitor`, open to advisers and managers alike. It computes live evidence from corrected enrollment timelines, explicit calendars and current marks. It creates no alert cases, changes no attendance, sends no messages, assigns no dropout/risk labels and calculates no official attendance credits or rates. School-approved thresholds and follow-up procedures remain separate work.
 
 ## Access and request
 
@@ -29,6 +29,18 @@ Each member has an evidence row for every requested date, including ineligible g
 An AM-only classroom date can classify as absent when AM is absent and PM is explicitly non-classroom. This counts one observed classroom-absence date, not an official full-day credit. A mixed present/absent date has a raw absent session but breaks the all-classroom-absent date run. A classroom/ADM date retains its classroom observations while remaining unsupported for date-run classification.
 
 Summary fields count eligible dates, expected/present/absent/missing classroom sessions, unsupported sessions, unconfigured dates, and absent classroom dates. `needs_completion` is true for missing marks, missing schedules or ADM. Null marks remain unknown. The longest and trailing absent-date runs count only within the requested window. Explicit nonclass dates are skipped; no dates before `from` are inspected, so a run may have started earlier. The trailing run is evaluated through `to`, not through today's date when an older range was requested. These are descriptive observations, not a school intervention threshold.
+
+## The screen
+
+`web/screens/Monitor.tsx` opens on the fortnight ending today — long enough to show a run forming, short enough to stay well inside the 31-date limit — clamped to the school year at both ends.
+
+**The window is checked before a request is spent.** The API refuses anything out of bounds with one `MONITOR_RANGE` code that does not say which of the four rules was broken, so `windowProblem()` checks them separately and each gets its own sentence: a reversed range, a window wider than 31 dates, a window ending after today or after the year, and one starting before the year. It is a pure function with a test per branch.
+
+**A gap in the record is never drawn as an absence.** `unconfigured` and `incomplete` carry the unrecorded mark rather than a badge, and a test asserts neither renders the word "absent". A date nobody configured and a session nobody marked are unknown; reading either as an absence is exactly the mistake this module exists to prevent.
+
+**The window is stated beside every count it produced**, along with the fact that a run may have started before it, because no date before `from` is inspected.
+
+**Nothing on the screen is a threshold.** The closing note says so in the school's own terms: there is no approved absence rule, so the screen shows the evidence and leaves the judgement to whoever reads it, and it points at the manual follow-up screen rather than offering to open a case itself.
 
 ## Live corrections and frozen months
 

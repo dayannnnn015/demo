@@ -1,6 +1,6 @@
 # Section 3B.1: reviewed classroom attendance
 
-This increment records classroom AM and PM attendance against the corrected enrollment timeline and explicit instructional calendar. It adds daily sheets, bounded preview/confirmation, preserved correction history, and protection against conflicting calendar or enrollment edits. It is API-only.
+This increment records classroom AM and PM attendance against the corrected enrollment timeline and explicit instructional calendar. It adds daily sheets, bounded preview/confirmation, preserved correction history, and protection against conflicting calendar or enrollment edits. The screen is `web/screens/Attendance.tsx`, at `/attendance`, open to advisers and managers alike.
 
 ## Roles and dated rosters
 
@@ -52,6 +52,24 @@ An enrollment update is checked against all its non-null dated marks after its e
 Calendar and enrollment preview endpoints can still return a review before this downstream check; confirmation may reject it with `ATTENDANCE_DEPENDENCY`. Review and clear the affected marks through the attendance workflow, perform the calendar/enrollment correction, then review any re-recording against the corrected context. These are separate transactions and must be explicit to staff. Mark history and original enrollment ownership survive the process. A cleared mark can be recorded in the corrected section without creating a second mark for the same enrollment/date.
 
 Section 3B.2 adds [submitted and locked months](monthly-attendance.md). Both states block daily writes and affected calendar, membership and identity changes until a manager returns or reopens the month. Reads now include `month_status` and `month_version`, and frozen sheets have `recording_available=false`. These context fields are optional in saved journal contracts because pre-0012 history lacks them. The month version also invalidates a daily preview across submission and return. Frozen monthly snapshots preserve historical names/membership; daily sheets still use current display and teacher access. Official released forms remain later work.
+
+## The screen
+
+`web/screens/Attendance.tsx` is one section on one date, both sessions, and it is the highest-frequency screen in the system: thirty advisers, twice a day. What it settled is worth keeping if it is ever rebuilt.
+
+**Marks are held locally until they are reviewed together.** The API records a batch atomically against one shared sheet version, so saving each mark as it is clicked would be thirty writes, thirty version bumps and thirty chances for two staff members to overwrite each other's half of the same class. The primary action counts what is pending and opens the review.
+
+**A change carries both sessions.** `pending()` in that file builds the payload, and it has a test for every branch: a learner whose AM moved sends their untouched PM back unchanged, because a change replaces the pair rather than patching half of it, and an omitted session would clear a mark nobody touched. A learner marked and then put back exactly as they were is dropped, since an all-no-op batch is refused.
+
+**Three chips, not a select.** Marking a class is the one task here done at speed against a paper list, so present, absent and not-marked are each one click. The third is how a mark is cleared: the API clears with an explicit null, and without that control a mark recorded by mistake could only be replaced with another guess. The radio stays in the tab order — it is taken out of the visual flow rather than hidden with `display: none` — and the visible chip carries the focus ring.
+
+**An unmarked session is drawn.** `MarkValue` renders `Unrecorded`, never a blank cell and never an em dash. A session that cannot hold a mark at all — unconfigured, no class, suspended, alternative delivery — says which, rather than appearing as an empty control the adviser would try to use.
+
+**The refusal is explained before it happens.** `recording_available` is false for four different reasons, and the screen names the one that applies: a year that is not active, a future date, a frozen month together with the screen that unfreezes it, or a date nobody has configured together with the screen that configures it. A disabled control with no sentence beside it is what this replaces.
+
+**The review hash is never reused after a refusal.** A 409 discards the hash and returns the adviser to the form, exactly as the calendar screen does.
+
+Manager-only change history sits below the register, because a teacher's history endpoint could disclose formerly assigned learners. A teacher's sheet carries a `current_access_only` badge and a sentence saying it is a current class list rather than a historical report.
 
 ## Database and verification
 

@@ -1,6 +1,6 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The [school workspace](https://edunexus-balili.vercel.app/app) covers Section 1 setup, the Section 2A learner registry and enrollment, and the Section 3A instructional calendar; later modules are API-only and appear as honest placeholders.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The [school workspace](https://edunexus-balili.vercel.app/app) covers Section 1 setup, the Section 2A learner registry and enrollment, and the whole of Section 3 attendance except manual follow-up: the instructional calendar, the daily register, monthly consolidation and the absence monitor. Later modules are API-only and appear as honest placeholders.
 
 Picking this project up, as a person or an agent? Start with [AGENTS.md](AGENTS.md), the working contract, and [where things stand](docs/status.md). `CLAUDE.md` points at the same file, so Claude Code and Codex read identical instructions.
 
@@ -75,8 +75,9 @@ Read [instructional calendars](docs/instructional-calendar.md). An unconfigured 
 - Reviewed classroom AM/PM present/absent marks in atomic batches of up to 100 learners.
 - Explicit unknown marks, corrections/clearing, protected history and stale-review checks.
 - Calendar/enrollment guards preventing existing attendance from being silently invalidated.
+- An adviser screen marking one section on one date, both sessions, reviewed and committed as one batch.
 
-Read [daily attendance](docs/daily-attendance.md).
+Read [daily attendance](docs/daily-attendance.md). A mark is present, absent or unrecorded, and the third is a real choice: only an explicit null clears one, and an unmarked session is never read as presence.
 
 ## What works in Section 3B.2
 
@@ -84,8 +85,9 @@ Read [daily attendance](docs/daily-attendance.md).
 - Manager-reviewed submission, return, locking and reopening with immutable submission snapshots.
 - Frozen-month guards for daily marks, calendars, enrollment and identity corrections.
 - Teacher status-only access, manager snapshot/history pagination and atomic version/hash checks.
+- A manager screen offering only the transitions the current state allows, with every blocking issue written as a sentence.
 
-Read [monthly attendance](docs/monthly-attendance.md). Alternative-delivery conversion, official totals and absence alerts remain later work. Monthly workflows are API-only.
+Read [monthly attendance](docs/monthly-attendance.md). Alternative-delivery conversion, official totals and absence alerts remain later work. Every count the screen shows is a raw classroom session, and it says so.
 
 ## What works in Section 3B.3
 
@@ -93,8 +95,9 @@ Read [monthly attendance](docs/monthly-attendance.md). Alternative-delivery conv
 - Raw session observations, missing/unsupported data and within-range absence runs.
 - Current teacher access, historical manager access and returned-record auditing.
 - Live correction refresh and monthly freeze status without changing saved snapshots.
+- A screen over a window of up to 31 dates, validated before the request, with every count stated beside the window that produced it.
 
-Read [absence monitoring](docs/attendance-monitor.md). School alert policies and notifications remain later work; this increment is API-only.
+Read [absence monitoring](docs/attendance-monitor.md). School alert policies and notifications remain later work: there is no threshold on that screen, because the school has no approved rule to put there.
 
 ## What works in Section 3B.4
 
@@ -174,14 +177,15 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 
 - **An overview**: where the school year stands — its reporting periods with today marked, sections by grade, the section-and-adviser list, who holds access, and the latest recorded changes. No average, attendance rate or standing appears, and the screen says so.
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
-- **Every other module, listed honestly**: enrollment, roster import, calendars, attendance, academics and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
+- **Attendance, end to end**: configure the instructional calendar a month at a time, mark a section morning and afternoon, review a month and submit or lock it, and read recorded absences and gaps over a chosen window.
+- **Every module still to come, listed honestly**: roster import, follow-up cases, academics and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
 - **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
 
 **A record that does not exist is drawn, not left blank.** An unmarked attendance session and an unentered score are null, never zero and never "present", so a missing value carries a ruled diagonal mark and says what is missing — "LRN not issued", "No adviser". The same mark, at panel size, is what the Overview uses to name the general average, attendance rate, academic standing and class ranking this system may not state, and what each of them waits on. An em dash would read as a value somebody typed.
 
-**Ctrl+K opens a command palette** onto all seventeen screens. It searches their names, sections and descriptions and nothing else: every learner and enrollment list writes an access-log row naming the exact records returned, so a palette that searched the registry would write one per keystroke.
+**Ctrl+K opens a command palette** onto all nineteen screens. It searches their names, sections and descriptions and nothing else: every learner and enrollment list writes an access-log row naming the exact records returned, so a palette that searched the registry would write one per keystroke.
 
 **Errors sit beside the field that caused them.** A rejected save marks each field, prints the server's own message under it, and focuses a summary that lists every problem and jumps to each one. Creating a record opens a side panel rather than a second form parked under the list, and anything irreversible is confirmed in a dialog that states the consequence rather than asking "are you sure".
 
@@ -189,11 +193,11 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 
 Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
 
-Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed corrections, attendance and academic setup stay API-only; the instructional calendar now has a manager screen.
+Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed learner corrections and academic setup stay API-only. Attendance does not: an adviser marks and monitors their own sections, while consolidation, calendars and every change history are manager-only.
 
 A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
 
-The rail groups the seventeen screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The top bar carries the page title, the active school year — the scope every record is filed under — the palette and the signed-in identity. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
+The rail groups the nineteen screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The top bar carries the page title, the active school year — the scope every record is filed under — the palette and the signed-in identity. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
 
 Read [frontend integration](docs/frontend-handoff.md) before extending it.
 

@@ -197,7 +197,7 @@ code, .mono {
 .rail-open:hover { background: var(--hover); color: var(--ink-900); }
 
 .nav-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s3) var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s1); }
-/* A thin rail-coloured scrollbar, so seventeen items do not put a bright
+/* A thin rail-coloured scrollbar, so nineteen items do not put a bright
    Windows scrollbar down the middle of the dark rail. */
 .nav-scroll { scrollbar-width: thin; scrollbar-color: var(--rail-700) transparent; }
 .nav-scroll::-webkit-scrollbar { width: 8px; }
@@ -362,7 +362,7 @@ code, .mono {
 .scope.none { background: var(--amber-100); border-color: var(--amber-200); color: var(--amber-700); }
 .scope.none .ico { color: var(--amber-700); }
 
-/* The keyboard route to all seventeen screens. It is a button styled as a
+/* The keyboard route to all nineteen screens. It is a button styled as a
    field because that is what it opens, and it states its own shortcut. */
 .search-trigger {
   display: inline-flex;
@@ -1331,6 +1331,67 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .month-nav .btn { padding: var(--s1) var(--s2); }
 
 /*
+  The attendance mark control.
+
+  Three chips rather than a select, because marking a class is the one task in
+  this system done at speed against a paper list: a select costs two
+  interactions per session where a chip costs one, thirty-odd times, twice a
+  day. The radio itself is taken out of the flow rather than hidden with
+  `display: none`, which would drop it from the tab order and from the
+  accessibility tree; the visible chip is its label, and the focus ring is
+  drawn on the chip.
+
+  The third chip clears a mark back to unknown. It carries the same hatch as
+  every other absent record in the workspace, because that is what it records:
+  an unmarked session is unknown, never zero and never "present".
+*/
+.marks {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--white);
+}
+.marks .mark { position: relative; display: inline-flex; }
+.marks input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.mark-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--s2);
+  border-left: 1px solid var(--line);
+  font-size: var(--t-11);
+  font-weight: 650;
+  letter-spacing: .02em;
+  color: var(--ink-600);
+  white-space: nowrap;
+  user-select: none;
+}
+.marks .mark:first-child .mark-chip { border-left: 0; }
+.marks input:hover + .mark-chip { background: var(--hover); }
+.marks input:focus-visible + .mark-chip { outline: 2px solid var(--focus); outline-offset: -2px; }
+.marks input:checked + .mark-chip.present { background: var(--green-100); color: var(--green-700); }
+.marks input:checked + .mark-chip.absent { background: var(--amber-100); color: var(--amber-700); }
+.marks input:checked + .mark-chip.none {
+  background-color: var(--canvas);
+  background-image: var(--hatch-faint);
+  color: var(--ink-500);
+}
+/* The register is carried to a classroom, and a printed radio is an empty
+   circle. On paper the chosen value is printed as its own word instead. */
+.mark-print { display: none; }
+
+.month-nav .date-input { width: auto; }
+
+/*
   This school runs on paper: every record here ends up on an SF2, SF4, SF9 or
   SF10, and a section list is printed and carried to a classroom. So a printed
   page drops the furniture, keeps the register, and states which school and
@@ -1341,7 +1402,8 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
   body { background: #fff; color: #000; font-size: 10pt; }
   .rail, .topbar, .scrim, .skip, .view-actions, .card-tools, .pager,
   .row-toggle, .sheet, .cmdk, .dialog, .form-actions, .status.busy,
-  .pick, .month-nav .btn { display: none !important; }
+  .pick, .month-nav .btn, .marks { display: none !important; }
+  .mark-print { display: inline; font-weight: 600; }
   .app { display: block; }
   .view { max-width: none; padding: 0; }
   .card, .callout, .tile { border: 1px solid #999; break-inside: avoid; box-shadow: none; }

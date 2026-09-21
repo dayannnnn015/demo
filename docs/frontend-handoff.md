@@ -1,4 +1,4 @@
-Current direction (21 September 2026): frontend work resumed after the corrective migration shipped. The instructional calendar screen is built; daily attendance is next, and it depends on the calendar being configured. Backend review findings are in [the review](backend-review-2026-09-20.md). **Do not enable score screens** on the current implementation or treat the score-entry gate conflict as resolved.
+Current direction (21 September 2026): frontend work resumed after the corrective migration shipped. The whole of Section 3 now has screens — the instructional calendar, the daily attendance register, monthly consolidation and the classroom absence monitor — so the attendance workflow is walkable end to end. Attendance follow-up (3B.4) is the one module in that section still without a screen. Backend review findings are in [the review](backend-review-2026-09-20.md). **Do not enable score screens** on the current implementation or treat the score-entry gate conflict as resolved.
 
 # Frontend integration contract
 
@@ -186,25 +186,27 @@ Enrollment `learner_id` now identifies the retained profile; `recorded_learner_i
 
 Enrollment lists default to valid records. Managers can request `record_state=voided` or `all`; teachers remain restricted. Show voided timeline/history as evidence with `usable_for_reporting=false`, and disable movement/timeline edits until restored. A historical import receipt does not prove current record validity. Use current versions and unchanged review hashes; inspect history on a lost response. Clear all protected snapshots on sign-out. These screens remain unimplemented.
 
-## Daily attendance screens to build
+## The daily attendance screen
 
-[Section 3B.1](daily-attendance.md) exposes dated sheets and reviewed classroom marks under `/api/v1/sections/:id/attendance`. Select `day_on` and page by `after_id` (maximum 100). Display the effective AM/PM schedule and keep null marks visibly unmarked. Teacher sheets are labeled `current_access_only` and exclude formerly accessible learners; do not present them as complete historical reports. Managers retain historical roster access. ADM, suspended, no-class and unconfigured sessions cannot receive classroom marks.
+[Section 3B.1](daily-attendance.md) has a screen: `web/screens/Attendance.tsx`, at `/attendance`, open to advisers and managers alike. It is the highest-frequency screen in the system — thirty advisers, twice a day — and the rules it settled are written up in [that section's own document](daily-attendance.md#the-screen).
 
-Each preview row supplies the enrollment ID and both nullable `am`/`pm` values. Preserve the other session when editing one: each row replaces the pair. Preview 1–100 learners with the sheet version and reason, show before/after values, then confirm the unchanged proposal/hash with `reviewed=true`. Omitted learners remain unchanged. Refresh on conflicts; never assume unmarked learners were present. Manager-only history can verify lost responses. Attendance dependencies can reject calendar/enrollment confirmation: explicitly review/clear affected marks, repair the underlying record, then review re-recording. These are separate transactions with preserved evidence. Clear names/reviews on sign-out and render text safely. No attendance screens or monthly totals were added in this release.
+Four are worth repeating here, because a rebuild would have to honour all four. Marks are held locally and reviewed as one batch, since the API commits atomically against a single shared sheet version. A change sends **both** sessions, because it replaces a learner's AM/PM pair rather than patching half of it — `pending()` does this and is tested for every branch, including the case where an omitted session would have cleared a mark nobody touched. Clearing a mark is one of the three choices, not a missing option, because only an explicit null clears one. And `recording_available` is false for four distinct reasons, each of which the screen names, together with the screen that resolves it.
 
-## Monthly attendance screens to build
+Change history is manager-only on this screen, deliberately: a teacher's history endpoint could disclose formerly assigned learners, so it does not exist for them. A teacher's sheet is badged `current_access_only` and says in words that it is a current class list, not a historical report.
 
-[Section 3B.2](monthly-attendance.md) supplies `/api/v1/sections/:id/attendance/months`: manager review/members, transition preview/confirmation, immutable history and old snapshots. Teachers can use `/status` only; it deliberately excludes historical learner details and counts. Send the first-of-month `month_on` and display the clipped school-year range.
+## The monthly consolidation screen
 
-Show completeness issues, explicit unknowns, raw AM/PM session counts and complete membership before a manager submits. Never label these counts as official days or rates. Page `/members` by `after_id` (maximum 100); compare live `data_hash` values and refresh on change. Pass a historical `snapshot_id` explicitly after return/reopening when frozen evidence is intended. The outer scope is current; captured section/year metadata lives inside `review`.
+[Section 3B.2](monthly-attendance.md) has a manager screen: `web/screens/Months.tsx`, at `/months`. Teachers have none, because the `/status` read available to them carries no counts and no learner detail — there is nothing to draw.
 
-Preview an allowed `submit`, `return`, `lock` or `reopen` with version and reason, then confirm the identical proposal/hash with `reviewed=true`. This is acting-manager review, not required two-person approval. Both submitted and locked months disable daily editing. Surface dependency errors on underlying record repairs; return/reopen before correcting, retain old evidence and resubmit afterward. Inspect manager history on a lost response rather than silently retrying. Finish reviews before year closure, which prevents further transitions. Clear protected snapshots on sign-out. No monthly screens were added.
+It offers only the transitions allowed from the current state, and no edit form, because nothing edits a month in place. Every blocking issue is rendered as the sentence that says what to do next and which screen does it; `issueText` holds that mapping and a test asserts each documented code has one. Every count on the screen is a raw AM/PM classroom session and is labelled as such — not a school day, an attendance credit, a percentage or an SF4 total. Membership sits behind an explicit control because it names learner records.
 
-## Classroom absence monitor to build
+## The classroom absence monitor screen
 
-[Section 3B.3](attendance-monitor.md) adds `GET /api/v1/sections/:id/attendance/monitor` with required `from`/`to` (1–31 nonfuture dates), `view=all|with_absences|incomplete`, `limit` (50 default, 100 maximum) and `after_id`. Display filters, date-window limits, current/historical visibility, raw session counts, completion gaps and dated evidence. Show that consecutive-absence counts are limited to this window; never label them as an official school threshold or dropout determination.
+[Section 3B.3](attendance-monitor.md) has a screen: `web/screens/Monitor.tsx`, at `/monitor`, open to advisers and managers alike. It opens on the fortnight ending today, clamped to the school year.
 
-Filters run before pagination. Keep nulls unknown, distinguish ADM from classroom marks and display monthly workflow status. Monitoring is live, including current display names; use the separate monthly snapshot API for historical submissions. Refresh after corrections or roster changes. Clear protected data on sign-out. This increment sends no messages and has no case-management or notification UI.
+Two rules carry the weight. The window is validated in the client before a request is spent, because the API returns one `MONITOR_RANGE` code for four different mistakes and a reader needs to know which; `windowProblem()` is a pure function with a test per branch. And a gap in the record is never drawn as an absence: `unconfigured` and `incomplete` carry the unrecorded mark, and a test asserts neither renders the word "absent".
+
+The screen states its window beside every count, says that a run may have started before it, and closes by saying there is no approved absence rule and therefore no threshold here — pointing at the manual follow-up workflow rather than offering to open a case.
 
 ## Attendance follow-up screens to build
 

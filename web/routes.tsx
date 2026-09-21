@@ -8,6 +8,9 @@ import { Learners } from './screens/Learners';
 import { Upcoming } from './screens/Upcoming';
 import { Enrollment } from './screens/Enrollment';
 import { Calendar } from './screens/Calendar';
+import { Attendance } from './screens/Attendance';
+import { Months } from './screens/Months';
+import { Monitor } from './screens/Monitor';
 import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -108,25 +111,25 @@ export const routes: Route[] = [
     render: p => <Calendar {...p} />,
   },
   {
-    id: 'attendance', nav: 'Daily attendance', icon: 'attendance', group: 'Attendance',
+    id: 'attendance', nav: 'Daily attendance', icon: 'attendance', group: 'Attendance', built: true, ownHeader: true,
     title: 'Daily attendance',
     lede: 'Morning and afternoon marks for one section.',
     record: 'attendance_marks', feeds: 'SF2',
-    render: soon(
-      'Mark a class present or absent, morning and afternoon.',
-      'The highest-frequency screen in the system: thirty advisers, twice a day. The API records marks in reviewed batches of up to 100 learners and keeps an unmarked session visibly unknown rather than counting it as present.',
-    ),
+    render: p => <Attendance {...p} />,
   },
   {
-    id: 'months', nav: 'Monthly consolidation', icon: 'months', group: 'Attendance', manager: true,
+    id: 'months', nav: 'Monthly consolidation', icon: 'months', group: 'Attendance', manager: true, built: true, ownHeader: true,
     title: 'Monthly consolidation',
     lede: 'Review a section month, then submit or lock it.',
     record: 'attendance_months', feeds: 'SF4',
-    render: soon(
-      'Check a month is complete, then submit it.',
-      'Submission freezes the month against later edits and keeps an immutable snapshot of who was enrolled and what was marked.',
-      'Official totals and rates stay out until the school supplies its approved mark meanings and half-day rules.',
-    ),
+    render: p => <Months {...p} />,
+  },
+  {
+    id: 'monitor', nav: 'Absence monitor', icon: 'monitor', group: 'Attendance', built: true, ownHeader: true,
+    title: 'Classroom absence monitor',
+    lede: 'Recorded absences and gaps in recording, inside a window you choose.',
+    record: 'attendance_marks',
+    render: p => <Monitor {...p} />,
   },
   {
     id: 'followups', nav: 'Follow-up cases', icon: 'followups', group: 'Attendance', manager: true,

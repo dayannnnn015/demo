@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.31.0 | The attendance section gets its screens: the daily register, monthly consolidation and the absence monitor | — |
 | 0.30.0 | The instructional calendar screen: a month at a time, preview and confirm, change history | — |
 | 0.29.0 | Corrective migration for the score defects the review reproduced: current-learner access, explicit clearing, privacy journals, column precision | 0022 |
 | 0.28.1 | Backend review: upstream identity validation, provisioning transport checks, decimal input fix; open database findings documented | None |

@@ -1,6 +1,6 @@
 # Section 3B.2: monthly attendance review
 
-This API-only increment checks classroom completeness, preserves immutable monthly submissions, and controls subsequent corrections. It does not calculate official attendance credits, percentages or SF2/SF4 totals. All counts are raw AM/PM classroom sessions.
+This increment checks classroom completeness, preserves immutable monthly submissions, and controls subsequent corrections. The manager screen is `web/screens/Months.tsx`, at `/months`; teachers have no monthly screen, because the `/status` read available to them carries no counts or learner detail worth one. It does not calculate official attendance credits, percentages or SF2/SF4 totals. All counts are raw AM/PM classroom sessions.
 
 ## Scope and access
 
@@ -45,6 +45,18 @@ Show readiness, context, counts and membership before confirming a transition. T
 Draft reads have `source=live` and rebuild the current data. Submitted/locked reads use `source=submission_snapshot`. The outer section/year context is current; `review.section` and `review.school_year` belong to the captured submission. An explicit `snapshot_id` retrieves an older submission after return, reopening or resubmission; it must match the requested section/month. A returned draft may retain a last snapshot ID while its default review/members are live. Pass the explicit ID when historical evidence is intended.
 
 Member pages sort by enrollment UUID. Frozen pages are stable. Live pages may change between requests; compare `data_hash` with the review and between pages, and reload if it changes. Transition confirmation independently verifies the complete dataset. Clear protected data on sign-out and render names/reasons as text.
+
+## The screen
+
+`web/screens/Months.tsx` reads one section and one month, and offers only the transitions the table above allows from the current state: submit from draft, return or lock from submitted, reopen from locked. There is no edit form, because nothing edits a month in place.
+
+**A blocking issue is a sentence, not a code.** `YEAR_NOT_ACTIVE`, `MONTH_NOT_ENDED`, `UNCONFIGURED_DATES`, `UNSUPPORTED_ADM` and `MISSING_MARKS` each map to what the reader has to do next, and to the screen that does it. `issueText` in that file holds the mapping and a test asserts every code has one; an unmapped code falls back to itself rather than disappearing. The issue list is shown only for a draft, since a frozen month has already passed these checks and restating them there would read as a fault.
+
+**Every count says what it is.** Present, absent, unmarked and expected are raw AM/PM classroom sessions, printed with a sentence saying they are not school days, attendance credits, percentages or SF4 totals. The mark-meanings gate is what stands between these numbers and any of those words.
+
+**Membership is read on request.** The member list names learner records, so it sits behind an explicit control rather than loading with the page.
+
+A closed year offers no transitions at all, matching the rule that no monthly transition or reopening is allowed in one.
 
 ## Correcting dependencies
 

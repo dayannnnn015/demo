@@ -22,6 +22,7 @@ const paths = {
   calendar: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" /><path d="m8.5 15.5 2.5 2.5 4.5-4.5" /></>,
   attendance: <><path d="M9 3h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path d="M16 4.5h2a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h2" /><path d="m8.5 13.5 2.5 2.5 4.5-4.5" /></>,
   months: <><rect x="3" y="3" width="18" height="5" rx="1.5" /><path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" /><path d="M10 12.5h4" /></>,
+  monitor: <><path d="M3 3v16a2 2 0 0 0 2 2h16" /><path d="m7 15 3.5-4 3 2.5L20 7" /><circle cx="20" cy="7" r="1.6" /></>,
   followups: <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1Z" /><path d="M4 22v-7" /></>,
   subjects: <><path d="M12 7.5v13" /><path d="M3 18a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5a4 4 0 0 1 4 3.5A4 4 0 0 1 16 4h5a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-5.5a3.5 3.5 0 0 0-3.5 2.5A3.5 3.5 0 0 0 8.5 18Z" /></>,
   policies: <><path d="M12 3v18M7.5 21h9" /><path d="M4.5 6.5h15" /><path d="M7 6.5 3.5 14h7Z" /><path d="M17 6.5 13.5 14h7Z" /></>,
