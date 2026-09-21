@@ -16,7 +16,9 @@ No gate opened. No endpoint, error code or arithmetic was added, and `P17xx` is 
 
 ## Verification and in flight
 
-All 308 tests across 23 files, server and web type checks and the production build pass. Each of the four correction tests was additionally run against a database built without `0022` and fails there, so they are regressions rather than restatements of current behavior. The working tree is clean and nothing is in flight.
+All 308 tests across 23 files, server and web type checks and the production build pass. Each of the four correction tests was additionally run against a database built without `0022` and fails there, so they are regressions rather than restatements of current behavior.
+
+Migration `0022` is applied to the hosted database and its effect verified there from catalog metadata. 0.29.0 is deployed: the live API reports 0.29.0, health, readiness and `/app` return 200, and all 109 protected operations reject an anonymous request. **`master` is two commits ahead of `origin/master`** — nothing has been pushed, because a push was not asked for and ships nothing on its own. The working tree is clean and nothing is in flight.
 
 ## Still outstanding
 
