@@ -10,6 +10,23 @@ So the key does not go there. It lives in [one Edge Function](../supabase/functi
 
 The runtime boundary is unchanged and still enforced: [`readConfig`](../src/core/config.ts) rejects a secret or service key for `SUPABASE_PUBLISHABLE_KEY`, and now also rejects one supplied as `PROVISION_FUNCTION_SECRET`. A deployment that configures no function keeps the operator workflow exactly as it was and answers `IDENTITY_SERVICE_DISABLED` to the new endpoint.
 
+## Configuring it, which the development deployment now has
+
+The function was deployed and wired on 21 September 2026, after a signed-in principal met `IDENTITY_SERVICE_DISABLED` trying to create an account. Both halves are needed and neither is in this repository:
+
+```bash
+supabase secrets set EDUNEXUS_PROVISION_SECRET=<64 random characters>   EDUNEXUS_INVITE_REDIRECT=https://edunexus-balili.vercel.app/account/setup --project-ref <ref>
+supabase functions deploy create-staff-identity --no-verify-jwt --project-ref <ref>
+```
+
+Then set `PROVISION_FUNCTION_URL` (`https://<ref>.supabase.co/functions/v1/create-staff-identity`) and the **same** `PROVISION_FUNCTION_SECRET` in the API runtime, and redeploy — an environment change does not reach a running deployment. `readConfig` refuses one of the pair without the other, so a half-finished configuration fails at boot rather than at the first invitation.
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into the function by the platform; they are never set by hand and never leave it. The redirect must already be in the Auth allowlist, or the invitation link will be refused when it is opened.
+
+Rotating the secret means setting it in both places and redeploying. Until the redeploy, the API presents the old secret and the function answers 401, which surfaces as `IDENTITY_SERVICE_REJECTED` — the error that distinguishes a mismatched secret from an unconfigured deployment.
+
+**Email delivery is the next limit.** Invitations go through whatever mail the Supabase project is configured with. The built-in service is rate limited and intended for testing, so onboarding thirty-three staff needs the school's own SMTP configured first; a rate-limited attempt answers `IDENTITY_SERVICE_UNAVAILABLE` and leaves the invitation untouched.
+
 This is narrower than the decision recorded in [constraints](constraints.md) as the service-role gate. That gate asks the school to accept that a compromised **runtime** could alter any identity. Here it still cannot, so the gate's risk is avoided rather than accepted.
 
 ### What is not rolled back
