@@ -4,7 +4,7 @@ Build and review one section at a time. The user wants sustained backend refinem
 
 Read [standing rules, gates and settled decisions](constraints.md) first. It lists what must never be built and what is blocked on a school decision, and [school information requests](school-information-requests.md) lists what to ask the school to unblock it. Where this roadmap and that file disagree, that file wins and this one is wrong. Every **Next:** line below names the gate it waits on, or states that it has none.
 
-The [20 September backend review](backend-review-2026-09-20.md) found existing-score defects requiring a corrective migration. The user authorized it on 21 September and migration `0022` applies it. Frontend work is paused; school-policy gates remain unchanged, and the correction opened none of them.
+The [20 September backend review](backend-review-2026-09-20.md) found existing-score defects requiring a corrective migration. The user authorized it on 21 September and migration `0022` applies it. Frontend work resumed afterwards, starting with the instructional calendar screen; school-policy gates remain unchanged, and neither the correction nor the screen opened any of them.
 
 ## Section 1 — Staff authorization and school setup
 
@@ -36,7 +36,7 @@ Section 2 validation covers duplicate LRNs, invalid dates, movement history, adv
 
 ## Section 3 — Attendance and monthly consolidation
 
-**Section 3A is implemented:** explicit AM/PM school calendars and section overrides, distinct classroom/alternative-delivery/no-class/suspended sessions, unconfigured-date handling, reviewed atomic changes, shared versions and protected history. See [instructional calendar](instructional-calendar.md). No official dates are seeded and no attendance credits are computed.
+**Section 3A is implemented, and now has a screen:** explicit AM/PM school calendars and section overrides, distinct classroom/alternative-delivery/no-class/suspended sessions, unconfigured-date handling, reviewed atomic changes, shared versions and protected history. The manager screen reads one month at a time, drives preview and confirmation, and shows every change in the year. See [instructional calendar](instructional-calendar.md). No official dates are seeded and no attendance credits are computed.
 
 **Section 3B.1 is implemented:** date-effective sheets, reviewed classroom AM/PM marks in 100-learner atomic batches, explicit unknowns, version/hash checks, and protected history. Teachers retain current learner-access restrictions; managers can view historical rosters. Calendar, timeline, placement and void corrections are rejected if they invalidate existing non-null marks. See [daily attendance](daily-attendance.md).
 

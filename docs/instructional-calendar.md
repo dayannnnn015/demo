@@ -1,6 +1,6 @@
 # Section 3A: instructional calendar
 
-The calendar defines the expected AM and PM schedule before attendance is recorded. Principals and administrative officers configure it through reviewed changes. Active teachers can read the school schedule and the effective schedule of sections they currently advise. This module is API-only. [Section 3B.1](daily-attendance.md) now records classroom AM/PM attendance; [Section 3B.2](monthly-attendance.md) adds monthly submission and locking. Official attendance arithmetic remains unimplemented.
+The calendar defines the expected AM and PM schedule before attendance is recorded. Principals and administrative officers configure it through reviewed changes. Active teachers can read the school schedule and the effective schedule of sections they currently advise. The manager-facing screen is `web/screens/Calendar.tsx`, which reads one month at a time and drives the preview-and-confirm workflow below; teachers have no calendar screen yet. [Section 3B.1](daily-attendance.md) now records classroom AM/PM attendance; [Section 3B.2](monthly-attendance.md) adds monthly submission and locking. Official attendance arithmetic remains unimplemented.
 
 ## Explicit dates and session modes
 
@@ -59,7 +59,7 @@ A clear contains only `day_on` and `action=clear`. Show the returned before/afte
 
 One calendar version covers all scopes within the year. An uninitialized calendar reads as version `0` without creating a root row. The first commit creates version `1`; every successful batch advances it once. This version is distinct from the academic-year version. Another school or section commit invalidates an earlier review. Changes to year/section metadata, actor, reason or proposed content also require a new preview. Closed years remain readable, but preview/commit are blocked.
 
-On `VERSION_CONFLICT`, `CALENDAR_REVIEW_CHANGED` or a blocking conflict, reload and require a new review. Commits do not have import-style retry receipts. If the response was lost, inspect history for the hash and actor before trying again. History spans all scopes and retains school/section metadata as it stood during review. A current teacher assignment authorizes calendar reads even for a closed year; calendar data contains no learner roster or marks.
+On `VERSION_CONFLICT`, `CALENDAR_REVIEW_CHANGED` or a blocking conflict, reload and require a new review. The screen does this by discarding the hash and returning to the form. Commits do not have import-style retry receipts. If the response was lost, inspect history for the hash and actor before trying again. History spans all scopes and retains school/section metadata as it stood during review. A current teacher assignment authorizes calendar reads even for a closed year; calendar data contains no learner roster or marks.
 
 ## Persistence, locking and downstream work
 

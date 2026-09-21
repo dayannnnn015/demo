@@ -1314,6 +1314,23 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 /* ---------- Print ---------- */
 
 /*
+  Instructional calendar. The register is read a month at a time because the
+  SF2 it feeds is one sheet per month, and the dates a manager is configuring
+  are the same page of the school's own calendar.
+*/
+.pick { width: 1px; white-space: nowrap; }
+.pick input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-700);
+  cursor: pointer;
+}
+.month-nav { display: inline-flex; align-items: center; gap: var(--s2); }
+.month-nav b { min-width: 12ch; text-align: center; font-size: var(--t-13); font-weight: 650; color: var(--ink-900); }
+.month-nav .btn { padding: var(--s1) var(--s2); }
+
+/*
   This school runs on paper: every record here ends up on an SF2, SF4, SF9 or
   SF10, and a section list is printed and carried to a classroom. So a printed
   page drops the furniture, keeps the register, and states which school and
@@ -1323,7 +1340,8 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 @media print {
   body { background: #fff; color: #000; font-size: 10pt; }
   .rail, .topbar, .scrim, .skip, .view-actions, .card-tools, .pager,
-  .row-toggle, .sheet, .cmdk, .dialog, .form-actions, .status.busy { display: none !important; }
+  .row-toggle, .sheet, .cmdk, .dialog, .form-actions, .status.busy,
+  .pick, .month-nav .btn { display: none !important; }
   .app { display: block; }
   .view { max-width: none; padding: 0; }
   .card, .callout, .tile { border: 1px solid #999; break-inside: avoid; box-shadow: none; }

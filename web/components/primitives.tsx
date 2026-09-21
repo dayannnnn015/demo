@@ -357,7 +357,7 @@ export function Finder({ fields, initial, onApply, onClear }: {
   );
 }
 
-export type Column<T> = { header: string; cell: (row: T) => ReactNode; numeric?: boolean };
+export type Column<T> = { header: string; cell: (row: T) => ReactNode; numeric?: boolean; className?: string };
 
 /**
  * A placeholder shaped like the table it stands in. Three grey bars said
@@ -376,6 +376,8 @@ export function TableSkeleton({ columns = 4, rows = 4 }: { columns?: number; row
     </div>
   );
 }
+
+const cellClass = <T,>(column: Column<T>) => [column.numeric ? 'numeric' : '', column.className ?? ''].filter(Boolean).join(' ');
 
 /**
  * One open row at a time, and its panel spans the full width of the table
@@ -406,7 +408,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
       <table>
         <thead>
           <tr>
-            {columns.map(column => <th key={column.header} scope="col" className={column.numeric ? 'numeric' : ''}>{column.header}</th>)}
+            {columns.map(column => <th key={column.header} scope="col" className={cellClass(column)}>{column.header}</th>)}
             {detail ? <th scope="col" className="actions">{actionsLabel}</th> : null}
           </tr>
         </thead>
@@ -418,7 +420,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
             return (
               <Fragment key={key}>
                 <tr>
-                  {columns.map(column => <td key={column.header} className={column.numeric ? 'numeric' : ''}>{column.cell(row)}</td>)}
+                  {columns.map(column => <td key={column.header} className={cellClass(column)}>{column.cell(row)}</td>)}
                   {detail ? (
                     <td className="actions">
                       <button
@@ -518,6 +520,13 @@ export function Pager({ offset, count, hasMore, onChange, size = 25 }: {
     </div>
   );
 }
+
+/** The browser's own date, not UTC: at 7am in Benguet, `toISOString` is still yesterday. */
+export const localToday = () => {
+  const now = new Date();
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+};
 
 export const value = (row: Record<string, unknown>, key: string) => (row[key] == null ? '' : String(row[key]));
 /** A value, or the mark that says no record exists — never an em dash. */

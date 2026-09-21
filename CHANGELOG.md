@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.30.0 | The instructional calendar screen: a month at a time, preview and confirm, change history | — |
 | 0.29.0 | Corrective migration for the score defects the review reproduced: current-learner access, explicit clearing, privacy journals, column precision | 0022 |
 | 0.28.1 | Backend review: upstream identity validation, provisioning transport checks, decimal input fix; open database findings documented | None |
 | 0.28.0 | Workspace overhauled: field-level errors, sheets, command palette, the unrecorded mark | — |
@@ -41,6 +42,26 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.30.0 — The instructional calendar gets a screen
+
+Frontend work resumed. Section 3A has had a complete API since 0.10.0 and no interface at all; it is the screen that has to come first, because attendance cannot be recorded against a date the calendar does not describe.
+
+**A month at a time, because the SF2 is a month.** The API reads at most 62 dates and the school's own form is one sheet per section per month, so the register shows one month with arrows bounded by the school year. The window is clamped to the year's start and end, which keeps every read inside the limit without arithmetic anybody has to think about.
+
+**An unconfigured date is drawn.** Both session cells carry the unrecorded hatch and the words "Not configured". This is the entire point of the module: a date nobody has configured is not a holiday, not a school day and not an absence, and a blank cell would have quietly said "nothing happens that day". A test asserts the mark is rendered and that no em dash stands in for it.
+
+**Setting a schedule is the API's own review, drawn.** Pick dates in the register, choose what kind of day it is, and the classification fills the two sessions the way the API requires — a holiday closes both, a suspension suspends both, a regular day teaches — with every session still editable, because the database is what decides and the form is only a convenience over it. Then preview: the panel shows each date's effective schedule now and after, names the ones that change nothing, and confirms with the hash the preview returned. A refusal throws that hash away and sends the manager back to the form. A review is never confirmed against a calendar that moved underneath it.
+
+**Conflicts are explained rather than printed.** `SECTION_OVERRIDES_PRESENT` names the sections holding their own schedule and says to clear those exceptions first; `BASE_DAY_UNCONFIGURED` says to set the school baseline before adding a section exception. A code number tells a school head nothing about what to do next.
+
+**Clearing is offered only where it means something.** In school scope only a school date can be cleared; in a section only that section's own exception can, because clearing is what restores inheritance and a date already inherited has nothing to restore.
+
+The change history reads every calendar change in the year across both scopes, newest first, with the `before_version` cursor — the way to check a change whose response was lost before recording it a second time.
+
+`web/dates.ts` now holds the month arithmetic, and none of it converts a plain calendar date through local time: at 8am in Benguet a locally parsed `YYYY-MM-DD` is still the previous UTC day, which would put the wrong weekday beside every row. Comparisons are string comparisons, which sort correctly in that format. `Column` gained an optional `className`, which is how the selection boxes are dropped from the printed month.
+
+Seven new tests in `tests/web-calendar.test.ts`. 315 tests across 24 files. No migration, no endpoint, no schema and no permission change.
 
 ## 0.29.0 — The score corrections the review could not make
 

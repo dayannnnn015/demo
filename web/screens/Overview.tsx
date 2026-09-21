@@ -3,7 +3,7 @@ import type { Api, Page, Row } from '../api';
 import { query } from '../api';
 import {
   Badge, EmptyState, PrintButton, Table, TableSkeleton, Unrecorded,
-  gradeName, sentence, value, yearName, type Status,
+  gradeName, localToday, sentence, value, yearName, type Status,
 } from '../components/primitives';
 import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
 
@@ -23,13 +23,6 @@ import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
  * academic standing stay behind their gates in docs/constraints.md, and the
  * screen draws their absence rather than leaving it to be guessed at.
  */
-
-/** The browser's own date, not UTC: at 7am in Benguet, `toISOString` is still yesterday. */
-const localToday = () => {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-};
 
 const greeting = () => {
   const hour = new Date().getHours();

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type Row = Record<string, unknown>;
-export type Page<T = Row> = { items: T[]; pagination?: { has_more?: boolean; next_after_id?: string | null; next_before_id?: string | null } };
+export type Page<T = Row> = { items: T[]; pagination?: { has_more?: boolean; next_after_id?: string | null; next_before_id?: string | null; next_before_version?: number | null } };
 
 /** An API error carrying the server's own code, so screens can react to specific ones. */
 export class ApiError extends Error {

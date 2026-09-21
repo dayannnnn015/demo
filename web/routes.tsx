@@ -7,6 +7,7 @@ import { Activity, Invitations, Staff } from './screens/Staff';
 import { Learners } from './screens/Learners';
 import { Upcoming } from './screens/Upcoming';
 import { Enrollment } from './screens/Enrollment';
+import { Calendar } from './screens/Calendar';
 import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -100,14 +101,11 @@ export const routes: Route[] = [
   },
 
   {
-    id: 'calendar', nav: 'Instructional calendar', icon: 'calendar', group: 'Attendance', manager: true,
+    id: 'calendar', nav: 'Instructional calendar', icon: 'calendar', group: 'Attendance', manager: true, built: true, ownHeader: true,
     title: 'Instructional calendar',
     lede: 'Which days hold classes, and how each session runs.',
     record: 'instructional_days', feeds: 'SF2',
-    render: soon(
-      'Set school and section schedules before attendance is recorded.',
-      'Attendance cannot be taken on a date the calendar does not describe, so this screen comes first. An unconfigured date stays unknown rather than being assumed to be a school day.',
-    ),
+    render: p => <Calendar {...p} />,
   },
   {
     id: 'attendance', nav: 'Daily attendance', icon: 'attendance', group: 'Attendance',

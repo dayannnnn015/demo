@@ -1,12 +1,12 @@
 # EDUNEXUS
 
-EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The [school workspace](https://edunexus-balili.vercel.app/app) covers Section 1 setup, the Section 2A learner registry and enrollment; later modules are API-only and appear as honest placeholders.
+EDUNEXUS supports learner attendance and academic records for Balili Elementary School, La Trinidad, Benguet. It currently implements staff/school setup, learner registration/enrollment, reviewed roster imports, LRN and timeline corrections, learner identity reconciliation, enrollment void/restoration, grade-placement corrections, instructional calendars, daily/monthly attendance, manual follow-up, subject catalog/section offerings, and **Section 4B.1: assessment tasks and raw score entry**. Staff invitations are tracked records and account recovery can be initiated from the sign-in page. Backend development remains the priority. The [school workspace](https://edunexus-balili.vercel.app/app) covers Section 1 setup, the Section 2A learner registry and enrollment, and the Section 3A instructional calendar; later modules are API-only and appear as honest placeholders.
 
 Picking this project up, as a person or an agent? Start with [AGENTS.md](AGENTS.md), the working contract, and [where things stand](docs/status.md). `CLAUDE.md` points at the same file, so Claude Code and Codex read identical instructions.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision, and [school information requests](docs/school-information-requests.md) lists what to ask the school to unblock it, against what [the school's own forms](docs/school-forms.md) already establish. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
-The [20 September backend review](docs/backend-review-2026-09-20.md) records maintenance fixes and confirmed score-database defects awaiting authorization for a corrective migration. Existing test coverage is not a production-readiness claim.
+The [20 September backend review](docs/backend-review-2026-09-20.md) records the maintenance fixes and the four score-database defects it reproduced; migration `0022` corrected all four. Existing test coverage is not a production-readiness claim.
 
 ## What works in Section 1
 
@@ -65,8 +65,9 @@ Read [learner registry](docs/learner-registry.md), [registry review](docs/regist
 - School baselines and section overrides, with unknown dates kept unconfigured.
 - Manager preview/confirmation, conflict protection, immutable review history and atomic batches.
 - Effective schedule reads for assigned teachers, bounded requests and shared calendar version checks.
+- A manager screen reading one month at a time, setting or clearing dates through preview and confirmation, and showing every change in the year.
 
-Read [instructional calendars](docs/instructional-calendar.md).
+Read [instructional calendars](docs/instructional-calendar.md). An unconfigured date is drawn as unknown on that screen, never blank: it is not a holiday, not a school day and not an absence.
 
 ## What works in Section 3B.1
 
@@ -188,7 +189,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 
 Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
 
-Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed corrections, attendance, calendars and academic setup stay API-only.
+Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed corrections, attendance and academic setup stay API-only; the instructional calendar now has a manager screen.
 
 A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
 

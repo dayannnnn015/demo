@@ -1,4 +1,4 @@
-Current direction (20 September 2026): frontend work is paused at the user’s request. Backend maintenance findings are recorded in [the review](backend-review-2026-09-20.md). Do not enable score screens based on the current implementation or treat the score-entry gate conflict as resolved.
+Current direction (21 September 2026): frontend work resumed after the corrective migration shipped. The instructional calendar screen is built; daily attendance is next, and it depends on the calendar being configured. Backend review findings are in [the review](backend-review-2026-09-20.md). **Do not enable score screens** on the current implementation or treat the score-entry gate conflict as resolved.
 
 # Frontend integration contract
 
@@ -35,7 +35,7 @@ The EDUNEXUS mark is `web/components/brand.tsx` — one component, `BrandMark`, 
 
 Corners are square everywhere. `--r-sm`, `--r`, `--r-md` and `--r-lg` are all `0`; do not write a `border-radius` or an `rx` that bypasses them, including a `999px` pill or a rounded bar end in a figure.
 
-`web/components/primitives.tsx` holds `Editor`, `FormSheet`, `Finder`, `Table`, `TableSkeleton`, `Task`, `Cell`, `Select`, `Badge`, `Callout`, `EmptyState`, `Unrecorded`, `Pager`, `Button`, `PrintButton`, `PageHeader` and `StatusLine`; `web/components/overlay.tsx` holds `Sheet`, `Confirm` and the `useTrap` hook they share. Prefer them over new markup so screens stay consistent, and give every table a real empty state: an empty screen is where a staff member decides whether the system is broken or simply new.
+`web/components/primitives.tsx` holds `Editor`, `FormSheet`, `Finder`, `Table`, `TableSkeleton`, `Task`, `Cell`, `Select`, `Badge`, `Callout`, `EmptyState`, `Unrecorded`, `Pager`, `Button`, `PrintButton`, `PageHeader`, `StatusLine` and the shared `localToday`; a `Column` may carry a `className` for a column the print stylesheet has to drop, which is how the calendar's selection boxes stay off paper; `web/dates.ts` holds plain-calendar-date arithmetic; `web/components/overlay.tsx` holds `Sheet`, `Confirm` and the `useTrap` hook they share. Prefer them over new markup so screens stay consistent, and give every table a real empty state: an empty screen is where a staff member decides whether the system is broken or simply new.
 
 **A missing record gets the `Unrecorded` mark, never an em dash and never a blank cell.** This is the rule the system exists to hold: an unmarked attendance session and an unentered score are null, never zero and never "present". An em dash reads as a value somebody typed and an empty cell reads as a page that failed to load, so `Unrecorded` draws a ruled diagonal hatch and names what is missing: `<Unrecorded label="LRN not issued" />`. The hatch is `--hatch` in tokens.css, a CSS gradient rather than an image, and it sizes up: `.empty-mark` on an empty state, `.planned-mark` on an unbuilt screen, `.gated-box` for a figure the system may not state. Use the `shown(row, key)` helper where a value may be null.
 
@@ -252,13 +252,26 @@ Send each learner's own `version`, using `0` for a learner with no mark yet; the
 
 Do not compute or display a total, average, percentage or grade anywhere on these screens, even client-side. No endpoint provides one, the weighting rules are not yet confirmed with the school, and a helpfully calculated column would be read as official. Surface `TASK_MAXIMUM` as "lower the recorded scores first", and expect an adviser to be unable to correct a learner who has transferred out; that is a manager action. Since migration `0022` that is enforced rather than merely intended: a departed learner drops out of the adviser's sheet entirely and an entry for them answers 404, while a manager still sees both the learner and the mark. Always send the `raw_score` key — omitting it is rejected, because only an explicit null may clear a mark.
 
-## Calendar screens to build
+## The instructional calendar screen
 
-[Section 3A](instructional-calendar.md) provides calendar reads, manager preview/confirmation and all-scope history under `/api/v1/academic-years/:id/calendar`. Read explicit `from`/`to` ranges of at most 62 dates. Schoolwide reads omit `section_id`; teachers can request only their assigned sections. Display `source` and both session modes. Render unconfigured dates as unknown, never absent or automatically closed. Summary counts are session-mode counts, not attendance credits.
+[Section 3A](instructional-calendar.md) has a screen: `web/screens/Calendar.tsx`, manager-only, at `/calendar`. It reads a month, sets or clears dates through the preview-and-confirm workflow, and shows the all-scope change history. What it settled is worth keeping if it is ever rebuilt.
 
-Use the returned `calendar_version` as mutation `version`, including `0` for an uninitialized calendar. Preview up to 62 distinct date sets/clears for one scope, show raw and effective before/after states, reason and conflicts, then submit the unchanged proposal/hash with `reviewed=true`. Clearing a section date restores inheritance. School changes with configured overrides are blocked: explicitly review/clear those overrides before changing the baseline. These are separate visible transactions. Use all-scope history and its `before_version` cursor to inspect a lost response. Refresh and re-review after conflicts; never auto-confirm a new hash. Render labels/reasons as text and clear protected review state on sign-out. Calendar UI and attendance marking UI remain unimplemented.
+**A month at a time, because the SF2 is a month.** The API reads at most 62 dates, and a manager configuring a calendar is working from one page of the school's own. The month arrows are bounded by the school year, and the window is clamped to `starts_on`/`ends_on`, so a read can never fall outside the year or over the limit.
+
+**An unconfigured date is drawn, never blank.** Both session cells carry `Unrecorded` with "Not configured". This is the whole point of the module: an unconfigured date is not a holiday, not a school day and not an absence, and attendance cannot be recorded against it. `tests/web-calendar.test.ts` asserts the mark is there and that no em dash stands in for it.
+
+**Dates are strings, and stay strings.** `web/dates.ts` holds the month arithmetic. Nothing routes a plain calendar date through a local-time conversion: comparisons are string comparisons, which sort correctly in `YYYY-MM-DD`, and the weekday column reads UTC parts of a UTC-pinned value. At 8am in Benguet a locally parsed date is still the previous UTC day, which would put the wrong weekday beside every row.
+
+**The classification presets are a convenience over the API's rule, not a second rule.** Choosing "Holiday" fills both sessions with "No class" because that is what the API requires of a holiday, and every session stays editable afterwards. The database still decides. If the rules in `instructional-calendar.md` change, change these with them rather than letting the form drift into being the authority.
+
+**The review hash is never reused after a refusal.** Preview returns the hash; confirm sends back the exact proposal that was previewed. A 409 — a version conflict, a changed review, a blocking conflict — throws the hash away and returns the manager to the form. Do not retry a hash against whatever is there now.
+
+**Conflicts are explained, not printed.** `SECTION_OVERRIDES_PRESENT` and `BASE_DAY_UNCONFIGURED` are rendered as the sentence that says what to do next, with the affected sections named. A bare code tells a school head nothing.
+
+Two things this screen does not do. It has no field-level error mapping, because `Editor` cannot express a two-step review; a server rejection goes to the sheet's own status line, and the client enforces the length and required rules so most never reach it. And it is manager-only, so an adviser cannot yet see the schedule for their own section, which the API would allow — the daily attendance screen shows the effective schedule for the day it is marking, which is the case that matters.
 
 ## Grade-placement review screens to build
+
 
 [Section 2B.5](grade-placement.md) adds manager-only whole-year grade correction. Read the current effective timeline, select the verified target grade, and map every entry to a section in that grade and year. Dates, types, and reasons stay unchanged. Show old/new grades, before/after sections and advisers, and the reason before submitting the unchanged version/hash with `reviewed=true`. This is not a promotion action.
 
