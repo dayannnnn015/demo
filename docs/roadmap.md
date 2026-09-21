@@ -4,6 +4,8 @@ Build and review one section at a time. The user wants sustained backend refinem
 
 Read [standing rules, gates and settled decisions](constraints.md) first. It lists what must never be built and what is blocked on a school decision, and [school information requests](school-information-requests.md) lists what to ask the school to unblock it. Where this roadmap and that file disagree, that file wins and this one is wrong. Every **Next:** line below names the gate it waits on, or states that it has none.
 
+The [20 September backend review](backend-review-2026-09-20.md) found existing-score defects requiring a corrective migration. Authorization is pending under the explicit no-new-migration handoff restriction. Frontend work is paused; school-policy gates remain unchanged.
+
 ## Section 1 — Staff authorization and school setup
 
 Implemented locally: managed-token authentication, database-backed roles, existing Auth-user authorization, account suspension, school profile, academic years, flexible periods, sections/advisers, audit events, version checks, request limits, migrations, OpenAPI, and automated tests.

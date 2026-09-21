@@ -24,6 +24,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   const parsed = schema.safeParse(env);
   if (!parsed.success) throw new Error(`Invalid configuration fields: ${parsed.error.issues.map(i => i.path.join('.')).join(', ')}`);
   const c = parsed.data;
+  const deployed = c.NODE_ENV === 'production' || Boolean(env.VERCEL);
   let isPublicKey = c.SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_');
   if (!isPublicKey) {
     try { isPublicKey = decodeJwt(c.SUPABASE_PUBLISHABLE_KEY).role === 'anon'; } catch { /* Invalid public key. */ }
@@ -35,7 +36,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   if (c.PROVISION_FUNCTION_SECRET && isServiceKey(c.PROVISION_FUNCTION_SECRET)) throw new Error('PROVISION_FUNCTION_SECRET must be a shared secret, never a Supabase secret/service key');
   if (c.PROVISION_FUNCTION_URL) {
     const fn = new URL(c.PROVISION_FUNCTION_URL);
-    if (fn.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(fn.hostname)) throw new Error('PROVISION_FUNCTION_URL must use HTTPS');
+    const localHttp = !deployed && fn.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(fn.hostname);
+    if ((fn.protocol !== 'https:' && !localHttp) || fn.username || fn.password || fn.hash) throw new Error('PROVISION_FUNCTION_URL must use HTTPS without credentials or a fragment; local HTTP is development-only');
   }
   const databaseUrl = new URL(c.DATABASE_URL);
   const authUrl = new URL(c.SUPABASE_URL);
@@ -47,7 +49,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     const parsedOrigin = new URL(origin);
     if (parsedOrigin.origin !== origin || !['http:', 'https:'].includes(parsedOrigin.protocol)) throw new Error('ALLOWED_ORIGINS must contain exact HTTP origins');
   }
-  const deployed = c.NODE_ENV === 'production' || Boolean(env.VERCEL);
   if (deployed && (!c.DATABASE_SSL || authUrl.protocol !== 'https:' || origins.some(o => !o.startsWith('https://')))) {
     throw new Error('Deployed environments require database TLS and HTTPS origins/auth');
   }

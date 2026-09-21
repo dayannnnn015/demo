@@ -45,6 +45,12 @@ describe('Section 4B.1 assessment tasks and raw score entry',()=>{
   });
   afterAll(async()=>db?.database.close());
 
+  it('accepts decimal marks without binary floating-point false rejections',async()=>{
+    for(const [i,value] of [1.1,2.55,19.99].entries())expect((await record([entry(i,value)])).status).toBe(201);
+    const r=await newTask({sequence:2,max_score:1.1});expect(r.status).toBe(201);expect(Number(r.body.data.max_score)).toBe(1.1);
+    for(const value of [0.001,1.001,1.10000000000001])expect((await record([entry(0,value,1)])).status).toBe(422);
+  });
+
   it('creates a task only under a component of the bound adopted revision',async()=>{
     expect(responses.taskCreate!.safeParse(task).success).toBe(true);
     expect(task).toMatchObject({component_code:'WW',sequence:1,status:'open',section_id:section,academic_year_id:year,version:1});

@@ -52,6 +52,12 @@ describe('Supabase authentication boundary', () => {
     await expect(verifier(vi.fn(async () => new Response(null, { status: 503 }))).auth.verify(token)).rejects.toMatchObject({ status: 503 });
     await expect(verifier(vi.fn(async () => { throw new TypeError('network'); })).auth.verify(token)).rejects.toMatchObject({ status: 503 });
   });
+  it('reports malformed successful identity responses as service failures without crashing', async () => {
+    const token = await sign();
+    for (const payload of [null, [], {}, {id:12}, {id:'not-a-uuid'}]) {
+      await expect(verifier(vi.fn(async () => Response.json(payload))).auth.verify(token)).rejects.toMatchObject({status:503,code:'AUTH_UNAVAILABLE'});
+    }
+  });
 });
 
 describe('deployment configuration', () => {
@@ -79,5 +85,11 @@ describe('deployment configuration', () => {
 
   it('reports configuration field names without secret values', () => {
     expect(() => readConfig({ ...valid, DATABASE_URL: 'very-private-secret' })).toThrow('Invalid configuration fields: DATABASE_URL');
+  });
+  it('rejects unsafe account-service URLs, including deployed loopback HTTP', () => {
+    const secret='x'.repeat(40);
+    for(const url of ['http://localhost:3000/invite','ftp://localhost/invite','https://user:password@functions.test/invite','https://functions.test/invite#ignored'])
+      expect(()=>readConfig({...valid,PROVISION_FUNCTION_URL:url,PROVISION_FUNCTION_SECRET:secret})).toThrow();
+    expect(readConfig({...valid,NODE_ENV:'development',PROVISION_FUNCTION_URL:'http://localhost:3000/invite',PROVISION_FUNCTION_SECRET:secret}).PROVISION_FUNCTION_URL).toBe('http://localhost:3000/invite');
   });
 });

@@ -23,6 +23,8 @@ Staff are provisioned in two stages: create a managed identity, then authorize i
 
 Tokens are bearer credentials. The future frontend must never put tokens in URLs or logs. Signing out revokes refresh capability according to the Auth provider; an already-issued access token can remain valid until expiry. Use `staff.active=false` for immediate school-level suspension. Account recovery needs an operational process agreed with the school. [Supabase JWT documentation](https://supabase.com/docs/guides/auth/jwts).
 
+The 0.28.1 review adds runtime shape/UUID validation to upstream identity responses and stricter deployment transport validation for the isolated account service. External outcomes remain non-transactional; reconcile an uncertain outcome before retrying. See [the review findings](backend-review-2026-09-20.md) for open score-database defects; intended privacy and concurrency guarantees must not be mistaken for verified coverage.
+
 ## Database boundary
 
 The `edunexus` schema is private and must not be exposed through the Supabase Data API. `anon`, `authenticated`, and `PUBLIC` receive no access to its records. The Vercel API uses `edunexus_app`, a restricted login with no administrative privileges or role memberships. It does not own the tables and cannot delete records, alter schema, or modify audit events. Every business transaction verifies that it is using this restricted role.

@@ -6,6 +6,8 @@ Picking this project up, as a person or an agent? Start with [AGENTS.md](AGENTS.
 
 The manuscript has been analyzed and the work is divided into reviewable sections. Read [standing rules, gates and settled decisions](docs/constraints.md) first: it records what must never be built and what is blocked on a school decision, and [school information requests](docs/school-information-requests.md) lists what to ask the school to unblock it, against what [the school's own forms](docs/school-forms.md) already establish. Then read [the manuscript analysis](docs/manuscript-analysis.md), [implementation roadmap](docs/roadmap.md), and [architecture](docs/architecture.md) before extending it.
 
+The [20 September backend review](docs/backend-review-2026-09-20.md) records maintenance fixes and confirmed score-database defects awaiting authorization for a corrective migration. Existing test coverage is not a production-readiness claim.
+
 ## What works in Section 1
 
 - Supabase staff token verification with signature, issuer, audience, expiration, and live identity checks.

@@ -1,4 +1,5 @@
 import { AppError } from './errors.js';
+import { z } from 'zod';
 
 export interface IdentityProvisioner { create(request: { email: string; displayName: string; role: string }): Promise<string>; }
 
@@ -22,14 +23,15 @@ export function createIdentityProvisioner(options: { url: string; secret: string
           signal: AbortSignal.timeout(10000),
           redirect: 'error',
         });
-      } catch { throw new AppError(503, 'IDENTITY_SERVICE_UNAVAILABLE', 'The account service did not respond. The invitation is unchanged; try again.'); }
-      let payload: { user_id?: unknown; error?: unknown } = {};
-      try { payload = await response.json() as typeof payload; } catch { /* Handled by status below. */ }
+      } catch { throw new AppError(503, 'IDENTITY_SERVICE_UNAVAILABLE', 'The account service did not confirm the result. The operator must check whether the identity was created before retrying.'); }
+      let payload: unknown;
+      try { payload = await response.json(); } catch { /* Handled by status below. */ }
       if (response.status === 409) throw new AppError(409, 'IDENTITY_EXISTS', 'That address already has an account. Link the existing identity instead of creating one.');
       if (response.status === 429) throw new AppError(503, 'IDENTITY_SERVICE_UNAVAILABLE', 'The account service is rate limited. The invitation is unchanged; try again shortly.');
       if (response.status === 401) throw new AppError(500, 'IDENTITY_SERVICE_REJECTED', 'The account service rejected this system. The deployment operator must check its shared secret.');
-      if (!response.ok || typeof payload.user_id !== 'string') throw new AppError(502, 'IDENTITY_SERVICE_FAILED', 'The account service could not create the account. The invitation is unchanged.');
-      return payload.user_id;
+      const result=z.object({user_id:z.uuid()}).safeParse(payload);
+      if (!response.ok || !result.success) throw new AppError(502, 'IDENTITY_SERVICE_FAILED', 'The account service did not confirm a valid identity. The operator must check the identity service before retrying.');
+      return result.data.user_id;
     },
   };
 }

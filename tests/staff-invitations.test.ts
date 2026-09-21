@@ -149,6 +149,19 @@ describe('Staff invitation records without a privileged runtime credential',()=>
     expect(after).toMatchObject({status:'requested',linked_user_id:null,version:invitation.version});
     expect((await get(`${base}/${invitation.id}/events`)).body.data.items.map((v:any)=>v.action)).toEqual(['request']);
   });
+  it('grants no school access if journaling fails after the external identity call',async()=>{
+    const invitation=await made(),user=await identity();let calls=0;
+    const service=withService(async()=>{calls++;return user;});
+    await db.pg.exec("create function edunexus.synthetic_identity_journal_failure() returns trigger language plpgsql as $$ begin raise exception 'synthetic failure'; end $$; create trigger synthetic_failure before insert on edunexus.staff_invitation_events for each row execute function edunexus.synthetic_identity_journal_failure();");
+    try{
+      expect((await mint(service,invitation)).status).toBe(500);expect(calls).toBe(1);
+      expect((await get(base+'/'+invitation.id)).body.data).toEqual(invitation);
+      expect((await db.pg.query('select user_id from edunexus.staff where user_id=$1',[user])).rows).toEqual([]);
+      expect((await get('/api/v1/me',user)).status).toBe(403);
+    }finally{await db.pg.exec('drop trigger synthetic_failure on edunexus.staff_invitation_events; drop function edunexus.synthetic_identity_journal_failure();');}
+    expect((await provision(invitation,{user_id:user})).status).toBe(201);
+    expect((await get('/api/v1/me',user)).status).toBe(200);
+  });
 
   it('rejects malformed emails, names and permission levels at both boundaries',async()=>{
     for(const extra of [{email:'not-an-address'},{email:'two@ad@dress.test'},{email:'with space@example.test'},{email:'a@b'},
@@ -226,5 +239,9 @@ describe('Isolated account service client',()=>{
     await expect(call(reply(502,{error:'invite_failed'}))).rejects.toMatchObject({status:502,code:'IDENTITY_SERVICE_FAILED'});
     await expect(call(reply(200,{}))).rejects.toMatchObject({status:502,code:'IDENTITY_SERVICE_FAILED'});
     await expect(call(async()=>{throw new TypeError('network');})).rejects.toMatchObject({status:503,code:'IDENTITY_SERVICE_UNAVAILABLE'});
+  });
+  it('rejects malformed successful responses and invalid identity identifiers',async()=>{
+    for(const payload of [null,[],{}, {user_id:''},{user_id:'not-a-uuid'}, {user_id:12}])
+      await expect(call(async()=>Response.json(payload))).rejects.toMatchObject({status:502,code:'IDENTITY_SERVICE_FAILED'});
   });
 });

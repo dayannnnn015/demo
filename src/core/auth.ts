@@ -33,8 +33,8 @@ export function createAuthenticator(options: {
       } catch { throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.'); }
       if (response.status === 429 || response.status >= 500) throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.');
       if (!response.ok) throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
-      let user: { id?: string };
-      try { user = await response.json() as { id?: string }; }
+      let user: { id: string };
+      try { user = z.object({id:z.uuid()}).parse(await response.json()); }
       catch { throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.'); }
       if (user.id !== payload.sub) throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
       return { userId: payload.sub! };

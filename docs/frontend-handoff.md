@@ -1,3 +1,5 @@
+Current direction (20 September 2026): frontend work is paused at the user’s request. Backend maintenance findings are recorded in [the review](backend-review-2026-09-20.md). Do not enable score screens based on the current implementation or treat the score-entry gate conflict as resolved.
+
 # Frontend integration contract
 
 The workspace is a Vite + React + TypeScript application in `web/`, built into `public/` and served by the API at `/app`; `/app` and `/account/setup` are the same page. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API. The workspace now also reads the Section 2A learner registry; import and correction screens are not yet built.

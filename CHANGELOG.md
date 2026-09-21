@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.28.1 | Backend review: upstream identity validation, provisioning transport checks, decimal input fix; open database findings documented | None |
 | 0.28.0 | Workspace overhauled: field-level errors, sheets, command palette, the unrecorded mark | — |
 | 0.27.2 | The mark as the browser tab icon; `img-src 'self'` for that one file | — |
 | 0.27.1 | Square corners, a wider brighter rail, the EDUNEXUS mark as inline SVG | — |
@@ -39,6 +40,12 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.28.1 — Backend boundary review
+
+Successful upstream identity responses are validated before use: JSON null and malformed identifiers now return controlled service failures. The provisioner reports uncertain external outcomes instead of promising a safe blind retry. Deployed provisioning URLs require HTTPS and reject embedded credentials/fragments. Decimal raw-mark validation accepts ordinary two-decimal inputs such as 1.1 without rounding.
+
+Five new regression cases cover these boundaries and the denial of school access after an external identity call followed by journal failure. The baseline 298 tests passed before changes; all 303 tests, type checks and build pass after the fixes. See [the review](docs/backend-review-2026-09-20.md) for hosted read-only checks, reproduced database defects and test limitations. No migration, endpoint, school policy, frontend change or P17xx error code is added. Corrective database work awaits clarification of the handoff restriction.
 
 ## 0.28.0 — The workspace overhauled
 

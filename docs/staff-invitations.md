@@ -16,7 +16,7 @@ This is narrower than the decision recorded in [constraints](constraints.md) as 
 
 An Auth identity is created by an HTTP call, and no database transaction can undo it. EDUNEXUS therefore checks everything it can *before* that call: the invitation exists, is still `requested`, matches the version the manager read, and carries a permission level this manager may grant. The database re-checks the permission level afterwards, because a security-definer function bypasses row policies.
 
-If the call succeeds and the database write then fails, the transaction rolls back and the address holds an Auth identity with no `edunexus.staff` row — which grants access to nothing. Asking again returns `IDENTITY_EXISTS`, and the manager links that identity through the ordinary provision endpoint.
+If the call succeeds and the database write then fails, the transaction rolls back and the address holds an Auth identity with no `edunexus.staff` row — which grants access to nothing. After a timeout or ambiguous upstream response, the operator must first check whether the identity exists. A later create may return `IDENTITY_EXISTS`; an existing identity is reconciled through the ordinary provision endpoint.
 
 ## The workflow
 
@@ -48,7 +48,7 @@ Both `provisioned` and `cancelled` are terminal. Correcting a mistake means canc
 | `POST /api/v1/staff-invitations/:id/cancellation` | Current version and a reason. |
 | `GET /api/v1/staff-invitations/:id/events` | Newest-first history, `limit` default 5/max 10, `before_version`. |
 
-`/identity` additionally answers `IDENTITY_SERVICE_DISABLED` (501) where no function is configured, `IDENTITY_EXISTS` (409) where the address already has an identity, `IDENTITY_SERVICE_UNAVAILABLE` (503) on a timeout or rate limit, and `IDENTITY_SERVICE_FAILED` (502) otherwise. Every operation requires an active manager. A completed or cancelled target returns `INVITATION_STATE` (409); a duplicate open email or an already-authorized identity returns `ALREADY_EXISTS` (409); an unknown Auth identity returns `INVALID_REFERENCE` (409). No endpoint sends mail, and none accepts or returns a credential.
+`/identity` additionally answers `IDENTITY_SERVICE_DISABLED` (501) where no function is configured, `IDENTITY_EXISTS` (409) where the address already has an identity, `IDENTITY_SERVICE_UNAVAILABLE` (503) on a timeout or rate limit, and `IDENTITY_SERVICE_FAILED` (502) otherwise. Every operation requires an active manager. A completed or cancelled target returns `INVITATION_STATE` (409); a duplicate open email or an already-authorized identity returns `ALREADY_EXISTS` (409); an unknown Auth identity returns `INVALID_REFERENCE` (409). The isolated identity endpoint can initiate an invitation email; it accepts and returns no credential.
 
 ## Personal data
 
