@@ -2,11 +2,15 @@
 
 ## Current development deployment
 
-**0.29.0 was released on 21 September 2026** as `edunexus-gtui0kzkp-joshs-projects-47d7b071.vercel.app`, aliased to https://edunexus-balili.vercel.app. It carries migration `0022`, the authorized corrective migration for the score defects in the [20 September review](backend-review-2026-09-20.md). The migration was applied to the hosted database **before** the application deploy, because 0.29.0's score reads write `record_access_events` rows the old check constraint would have rejected.
+**0.30.0 was released on 21 September 2026** as `edunexus-5knbr4sjv-joshs-projects-47d7b071.vercel.app`, aliased to https://edunexus-balili.vercel.app. It is an interface release: the Section 3A instructional calendar now has a manager screen. No migration, endpoint or permission changed.
 
-Live checks after the release: `/openapi.json` reports 0.29.0, `/health/live`, `/health/ready` and `/app` return 200, and all 109 documented protected operations rejected an anonymous request with 401. The migration's effect was separately verified against the hosted catalog: both score columns are `numeric(7,2)`, the `scoped_read` policy on `assessment_scores` applies `can_read_enrollment`, the audit resource constraint admits `scoreSheet`, `scoreRecord` and `scoreHistory`, the entry function requires the `raw_score` key, and both writers take the shared lock before their first read. None of that is school acceptance; no authenticated session was exercised.
+Live checks: `/openapi.json` reports 0.30.0, `/health/live`, `/health/ready` and `/app` return 200, and the deployed bundle was checked for the new screen's own strings, because a workspace change that builds locally and is missing from the served bundle looks identical to a working deploy from the API's side.
 
-**Nothing deploys on a push.** The Vercel project is not git-connected, so `git push` runs CI and ships nothing. `npx vercel --prod --scope joshs-projects-47d7b071` from the repository root is the deploy, and it is the last step of every release rather than a separate errand. A bare `vercel` without the scope may answer Not authorized.
+**0.29.0 was released on 21 September 2026** as `edunexus-gtui0kzkp-joshs-projects-47d7b071.vercel.app`. It carried migration `0022`, the authorized corrective migration for the score defects in the [20 September review](backend-review-2026-09-20.md). The migration was applied to the hosted database **before** the application deploy, because 0.29.0's score reads write `record_access_events` rows the old check constraint would have rejected.
+
+Its live checks passed: version 0.29.0, health, readiness and app responses, and all 109 documented protected operations rejecting an anonymous request with 401. The migration's effect was separately verified against the hosted catalog: both score columns are `numeric(7,2)`, the `scoped_read` policy on `assessment_scores` applies `can_read_enrollment`, the audit resource constraint admits `scoreSheet`, `scoreRecord` and `scoreHistory`, the entry function requires the `raw_score` key, and both writers take the shared lock before their first read.
+
+None of this is school acceptance. No authenticated session has ever been exercised, so no screen's data path — including the calendar's — has run in a browser.
 
 ## The hosted environment
 
