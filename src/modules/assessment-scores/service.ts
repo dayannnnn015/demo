@@ -5,6 +5,13 @@ import {scoreSchemas as s,type ScoreOperationId} from './contracts.js';
 const columns='id,offering_id,binding_id,reporting_period_id,section_id,academic_year_id,component_code,sequence,title,max_score,status,version,created_at,updated_at';
 export async function executeScore(id:ScoreOperationId,ctx:Context,input:{id?:string;body:unknown;query:unknown}) {
   const {tx}=ctx;
+  // A score sheet names learners and their marks, so reading one is a
+  // disclosure and belongs in the privacy audit beside every other learner read.
+  const record=async(ids:unknown[])=>{
+    const unique=[...new Set(ids)];
+    if(!unique.length)await tx.query('select edunexus.record_access($1,$2::uuid[])',[id,[]]);
+    for(let n=0;n<unique.length;n+=100)await tx.query('select edunexus.record_access($1,$2::uuid[])',[id,unique.slice(n,n+100)]);
+  };
   const task=async()=>{
     const [row]=await tx.query(`select ${columns} from edunexus.assessment_tasks where id=$1`,[input.id]);
     if(!row)throw new AppError(404,'NOT_FOUND','The assessment task was not found.');
@@ -46,13 +53,17 @@ export async function executeScore(id:ScoreOperationId,ctx:Context,input:{id?:st
       left join edunexus.assessment_scores s on s.task_id=$1 and s.enrollment_id=e.id
       where e.section_id=$2 and e.record_state='valid' and ($3::uuid is null or e.id>$3)
       order by e.id limit $4`,[current.id,current.section_id,q.after_id??null,q.limit+1]);
-    return {task:current,recorded_scores_only:true as const,items:rows.slice(0,q.limit),
+    const items=rows.slice(0,q.limit);
+    await record(items.map(v=>v.enrollment_id));
+    return {task:current,recorded_scores_only:true as const,items,
       pagination:{limit:q.limit,next_after_id:rows.length>q.limit?rows[q.limit-1]!.enrollment_id:null}};
   }
   if(id==='scoreRecord'){
     const b=input.body as z.infer<typeof s.record>;
     const [row]=await tx.query('select edunexus.record_assessment_scores($1,$2::jsonb,$3) as result',[input.id,JSON.stringify(b.entries),b.reason]);
-    return row!.result;
+    const result=row!.result as {entries:{enrollment_id:string}[]};
+    await record(result.entries.map(v=>v.enrollment_id));
+    return result;
   }
   if(id==='taskHistory'){
     await task();
@@ -66,5 +77,7 @@ export async function executeScore(id:ScoreOperationId,ctx:Context,input:{id?:st
   const q=input.query as z.infer<typeof s.scoreHistory>;
   const rows=await tx.query(`select id::text,task_id,entries,reason,actor_user_id,request_id,recorded_at from edunexus.assessment_score_events
     where task_id=$1 and ($2::bigint is null or id<$2) order by edunexus.assessment_score_events.id desc limit $3`,[input.id,q.before_id??null,q.limit+1]);
-  return {items:rows.slice(0,q.limit),pagination:{limit:q.limit,next_before_id:rows.length>q.limit?rows[q.limit-1]!.id:null}};
+  const items=rows.slice(0,q.limit);
+  await record(items.flatMap(v=>(v.entries as {enrollment_id:string}[]).map(e=>e.enrollment_id)));
+  return {items,pagination:{limit:q.limit,next_before_id:rows.length>q.limit?rows[q.limit-1]!.id:null}};
 }

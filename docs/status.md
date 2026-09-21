@@ -1,29 +1,31 @@
 # Where things stand
 
-**Updated:** 2026-09-20 · **Version:** 0.28.1 · **Last commit:** see `git log -1` (maintenance follows `fe486ad`) · **Branch:** master
+**Updated:** 2026-09-21 · **Version:** 0.29.0 · **Last commit:** see `git log -1` · **Branch:** `master`
 
-## Current work
+## Just shipped
 
-The user paused frontend development and requested an existing-backend review with fixes and testing. No new academic feature or school-policy decision is authorized. The [review report](backend-review-2026-09-20.md) is the durable record of findings and limitations.
+Two commits. The first is **0.28.1, which had been deployed on 20 September and never committed** — `status.md` claimed a clean tree while twenty files sat modified and the review report was untracked, so the live deployment had no commit behind it. Nothing in that work changed; it is now recorded.
 
-Maintenance fixes validate successful upstream Auth/account-service responses, require safe deployed provisioning transport, explain ambiguous external account outcomes and accept legitimate decimal raw marks without rounding. Additional tests verify denial of school access after an external identity call followed by a journal failure. No endpoint, migration or P17xx code is added. All 21 existing migration checksums were independently verified against Supabase; 44 domain tables have RLS and no public Data API read grants. All 109 live protected routes rejected anonymous requests.
+The second is **0.29.0 and migration `0022`**, the corrective migration the user authorized on 21 September for the four score defects the [20 September review](backend-review-2026-09-20.md) reproduced. A former adviser loses a departed learner's marks in SQL as well as over HTTP; an omitted `raw_score` key no longer clears a recorded mark; score sheet, entry and history reads write `record_access_events` rows naming exactly what they disclosed; and both score columns widened to `numeric(7,2)` so the documented maximum of 10000 fits. Both writers now take the shared academic lock before the reads they version-check.
+
+No gate opened. No endpoint, error code or arithmetic was added, and `P17xx` is still the next free range.
 
 ## Single next action
 
-**Resolve authorization for a corrective migration.** The handoff prohibited new migrations. Newly reproduced score defects require one: withdrawn-learner access/write protection, missing raw_score silently clearing a mark, missing score-read privacy journals, and the API/storage mismatch at maximum 10000. Lock ordering also needs a multi-connection concurrency regression. The clarification is pending; do not treat silence as approval or modify an applied migration. Detailed reproductions are in the review report.
+**Write the multi-connection concurrency regression for the score writers.** It is the last open finding in the review and the one thing `0022` could not close: the lock-before-read ordering is asserted against the stored function source, not demonstrated under concurrency, because PGlite serializes transactions. It needs a real PostgreSQL with two connections — a local server, a container, or a rolled-back fixture on the development Supabase project.
 
 ## Verification and in flight
 
-All 303 tests across 23 files, server/web type checks and production build passed. The runtime dependency audit reported zero vulnerabilities. Maintenance release 0.28.1 is deployed as `dpl_Fq5z2XjRih6c33aSnNC6UpAejFwX`; live version, all 109 protected routes and readiness checks passed. GitHub CI status is available for the current commit; no development work is in flight. No school records or real Auth identities were created; no email was sent. The authenticated browser workflow, account Edge Function, multi-session load and restore exercise remain unverified.
+All 308 tests across 23 files, server and web type checks and the production build pass. Each of the four correction tests was additionally run against a database built without `0022` and fails there, so they are regressions rather than restatements of current behavior. The working tree is clean and nothing is in flight.
 
 ## Still outstanding
 
-- Score entry remains named in the closed grading gate, despite the existing raw-score implementation. The policy contradiction is unresolved; reviewing defects does not open it.
-- First real manager password setup/sign-in remains unverified. Account provisioning needs its isolated Edge Function deployment/configuration and real workflow verification; the API runtime must never receive a service-role key. SMTP setup is needed before broad onboarding.
-- School questions and partially supplied SF2/SF4/SF9 evidence are in [school-information-requests.md](school-information-requests.md) and [school-forms.md](school-forms.md). The supplied forms do not settle grading, session-to-day attendance conversion, the absence threshold, cross-section teacher access, privacy approval or recovery targets. Keep the filled forms and manuscript out of Git.
-- No school facts were entered during this review. Academic-year dates/address and subject/MAPEH interpretation still require the checks documented in school-forms.md.
-- The frontend remains v0.28.0's workspace implementation. Calendar, daily attendance and later screens are deferred while the user focuses on backend maintenance. Preserve [the frontend contract](frontend-handoff.md).
+- **The nine school information requests are all unsent.** [school-information-requests.md](school-information-requests.md) has them in priority order. Request 1, the grading enclosure and ECR examples, alone blocks about ten increments and is the critical path. Request 6, the privacy owner, is urgent for a different reason: the supplied SF4 holds 33 real staff records in the local working area with nobody named as accountable for them.
+- Score entry is still named in the closed grading gate although the raw-score module exists. Correcting its defects did not resolve that contradiction and was not allowed to.
+- First real manager password setup and sign-in remain unverified. The account Edge Function is neither deployed nor configured, and SMTP is not set up.
+- The frontend is still 0.28.0's workspace, paused at the user's request. Eight routes render placeholders and five review workflows have backend modules with no screen at all; [frontend-handoff.md](frontend-handoff.md) lists them and the rules each must respect.
+- No load test, no restore drill, no UAT or TAM evaluation. School facts — academic-year dates, address, subject interpretation — are still unentered.
 
 ## Release procedure
 
-GitHub was synchronized at `fe486ad` before this review. Pushing does not deploy: Vercel is not git-connected. Release with `vercel --prod --scope joshs-projects-47d7b071`; a bare command may report Not authorized. The maintenance release is committed and the tree is clean; check the current commit’s GitHub workflow for its final CI result.
+Pushing does not deploy; the Vercel project is not git-connected. A release is `npm run check`, then `npm run db:migrate` when it carries a migration, then `npx vercel --prod --scope joshs-projects-47d7b071`. [deployment.md](deployment.md) holds the hosted environment record and what the hosted checks do and do not establish.

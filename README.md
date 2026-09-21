@@ -153,6 +153,8 @@ Read [assessment-policy binding](docs/assessment-policy-bindings.md). Binding is
 - Raw marks in batches of up to 100, each against its own version, with unrecorded learners left null rather than zero.
 - Clearing that preserves history, protection against lowering a maximum below a recorded mark, and archival.
 - Adviser entry for current sections, manager historical access, and manager-only task and score journals.
+- Marks of a learner who has left are kept for managers and closed to their former adviser, in SQL as well as over HTTP.
+- Only an explicit null clears a mark, and every score read names the learners it disclosed in the privacy audit.
 
 Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, average, percentage, transmutation or grade is computed anywhere; those wait on the school grading enclosure.
 

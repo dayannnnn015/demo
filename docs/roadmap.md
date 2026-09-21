@@ -4,7 +4,7 @@ Build and review one section at a time. The user wants sustained backend refinem
 
 Read [standing rules, gates and settled decisions](constraints.md) first. It lists what must never be built and what is blocked on a school decision, and [school information requests](school-information-requests.md) lists what to ask the school to unblock it. Where this roadmap and that file disagree, that file wins and this one is wrong. Every **Next:** line below names the gate it waits on, or states that it has none.
 
-The [20 September backend review](backend-review-2026-09-20.md) found existing-score defects requiring a corrective migration. Authorization is pending under the explicit no-new-migration handoff restriction. Frontend work is paused; school-policy gates remain unchanged.
+The [20 September backend review](backend-review-2026-09-20.md) found existing-score defects requiring a corrective migration. The user authorized it on 21 September and migration `0022` applies it. Frontend work is paused; school-policy gates remain unchanged, and the correction opened none of them.
 
 ## Section 1 — Staff authorization and school setup
 
@@ -62,7 +62,7 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.5 is implemented:** [offering binding](assessment-policy-bindings.md) records which section subject offering a standing adoption governs, on current offering and adoption versions, within one school year and an applicable section grade. One standing binding exists per offering, release is reviewed and one-way, and a standing binding blocks adoption withdrawal and offering retirement until released.
 
-**Section 4B.1 is implemented:** [assessment tasks and raw score entry](assessment-scores.md) records named assessments whose component codes come from the bound adopted revision, and raw learner marks in versioned batches. Unrecorded learners stay null, clearing preserves history, and nothing is summed, weighted, averaged, transmuted or turned into a grade.
+**Section 4B.1 is implemented:** [assessment tasks and raw score entry](assessment-scores.md) records named assessments whose component codes come from the bound adopted revision, and raw learner marks in versioned batches. Unrecorded learners stay null, clearing preserves history, and nothing is summed, weighted, averaged, transmuted or turned into a grade. Migration `0022` corrected it: a former adviser loses a departed learner's marks, an omitted `raw_score` key no longer clears one, score reads write privacy access rows, and the documented maximum fits its column.
 
 **Next: calculation.** Gate: **grading enclosure and ECR examples**, closed. The raw marks recorded in 4B.1 are the input; the policy bound to each offering says which rules apply. Everything after score entry waits on the **grading enclosure and ECR examples** gate, and Kindergarten additionally on the **Kindergarten assessment policy** gate. Do not infer official weights, rounding, transmutation or numeric Kindergarten grading from catalog metadata. Draft weights alone are not a complete grading policy, and an adoption reference is not proof that the content is correct.
 

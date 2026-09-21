@@ -250,7 +250,7 @@ Component choices come from the bound adopted revision, so fetch them from the b
 
 Send each learner's own `version`, using `0` for a learner with no mark yet; the batch is 1-100 and commits atomically, so surface a rejected batch as "nothing was saved" rather than implying partial success. **Never render an unrecorded mark as zero** — leave the cell visibly empty, exactly as unmarked attendance sessions are shown. Clearing a mark is sending null, not deleting a row.
 
-Do not compute or display a total, average, percentage or grade anywhere on these screens, even client-side. No endpoint provides one, the weighting rules are not yet confirmed with the school, and a helpfully calculated column would be read as official. Surface `TASK_MAXIMUM` as "lower the recorded scores first", and expect an adviser to be unable to correct a learner who has transferred out; that is a manager action.
+Do not compute or display a total, average, percentage or grade anywhere on these screens, even client-side. No endpoint provides one, the weighting rules are not yet confirmed with the school, and a helpfully calculated column would be read as official. Surface `TASK_MAXIMUM` as "lower the recorded scores first", and expect an adviser to be unable to correct a learner who has transferred out; that is a manager action. Since migration `0022` that is enforced rather than merely intended: a departed learner drops out of the adviser's sheet entirely and an entry for them answers 404, while a manager still sees both the learner and the mark. Always send the `raw_score` key — omitting it is rejected, because only an explicit null may clear a mark.
 
 ## Calendar screens to build
 

@@ -11,7 +11,9 @@ Scope: existing authentication/configuration, account provisioning, policy adopt
 
 Additional coverage verifies that an external identity followed by a journal failure grants no school access, preserves the outstanding invitation and can be reconciled through the existing operator link route. No real email was sent.
 
-## Confirmed database defects awaiting corrective-migration authorization
+## Confirmed database defects, corrected by migration 0022 on 21 September
+
+**Resolved.** The user authorized a corrective migration on 21 September 2026. All four defects below are fixed in `database/migrations/0022_assessment_score_corrections.sql`, released as 0.29.0, and each has a regression case in `tests/assessment-scores.test.ts` that was run against a database built without `0022` and fails there. No applied migration was edited; `0022` replaces the two writer functions with `create or replace` and alters the policy and columns in place. The paragraphs below are left as the review wrote them, because the reproduction is the durable part.
 
 The user explicitly prohibited new migrations in the handoff. A clarification is pending about allowing a corrective migration for existing behavior only. No applied migration was edited and no corrective migration was created or applied during the unrestricted part of this review.
 
@@ -27,6 +29,8 @@ The temporary synthetic regression cases reproduced all four categories. They ar
 ## Additional inspection findings
 
 `write_assessment_task` reads its old row and checks the expected version before acquiring the shared lock through `assessment_entry_context`. `record_assessment_scores` similarly reads task maximum/status before that lock. A waiting writer may therefore proceed with stale task state after another transaction commits. This is a code-inspection finding; the embedded PGlite suite serializes transactions and does not establish the concurrent outcome. A corrective migration should lock before those reads, with a real multi-connection PostgreSQL regression before closing the finding.
+
+**Partly addressed.** Migration `0022` moves `pg_advisory_xact_lock(82412001)` ahead of those reads in both functions, and a test asserts that ordering in the stored function source. **The finding stays open**: the ordering is asserted as text, not demonstrated under concurrency, and the multi-connection regression this paragraph asks for does not exist. PGlite cannot provide it.
 
 Account provisioning holds the shared academic lock during an external call of up to ten seconds, while other transactions use a three-second lock timeout. The outcome is bounded refusal/retry, but this has not been load-tested with real invitations. The account service remains unverified in the deployed workflow; this review does not send mail or configure the function.
 

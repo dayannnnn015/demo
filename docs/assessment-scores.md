@@ -18,7 +18,7 @@ The second is why a task must reference a component code from the **bound adopte
 - `component_code` must exist in the bound adoption's `policy_snapshot.components`. It is normalized to upper case.
 - `reporting_period_id` must belong to the offering's school year.
 - `sequence` is 1–99 and unique per offering, period and component, so "Written Work 3" is unambiguous.
-- `max_score` is `numeric(6,2)`, above zero and at most 10000. This is a storage and sanity bound, not a grading rule; the school can revise it.
+- `max_score` is `numeric(7,2)`, above zero and at most 10000. This is a storage and sanity bound, not a grading rule; the school can revise it. It was `numeric(6,2)` until migration `0022`, which stops at 9999.99, so the documented maximum itself raised an overflow instead of saving.
 - `status` is `open` or `archived`. Archived tasks reject new scores and drop out of the default list.
 - Offering, period, component and sequence are fixed once a task exists. Title, maximum and status are versioned and journaled.
 
@@ -53,13 +53,22 @@ Scores survive the learner leaving the section. Entry requires a valid enrollmen
 | `GET /api/v1/assessment-tasks/:id/events` | Manager-only task history. |
 | `GET /api/v1/assessment-tasks/:id/score-events` | Manager-only batched score history, newest first, `before_id` cursor. |
 
-Errors: `TASK_COMPONENT` means no standing binding or an unknown component code; `TASK_PERIOD` a period outside the school year; `TASK_STATE` an archived task or closed year; `SCORE_RANGE` a mark outside zero to the maximum; `SCORE_ENROLLMENT` a learner outside this section; `TASK_MAXIMUM` a maximum below a recorded mark.
+Errors: `TASK_COMPONENT` means no standing binding or an unknown component code; `TASK_PERIOD` a period outside the school year; `TASK_STATE` an archived task or closed year; `SCORE_RANGE` a mark outside zero to the maximum; `SCORE_ENROLLMENT` a learner outside this section; `TASK_MAXIMUM` a maximum below a recorded mark. A learner the caller may no longer read is `NOT_FOUND`, the same answer the rest of the system gives, rather than an admission that the record exists.
 
 ## Storage and validation
 
 Migration `0021` adds `assessment_tasks`, `assessment_scores` and their two journals. Runtime grants are SELECT-only with RLS; advisers see their own current open-year sections and managers see everything, and both journals are manager-only. Validated security-definer commands own every write, take the shared academic setup lock and lock the school year for share. `assessment_entry_context` resolves the offering, its standing binding and the actor's access in one place and is not runtime-callable.
 
-Ten tests cover component sourcing from the bound revision, refusal without a binding, recording and clearing, unrecorded learners staying null, range and maximum protection, stale versions and duplicate learners in a batch, archival and closed years, adviser and suspended-account scoping, whole-batch rollback including journal failure, pagination, and the absence of any total, average, percentage or grade in the responses and the contract.
+Migration `0022` corrects four defects the [20 September review](backend-review-2026-09-20.md) reproduced against `0021`. Each restored a guarantee the rest of the system already held; none of them is arithmetic, and no endpoint or error code was added.
+
+- **A teacher reads only the learners they currently teach.** Checking the task's section alone left a withdrawn or transferred learner's marks readable by their former adviser and writable through the entry function, in HTTP and in direct restricted-role SQL alike. The score row policy and the writer now both apply `can_read_enrollment`, the predicate daily attendance already uses. It stays true for a manager, so no history is lost.
+- **Only an explicit JSON null clears a mark.** An entry that omitted the `raw_score` key reached the null branch and erased a recorded mark. The HTTP schema always rejected it; the database boundary did not, and the database boundary is the authority. A missing key is now `23514`, and whole-batch rollback is unchanged.
+- **Reading a score sheet writes a privacy access row.** A sheet names learners and their marks, so it is a disclosure and belongs in `record_access_events` beside every other learner read. `scoreSheet`, `scoreRecord` and `scoreHistory` are permitted resources and log exactly the enrollments each response disclosed. `taskGet`, `taskList` and `taskHistory` name no learner and log nothing.
+- **The documented maximum fits.** `max_score` and `raw_score` widened to `numeric(7,2)`.
+
+Both writers now take the shared academic-setup lock before reading the state they version-check against, rather than after. That ordering is asserted as text, because PGlite serializes transactions: a real multi-connection regression is still owed before the concurrency finding closes.
+
+Sixteen tests cover component sourcing from the bound revision, refusal without a binding, recording and clearing, unrecorded learners staying null, range and maximum protection, stale versions and duplicate learners in a batch, archival and closed years, adviser and suspended-account scoping, whole-batch rollback including journal failure, pagination, the absence of any total, average, percentage or grade in the responses and the contract, and one case per corrected defect above. Each of those four fails against `0021`.
 
 ## What is still gated
 

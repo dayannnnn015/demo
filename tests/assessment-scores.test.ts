@@ -45,6 +45,64 @@ describe('Section 4B.1 assessment tasks and raw score entry',()=>{
   });
   afterAll(async()=>db?.database.close());
 
+  // The five cases below reproduce the 20 September backend review's findings,
+  // corrected by migration 0022. Each failed against 0021.
+  it('cuts a former adviser off from a departed learner and keeps the record for managers',async()=>{
+    expect((await record([entry(0,9)])).status).toBe(201);
+    const enrolled=(await get(`/api/v1/enrollments/${enrollments[0]}`)).body.data;
+    expect((await post(`/api/v1/enrollments/${enrollments[0]}/movements`,{version:enrolled.version,action:'withdrawn',effective_on:`${n}-07-01`,section_id:null,exit_reason:'transfer_out'})).status).toBe(201);
+    expect((await get(`/api/v1/assessment-tasks/${task.id}/scores`,ids.teacher)).body.data.items.map((v:any)=>v.enrollment_id)).not.toContain(enrollments[0]);
+    expect(await db.asUser(ids.teacher,tx=>tx.query('select raw_score from edunexus.assessment_scores where enrollment_id=$1',[enrollments[0]]))).toEqual([]);
+    expect((await record([entry(0,10,1)],ids.teacher)).status).toBe(404);
+    expect((await get(`/api/v1/assessment-tasks/${task.id}/scores`,ids.principal)).body.data.items.map((v:any)=>v.enrollment_id)).toContain(enrollments[0]);
+    const kept=await db.asUser(ids.principal,tx=>tx.query('select raw_score from edunexus.assessment_scores where enrollment_id=$1',[enrollments[0]]));
+    expect(Number((kept[0] as any).raw_score)).toBe(9);
+  });
+
+  it('lets only an explicit null clear a mark, at the database boundary too',async()=>{
+    expect((await record([entry(0,9)])).status).toBe(201);
+    const call=(entries:object[])=>db.asUser(ids.principal,async tx=>{
+      await tx.query(`select set_config('edunexus.request_id',$1,true)`,[randomUUID()]);
+      return tx.query('select edunexus.record_assessment_scores($1,$2::jsonb,$3) as result',[task.id,JSON.stringify(entries),reason]);
+    });
+    const stored=async()=>(await db.pg.query('select raw_score from edunexus.assessment_scores where enrollment_id=$1',[enrollments[0]])).rows[0] as any;
+    await expect(call([{enrollment_id:enrollments[0],version:1}])).rejects.toMatchObject({code:'23514'});
+    expect(Number((await stored()).raw_score)).toBe(9);
+    await call([{enrollment_id:enrollments[0],raw_score:null,version:1}]);
+    expect((await stored()).raw_score).toBeNull();
+  });
+
+  it('stores the documented maximum instead of overflowing on it',async()=>{
+    const t=await newTask({sequence:9,max_score:10000});
+    expect(t.status,JSON.stringify(t.body)).toBe(201);
+    expect(Number(t.body.data.max_score)).toBe(10000);
+    expect((await record([entry(0,10000)],ids.teacher,t.body.data)).status).toBe(201);
+    expect((await newTask({sequence:10,max_score:10000.01})).status).toBe(422);
+  });
+
+  it('names in the privacy audit exactly the learners a score read disclosed',async()=>{
+    await db.pg.query('delete from edunexus.record_access_events');
+    const logged=async(resource:string)=>(await db.pg.query('select record_ids from edunexus.record_access_events where resource=$1',[resource])).rows.flatMap((v:any)=>v.record_ids);
+    expect((await get(`/api/v1/assessment-tasks/${task.id}/scores`,ids.teacher)).status).toBe(200);
+    expect((await logged('scoreSheet')).sort()).toEqual([...enrollments].sort());
+    expect((await record([entry(1,7)])).status).toBe(201);
+    expect(await logged('scoreRecord')).toEqual([enrollments[1]]);
+    expect((await get(`/api/v1/assessment-tasks/${task.id}/score-events`,ids.principal)).status).toBe(200);
+    expect(await logged('scoreHistory')).toEqual([enrollments[1]]);
+    expect(await logged('taskGet')).toEqual([]);
+  });
+
+  it('takes the shared academic lock before reading the state it checks against',async()=>{
+    // A text assertion, because PGlite serializes transactions and cannot show
+    // the race itself. A real multi-connection regression is still owed.
+    for(const name of ['write_assessment_task','record_assessment_scores']){
+      const [row]=(await db.pg.query(`select prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='edunexus' and p.proname=$1`,[name])).rows as any[];
+      const source=row.prosrc as string;
+      expect(source.indexOf('pg_advisory_xact_lock(82412001)'),name).toBeGreaterThan(-1);
+      expect(source.indexOf('pg_advisory_xact_lock(82412001)'),name).toBeLessThan(source.indexOf('select * into'));
+    }
+  });
+
   it('accepts decimal marks without binary floating-point false rejections',async()=>{
     for(const [i,value] of [1.1,2.55,19.99].entries())expect((await record([entry(i,value)])).status).toBe(201);
     const r=await newTask({sequence:2,max_score:1.1});expect(r.status).toBe(201);expect(Number(r.body.data.max_score)).toBe(1.1);

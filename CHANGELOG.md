@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.29.0 | Corrective migration for the score defects the review reproduced: current-learner access, explicit clearing, privacy journals, column precision | 0022 |
 | 0.28.1 | Backend review: upstream identity validation, provisioning transport checks, decimal input fix; open database findings documented | None |
 | 0.28.0 | Workspace overhauled: field-level errors, sheets, command palette, the unrecorded mark | — |
 | 0.27.2 | The mark as the browser tab icon; `img-src 'self'` for that one file | — |
@@ -40,6 +41,22 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.29.0 — The score corrections the review could not make
+
+The [20 September review](docs/backend-review-2026-09-20.md) reproduced four defects in Section 4B.1 and was forbidden to write a migration. The user authorized one on 21 September. Migration `0022` is that migration and nothing more: it opens no gate, adds no endpoint, no error code and no arithmetic, and every correction restores a guarantee the rest of the system already held.
+
+**A teacher reads only the learners they currently teach.** Record a mark, withdraw the learner, and the former adviser could still read the mark through restricted-role SQL and record a replacement over HTTP, answered 201. The score row policy and the entry function now both apply `can_read_enrollment` — the same predicate daily attendance has used since `0011` — so a departed learner's marks close to their former adviser and stay open to managers, who hold the history. A security-definer function bypasses RLS, which is why the check had to be written twice; `assert_may_grant_role` exists for the same reason.
+
+**Only an explicit null clears a mark.** An entry that simply omitted the `raw_score` key reached the null branch and replaced a recorded 9 with nothing. `jsonb_typeof` of a missing key is SQL null, and `null not in (…)` is null, not true, so the guard never fired. The HTTP schema rejected it all along, but the database is the authority and it accepted it.
+
+**A score read is a disclosure and now says so.** Reading a sheet returns learner names beside their marks and wrote no `record_access_events` row, while every learner and enrollment list in the system writes one. `scoreSheet`, `scoreRecord` and `scoreHistory` are permitted resources and log exactly the enrollments each response named. The three task reads name no learner and log nothing, for the same reason the command palette does not search the registry.
+
+**The documented maximum fits its column.** `max_score` and `raw_score` were `numeric(6,2)`, which stops at 9999.99, so creating a task at the documented maximum of 10000 returned 500. Both are `numeric(7,2)`. The academic meaning of a maximum is still the school's; this only lets the stated bound be stored.
+
+Both writers also take the shared academic-setup lock before reading the row they version-check, rather than after, so a waiting writer cannot proceed on state the transaction ahead of it has already replaced. That ordering is asserted as text: PGlite serializes transactions and cannot show the race, so a real multi-connection regression is still owed before the finding closes.
+
+Five regression cases, one per correction plus the lock ordering. Each of the first four was run against a database built without `0022` and fails there. 308 tests across 23 files, type checks and build pass.
 
 ## 0.28.1 — Backend boundary review
 
