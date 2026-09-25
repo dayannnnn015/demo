@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.37.4 | Local load measurement: the morning register fails at 27 advisers; cause found, fix awaiting authorization | — |
 | 0.37.3 | The score-writer lock races reproduced on real PostgreSQL; the review's open finding closed | — |
 | 0.37.2 | Two contracts made plain text again, so their diffs can be reviewed | — |
 | 0.37.1 | The attendance workflow tested end to end through its four screens | — |
@@ -52,6 +53,14 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.37.4 — The morning register, under the school's own load
+
+`npm run test:load` seeds a disposable PostgreSQL server like the school: 27 sections of 35 synthetic learners, each section with its own adviser. All 27 advisers then read, preview and confirm the register at the same instant, as they will at the start of a school day. **More than half are refused with `RETRY_REQUIRED` before they see their register**, and the monitor fails the same way. One read takes about 110 ms, and latency climbs linearly with the number of advisers until the three-second lock timeout starts refusing them.
+
+The cause is in `attendance_context` (migration 0011). Every register read, preview, confirmation and monitor read takes the **exclusive** school-wide academic lock that every writer takes, so reads of different sections queue behind each other. The proposed fix is a new migration in which reads take the lock in shared mode and writers take it exclusively before anything else. That preserves every consistency guarantee and stops readers blocking each other. Because it changes the database's locking protocol, **it waits on the user's authorization and has not been written.** The measurement, the numbers and the reasoning are in [docs/load-measurement-2026-09-25.md](docs/load-measurement-2026-09-25.md).
+
+The harness shares `scripts/disposable-postgres.ts` with `npm run test:race`. It is local and synthetic and reads no `.env`. It is not the hosted acceptance run, which the load gate still requires. No code, migration or schema changed.
 
 ## 0.37.3 — The lock races, shown on a real server
 

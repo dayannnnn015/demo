@@ -1,10 +1,10 @@
 # Where things stand
 
-**Updated:** 2026-09-25 · **Version:** 0.37.3 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-25 · **Version:** 0.37.4 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
 
-**0.37.3 closed the review's lock-ordering finding** with a real two-connection PostgreSQL test (`npm run test:race`, opt-in, needs Docker). **0.37.2** made two contracts plain text again (literal control bytes had made git treat them as binary). **0.37.1 drove the four attendance screens end to end in tests** — calendar, register, months, monitor — and found no defect. **0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
+**0.37.4 found that the morning register fails at the school's own load**: with 27 advisers at once, over half are refused before seeing their register, because every attendance read takes the exclusive academic lock ([the measurement](load-measurement-2026-09-25.md)). **0.37.3 closed the review's lock-ordering finding** with a real two-connection PostgreSQL test (`npm run test:race`, opt-in, needs Docker). **0.37.2** made two contracts plain text again (literal control bytes had made git treat them as binary). **0.37.1 drove the four attendance screens end to end in tests** — calendar, register, months, monitor — and found no defect. **0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
 
 Earlier this session: **0.36.0** assessment policies, **0.35.0** roster import, **0.34.0** the reviewed corrections, **0.33.0** subjects and offerings plus a fix to the shared `Editor` losing input, **0.32.0** follow-up cases and DOM tests against the real API (`tests/helpers/dom.ts`, `tsconfig.web-tests.json`; see AGENTS.md). Every route except Scores is now a real screen.
 
@@ -12,9 +12,11 @@ No gate opened. No migration, permission or academic behaviour changed.
 
 ## Single next action
 
-**Write the load-test script and the restore-drill runbook** (Section 7), the last unblocked work. Everything else waits on the school or on the score-entry decision below.
+**Get the user's decision on migration 0023**, which would make attendance reads take the academic lock in shared mode and writers take it exclusively first. It is the fix for the load finding above and changes the database's locking protocol, so it is not written until the user authorizes it. If authorized: write it with `create or replace`, prove it with `npm run test:load` (no refusals at 27 advisers) and a reader/writer case in `tests/concurrency.pg.test.ts`, then apply it to the hosted database with `npm run db:migrate`.
 
-**Still waiting on the user:** the score-entry contradiction — [the frontend contract](frontend-handoff.md) says not to enable score screens while [constraints.md](constraints.md) lists score entry inside the closed grading gate although the raw-score module shipped. The Scores route stays a placeholder until that is decided.
+**Also waiting on the user:** the score-entry contradiction — [the frontend contract](frontend-handoff.md) says not to enable score screens while [constraints.md](constraints.md) lists score entry inside the closed grading gate although the raw-score module shipped. The Scores route stays a placeholder until that is decided.
+
+Everything else unblocked is done. What remains is the school's information requests and the operator's hosted drills (restore, revocation, rollback, a hosted load run).
 
 ## Verification and in flight
 
