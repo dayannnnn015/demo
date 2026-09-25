@@ -46,7 +46,7 @@ Section 2 validation covers duplicate LRNs, invalid dates, movement history, adv
 
 **Section 3B.4 is implemented:** [manual managerial follow-up](attendance-followups.md), reviewed opening from matching evidence, one open case per annual record, assignment/due dates, notes, resolution/cancellation/reopening, immutable history and current-evidence comparisons. Cases survive source corrections and school-year closure without altering attendance.
 
-**Section 3B.4 has no screen yet**, and is the one part of Section 3 still API-only.
+**Section 3B.4 has had a screen since 0.32.0**, so every Section 3 module now has an interface. A manager finds a learner with matching evidence through the monitor, opens a case by hand, and compares its opening evidence with the records as they stand now.
 
 **Next: policy configuration and school acceptance of attendance workflows.** Gates: **mark meanings and conversion rules**, and **absence-alert rule**. Both are closed, so official totals, half-day credits, alternative-delivery participation/conversion and any automatic alerting stay unbuilt. The school has confirmed it has no approved alert threshold. Obtain approved mark meanings, conversion rules and templates before presenting official totals. The current classroom marks do not assign half-day credits. Academic subject/curriculum foundations can proceed while school policy decisions remain outstanding.
 

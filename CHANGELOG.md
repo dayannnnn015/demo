@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.32.0 | The follow-up cases screen, and screen tests that drive the real API in a DOM | — |
 | 0.31.0 | The attendance section gets its screens: the daily register, monthly consolidation and the absence monitor | — |
 | 0.30.0 | The instructional calendar screen: a month at a time, preview and confirm, change history | — |
 | 0.29.0 | Corrective migration for the score defects the review reproduced: current-learner access, explicit clearing, privacy journals, column precision | 0022 |
@@ -43,6 +44,20 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.32.0 — Follow-up cases get a screen
+
+Section 3B.4 has had a complete API since 0.12.0 and was the last part of Section 3 without an interface. `web/screens/Followups.tsx` is the manager's queue of attendance follow-up and the only place a case is opened.
+
+**A case is opened from evidence.** The sheet takes a section, a 1–31 date window and a category, then reads the absence monitor filtered the way the database checks that category, so the only learners offered are ones a case could be opened for. That read happens on request, since each monitor read logs the learners it names. Owner, due date and reason go to the preview; confirmation carries the unchanged hash and is disabled whenever there is none.
+
+**What the API refuses is explained first.** A past due date, a second open case for the learner, a window with no matching evidence and an inactive year each get their own sentence. The due-date rules the API reports as one `FOLLOWUP_DUE_DATE` are checked in the client first — an update may keep a date that has already gone by, a new one may not, and closing a case always sends `due_on: null`.
+
+**Opening evidence stands beside the records as they are now.** Changed evidence is explained as something captured having changed, which may be a name or a calendar date rather than a mark, and a learner no longer enrolled in the window is drawn as exactly that, with the case still actionable. The queue filters by year, status, original section, owner and overdue, and names a suspended owner rather than dropping them.
+
+**Screens are now tested through their data paths.** `tests/web-screens.test.ts` renders to a string, where effects never run, so no fetch, review or confirmation had ever been exercised by a test. `tests/helpers/dom.ts` mounts a screen in happy-dom — a new dev-only dependency — and hands it the workspace's own API client pointed at an in-process API over PGlite. `tests/web-followups.test.ts` opens a case through the screen and checks the row in the database, finds a gap-only learner under one category and not the other, shows the open-case refusal with confirmation disabled, resolves a case with its due date cleared, stops a past due date before any request is sent, surfaces a version conflict instead of overwriting, and shows a teacher no queue. These tests import both `web/` and `src/`, so they are type-checked by a third config, `tsconfig.web-tests.json`.
+
+348 tests across 26 files. No migration, no endpoint, no schema and no permission change, and no gate opened.
 
 ## 0.30.0 — The instructional calendar gets a screen
 

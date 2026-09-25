@@ -208,11 +208,19 @@ Two rules carry the weight. The window is validated in the client before a reque
 
 The screen states its window beside every count, says that a run may have started before it, and closes by saying there is no approved absence rule and therefore no threshold here — pointing at the manual follow-up workflow rather than offering to open a case.
 
-## Attendance follow-up screens to build
+## The attendance follow-up screen
 
-[Section 3B.4](attendance-followups.md) provides manager-only queues, evidence, reviewed creation/actions and history. Teachers receive no case/notes/history access. From a selected annual enrollment, preview a 1–31 date window and `absence` or `recording_gap` category; show the exact member, source versions and counts. Choose an active managerial assignee, nullable due date and reason, then confirm the unchanged hash with `reviewed=true`. There is no automatic-alert rule or messaging action.
+[Section 3B.4](attendance-followups.md) has a screen: `web/screens/Followups.tsx`, at `/followups`, manager-only because every case endpoint is. Teachers never see the route, and the API refuses them the queue if they reach it.
 
-Show immutable opening evidence beside current evidence, including `evidence_changed` and unavailable membership after corrections. The queue is live and supports year, status, original section, owner, overdue and UUID pagination filters. Read details and history separately; the list omits evidence/reasons. Case notes use the `update` action even when owner/date stay the same. Resolve/cancel with a null due date; reopen only when no newer case is open. Each action requires current-version review and explicit confirmation. Existing cases remain manageable after year closure. Inspect history after a lost response, clear protected data on sign-out and render names/reasons as text. No case screens were added.
+**Opening a case starts from evidence, not from a learner.** The sheet asks for a section, a 1–31 date window and a category, then reads the absence monitor filtered the way the database checks the category — `with_absences` for an absence case, `incomplete` for a gap — so the only learners offered are ones a case could be opened for. It reads on request, not as the window changes, because every monitor read writes an access row naming the learners it returned. The window is checked with the monitor's own `windowProblem()` before a request is spent.
+
+**Review, then confirm.** Owner, optional due date and reason go to the preview; the review shows the learner, window, owner, due date, target status and current counts, and lists any blocking issue as the sentence saying what to do (`issueText`). Confirm is disabled whenever the preview returned no hash. A conflict on confirm drops the review, because its hash is dead.
+
+**Due dates are checked the way the API checks them.** `dueProblem()` refuses a new or changed date before today, lets an update keep a date that has already passed, and is skipped for resolve and cancel — whose form has no date field, because `changeBody()` always sends `due_on: null` when closing. The API answers all of these with one `FOLLOWUP_DUE_DATE`, which is why the reason is found in the client first.
+
+**A case shows what it was opened on beside what is there now.** The detail reads `/attendance-follow-ups/:id` when the row is expanded, not with the queue, and draws opening and current counts side by side. `evidence_changed` is explained as *something* the evidence captured having changed — a name, a calendar date or a month status count too — rather than as a change in attendance, and `available: false` is drawn as the learner no longer being enrolled in the window, with the case still actionable.
+
+Owners are named from the whole staff list, so a suspended manager still appears against their cases; only active principals and administrative officers are offered as a new owner. There is no reminder, badge or alert anywhere on the screen, and it says why.
 
 ## Academic setup screens to build
 

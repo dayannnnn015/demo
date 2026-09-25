@@ -52,7 +52,7 @@ After any conflict, refresh and review again. There are no automatic replay rece
 
 `GET /api/v1/attendance-follow-ups` requires `academic_year_id`. Optional filters are `status=open|resolved|cancelled|all` (default open), `section_id`, `assignee_user_id` and `overdue_only=true|false` (default false). Filtering precedes UUID pagination; `limit` defaults to 50 and is at most 100, with `after_id` for the next page. The section filter refers to the case's original section, even after a learner moves. Pages show current minimal names and task metadata, without opening evidence or reasons. They are live queues, not point-in-time exports.
 
-`GET /api/v1/attendance-follow-ups/:id/events` returns newest-first immutable history. `limit` defaults to 5 and is at most 10; use `before_version` for older events. Each event includes the reviewed before-state, current evidence, proposed action/owner/date, reason, actor and request ID. Clear protected data on sign-out and render names/reasons as text. This increment is API-only.
+`GET /api/v1/attendance-follow-ups/:id/events` returns newest-first immutable history. `limit` defaults to 5 and is at most 10; use `before_version` for older events. Each event includes the reviewed before-state, current evidence, proposed action/owner/date, reason, actor and request ID. Clear protected data on sign-out and render names/reasons as text. Since 0.32.0 the Follow-up cases screen (`web/screens/Followups.tsx`) is the manager's interface to all of this; see [frontend integration](frontend-handoff.md).
 
 ## Storage and verification
 

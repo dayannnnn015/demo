@@ -11,6 +11,7 @@ import { Calendar } from './screens/Calendar';
 import { Attendance } from './screens/Attendance';
 import { Months } from './screens/Months';
 import { Monitor } from './screens/Monitor';
+import { Followups } from './screens/Followups';
 import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -132,15 +133,11 @@ export const routes: Route[] = [
     render: p => <Monitor {...p} />,
   },
   {
-    id: 'followups', nav: 'Follow-up cases', icon: 'followups', group: 'Attendance', manager: true,
+    id: 'followups', nav: 'Follow-up cases', icon: 'followups', group: 'Attendance', manager: true, built: true, ownHeader: true,
     title: 'Attendance follow-up',
-    lede: 'Cases opened against absences and gaps in recording.',
+    lede: 'Cases opened by hand against absences and gaps in recording.',
     record: 'attendance_followups',
-    render: soon(
-      'Open, assign and resolve follow-up on absences.',
-      'A case keeps the evidence it was opened from and compares it against current records, so a later correction never rewrites the history.',
-      'There is no automatic alert: the school has confirmed it has no approved absence threshold.',
-    ),
+    render: p => <Followups {...p} />,
   },
 
   {

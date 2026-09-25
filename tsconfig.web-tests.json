@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.web.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "web/**/*.ts",
+    "web/**/*.tsx",
+    "tests/helpers/dom.ts",
+    "tests/web-followups.test.ts"
+  ]
+}
