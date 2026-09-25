@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.37.1 | The attendance workflow tested end to end through its four screens | — |
 | 0.37.0 | `GET /enrollment-counts`: learner counts by grade that name nobody, shown on the Overview | — |
 | 0.36.0 | The assessment policy screen: drafts, adoption, binding — no default weights, nothing computed | — |
 | 0.35.0 | The roster import screen: preview, explicit duplicate decisions, identical commit | — |
@@ -49,6 +50,14 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.37.1 — The attendance screens, driven end to end
+
+The calendar, daily register, monthly consolidation and absence monitor shipped in 0.30.0 and 0.31.0 with only string-render tests, so none of their fetches, reviews or confirmations had ever run. `tests/web-attendance-flow.test.ts` walks the workflow through the real screens against the real API, in the order a school would.
+
+The manager configures five classroom days and a weekend on the calendar. The adviser marks a class, and the test checks that an unmarked afternoon stays null, that changing one session carries the untouched one back rather than clearing it, and that a save leaves the adviser on the date they were marking. An unconfigured date offers no chips. The manager then sees a month with unmarked sessions held in draft with the reason spelled out, and submits it once every session is marked. Finally the adviser reads the week back on the monitor as raw counts, with the month shown as submitted.
+
+The school year in the test starts on 25 June so that June is the smallest month that can honestly be submitted. No defect was found. No code, endpoint or schema changed.
 
 ## 0.37.0 — The Overview counts learners without reading one
 
