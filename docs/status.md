@@ -1,10 +1,10 @@
 # Where things stand
 
-**Updated:** 2026-09-25 · **Version:** 0.38.0 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-25 · **Version:** 0.38.1 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
 
-**0.38.0 fixed it with migration 0023** (authorized by the user): no refusals at 27 advisers, the morning wave in about 1.3 s. **0.37.4 found that the morning register fails at the school's own load**: with 27 advisers at once, over half are refused before seeing their register, because every attendance read takes the exclusive academic lock ([the measurement](load-measurement-2026-09-25.md)). **0.37.3 closed the review's lock-ordering finding** with a real two-connection PostgreSQL test (`npm run test:race`, opt-in, needs Docker). **0.37.2** made two contracts plain text again (literal control bytes had made git treat them as binary). **0.37.1 drove the four attendance screens end to end in tests** — calendar, register, months, monitor — and found no defect. **0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
+**0.38.1** retries busy reads, caches the libraries across releases and adds `npm run smoke`. **0.38.0 fixed it with migration 0023** (authorized by the user): no refusals at 27 advisers, the morning wave in about 1.3 s. **0.37.4 found that the morning register fails at the school's own load**: with 27 advisers at once, over half are refused before seeing their register, because every attendance read takes the exclusive academic lock ([the measurement](load-measurement-2026-09-25.md)). **0.37.3 closed the review's lock-ordering finding** with a real two-connection PostgreSQL test (`npm run test:race`, opt-in, needs Docker). **0.37.2** made two contracts plain text again (literal control bytes had made git treat them as binary). **0.37.1 drove the four attendance screens end to end in tests** — calendar, register, months, monitor — and found no defect. **0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
 
 Earlier this session: **0.36.0** assessment policies, **0.35.0** roster import, **0.34.0** the reviewed corrections, **0.33.0** subjects and offerings plus a fix to the shared `Editor` losing input, **0.32.0** follow-up cases and DOM tests against the real API (`tests/helpers/dom.ts`, `tsconfig.web-tests.json`; see AGENTS.md). Every route except Scores is now a real screen.
 
@@ -20,7 +20,7 @@ Everything else unblocked is done. What remains is the school's information requ
 
 ## Verification and in flight
 
-All 408 tests across 35 files pass, plus 10 opt-in race tests that skip without Docker (`npm run test:race`), along with all three type checks and the production build.
+All 413 tests across 36 files pass, plus 10 opt-in race tests that skip without Docker (`npm run test:race`), along with all three type checks and the production build.
 
 The working tree is clean and nothing is in flight. No migration was needed, so none was written.
 

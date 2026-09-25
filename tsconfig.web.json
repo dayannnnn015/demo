@@ -23,6 +23,7 @@
     "web/**/*.ts",
     "web/**/*.tsx",
     "vite.config.ts",
+    "tests/web-api.test.ts",
     "tests/web-attendance.test.ts",
     "tests/web-calendar.test.ts",
     "tests/web-screens.test.ts",

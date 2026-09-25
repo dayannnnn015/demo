@@ -61,6 +61,10 @@ Sessions are kept in `sessionStorage` under `edunexus-session`. A refresh keeps 
 
 Static bundle files are served before the CORS middleware, because a `type="module"` script is always fetched in CORS mode and the API origin allowlist would otherwise reject the workspace's own bundle.
 
+**A busy database is retried for reads only.** `createApi` in `web/api.ts` sends a GET again, at most twice and after a short randomized pause, when the server answers `RETRY_REQUIRED`. That code means a lock wait ran out and the transaction rolled back, so nothing was recorded. A write is never retried: a refused change needs a fresh review, and `retryable()` is the one place that decides.
+
+**The build ships the libraries as their own chunk.** `vite.config.ts` puts React and the Supabase client in `vendor-*.js`, which keeps its hash across releases, so the year-long immutable asset cache lets returning staff download only the application after a deploy.
+
 ## The shell
 
 `web/components/AppShell.tsx` draws the rail, the top bar and the profile menu; `PageHeader` draws the line under the title and the form chip.

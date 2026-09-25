@@ -14,7 +14,31 @@ export class ApiError extends Error {
 
 export type Api = <T>(path: string, method?: string, body?: unknown) => Promise<T>;
 
-export function createApi(client: SupabaseClient, onSessionLost: () => void): Api {
+/**
+ * Whether a failed request may be sent again unchanged. Only a read, and only
+ * when the server said the database was busy: `RETRY_REQUIRED` means a lock or
+ * serialization wait ran out, the transaction rolled back, and nothing was
+ * recorded. A write is never retried here — a refused change needs a fresh
+ * review, and a version conflict needs a person to look again.
+ */
+export const retryable = (method: string, error: unknown) =>
+  method === 'GET' && error instanceof ApiError && error.code === 'RETRY_REQUIRED';
+
+export function createApi(client: SupabaseClient, onSessionLost: () => void, wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))): Api {
+  const send = createRequest(client, onSessionLost);
+  return async <T>(path: string, method = 'GET', body?: unknown): Promise<T> => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await send<T>(path, method, body); }
+      catch (error) {
+        if (attempt >= 2 || !retryable(method, error)) throw error;
+        // Spread out, so advisers who were refused together do not all come back together.
+        await wait(250 + Math.random() * 500 * (attempt + 1));
+      }
+    }
+  };
+}
+
+function createRequest(client: SupabaseClient, onSessionLost: () => void) {
   return async <T>(path: string, method = 'GET', body?: unknown): Promise<T> => {
     const { data } = await client.auth.getSession();
     if (!data.session) { onSessionLost(); throw new ApiError(401, 'AUTH_REQUIRED', 'Please sign in again.'); }

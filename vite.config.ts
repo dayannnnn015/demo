@@ -14,6 +14,16 @@ export default defineConfig({
       transformIndexHtml: (html: string) => html.replace(/ crossorigin(="[^"]*")?/g, ''),
     },
   ],
-  build: { outDir: '../public', emptyOutDir: true, sourcemap: false },
+  build: {
+    outDir: '../public', emptyOutDir: true, sourcemap: false,
+    // Libraries change far less often than the screens. In their own chunk they
+    // keep their hash across releases, so the year-long immutable cache the
+    // server sets means staff re-download only the application after a deploy.
+    rollupOptions: {
+      output: {
+        manualChunks: (id: string) => (/\/node_modules\/(react|react-dom|scheduler|@supabase)\//.test(id) ? 'vendor' : undefined),
+      },
+    },
+  },
   server: { proxy: { '/api': 'http://127.0.0.1:3001', '/account/config': 'http://127.0.0.1:3001', '/openapi.json': 'http://127.0.0.1:3001' } },
 });

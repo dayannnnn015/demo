@@ -1,6 +1,6 @@
 {
   "name": "edunexus",
-  "version": "0.38.0",
+  "version": "0.38.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:race": "tsx scripts/race-test.ts",
     "test:load": "tsx scripts/load-test.ts",
+    "smoke": "tsx scripts/smoke.ts",
     "check": "npm run typecheck && npm test && npm run build",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
     "db:bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts",

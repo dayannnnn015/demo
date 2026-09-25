@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.38.1 | Reads retried when the database is busy; libraries cached across releases; `npm run smoke` | — |
 | 0.38.0 | The daily register no longer queues the whole school: shared reads, per-section confirmations | 0023 |
 | 0.37.4 | Local load measurement: the morning register fails at 27 advisers; cause found, fix awaiting authorization | — |
 | 0.37.3 | The score-writer lock races reproduced on real PostgreSQL; the review's open finding closed | — |
@@ -54,6 +55,14 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.38.1 — Smaller things that make the day smoother
+
+**A busy database is retried for reads.** A school-wide change can still make a register read wait, for example a manager editing the calendar at 7:30, and a wait past three seconds answers `RETRY_REQUIRED`. The workspace client now sends a read again, at most twice, after a short randomized pause. That code means the transaction rolled back and nothing was recorded, so a repeated read is harmless. A write is never retried, because a refused change needs a fresh review. `retryable()` in `web/api.ts` is the single rule, with five tests.
+
+**Libraries are cached across releases.** The single 580 KB script is now two: the application (64 KB gzipped) and React with the Supabase client (119 KB gzipped). The library chunk keeps its hash from one release to the next, and the server already caches assets for a year as immutable, so returning staff re-download only the application after a deploy.
+
+**`npm run smoke` replaces the hand-run release checks.** It checks health, readiness, the workspace page and every asset the page references, then that the published contract reports the version in `package.json` and that all 110 documented operations refuse an anonymous caller. It sends only anonymous requests. It passed against production before and after this release.
 
 ## 0.38.0 — The whole school can take the register at once
 

@@ -40,7 +40,7 @@ Credentials: the restricted database credential is held in ignored local files a
 1. `npm run check` — typecheck, tests and build must pass.
 2. `npm run db:migrate` if the release adds a migration. The runner is checksummed and refuses a modified applied file; it applies pending files in one transaction.
 3. `npx vercel --prod --scope joshs-projects-47d7b071`.
-4. Live checks: `/health/live`, `/health/ready` and `/app` return 200, `/openapi.json` reports the released version, and every documented protected operation rejects an anonymous request with 401.
+4. Live checks: `npm run smoke`. It confirms that `/health/live`, `/health/ready`, `/app` and every script and stylesheet `/app` references return 200, that `/openapi.json` reports the version in `package.json`, and that every documented operation rejects an anonymous request with 401. It sends only anonymous requests, so it cannot read or change a record. `npm run smoke -- http://127.0.0.1:3001` runs it against a local server.
 
 ## What the hosted checks do and do not establish
 
