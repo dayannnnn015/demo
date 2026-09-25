@@ -69,6 +69,8 @@ Confirmation p95 fell from over 3 s to about 250 ms, and every one of the 1,890 
 
 ## Not measured
 
+- **Creating a staff account during the register.** Account creation holds the academic lock exclusively across its call to the account service, up to ten seconds, so that two managers can never create two accounts for one invitation and no account is ever left without its record. Since 0023, register reads wait behind that lock. Two read retries (0.38.1) absorb a typical one-to-two-second call, but a slow one would still refuse reads. This was left as it is on purpose: accounts are created about 33 times in the system's life, mostly during onboarding, and narrowing the lock would weaken the no-orphaned-account guarantee. **Create accounts outside register hours.**
+
 - **Hosted behaviour.** Network latency between Vercel and Supabase lengthens every transaction that holds the lock, so this is likely to be worse when hosted, not better.
 - **Mixed traffic**, such as a manager submitting a month or correcting a timeline during the morning register. Those take the same exclusive lock and would add to the queue.
 - **Backup restoration, privilege revocation and rollback drills**, which need operator access to the hosted project.
