@@ -1,10 +1,10 @@
 # Where things stand
 
-**Updated:** 2026-09-25 · **Version:** 0.37.2 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-25 · **Version:** 0.37.3 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
 
-**0.37.2** made two contracts plain text again (literal control bytes had made git treat them as binary). **0.37.1 drove the four attendance screens end to end in tests** — calendar, register, months, monitor — and found no defect. **0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
+**0.37.3 closed the review's lock-ordering finding** with a real two-connection PostgreSQL test (`npm run test:race`, opt-in, needs Docker). **0.37.2** made two contracts plain text again (literal control bytes had made git treat them as binary). **0.37.1 drove the four attendance screens end to end in tests** — calendar, register, months, monitor — and found no defect. **0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
 
 Earlier this session: **0.36.0** assessment policies, **0.35.0** roster import, **0.34.0** the reviewed corrections, **0.33.0** subjects and offerings plus a fix to the shared `Editor` losing input, **0.32.0** follow-up cases and DOM tests against the real API (`tests/helpers/dom.ts`, `tsconfig.web-tests.json`; see AGENTS.md). Every route except Scores is now a real screen.
 
@@ -18,13 +18,13 @@ No gate opened. No migration, permission or academic behaviour changed.
 
 ## Verification and in flight
 
-All 407 tests across 35 files pass, along with all three type checks and the production build.
+All 407 tests across 35 files pass (plus the 4 opt-in race tests, which skip without Docker), along with all three type checks and the production build.
 
 The working tree is clean and nothing is in flight. No migration was needed, so none was written.
 
 **Every built screen now has its data paths tested against the real API** — the attendance four since 0.37.1 (`tests/web-attendance-flow.test.ts`). None has yet been driven by a real adviser against the school's own calendar, which does not exist yet. The daily register in particular should be exercised by a real adviser against a configured calendar before anyone relies on it — and it cannot be exercised at all until the school's 2026–2027 calendar exists, because attendance cannot be recorded against an unconfigured date.
 
-The lock-ordering concurrency finding remains open, unchanged: the fix is in, asserted against the stored function source rather than demonstrated, because PGlite serialises transactions.
+The lock-ordering concurrency finding is closed: `npm run test:race` shows both races under the 0021 definitions and 0022 refusing them, on a real PostgreSQL server.
 
 ## Still outstanding
 

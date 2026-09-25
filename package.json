@@ -1,6 +1,6 @@
 {
   "name": "edunexus",
-  "version": "0.37.2",
+  "version": "0.37.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.web.json --noEmit && tsc -p tsconfig.web-tests.json --noEmit",
     "start": "node --env-file-if-exists=.env dist/src/dev.js",
     "test": "vitest run",
+    "test:race": "tsx scripts/race-test.ts",
     "check": "npm run typecheck && npm test && npm run build",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
     "db:bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts",

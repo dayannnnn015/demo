@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.37.3 | The score-writer lock races reproduced on real PostgreSQL; the review's open finding closed | — |
 | 0.37.2 | Two contracts made plain text again, so their diffs can be reviewed | — |
 | 0.37.1 | The attendance workflow tested end to end through its four screens | — |
 | 0.37.0 | `GET /enrollment-counts`: learner counts by grade that name nobody, shown on the Overview | — |
@@ -51,6 +52,14 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.37.3 — The lock races, shown on a real server
+
+The 20 September review found that the score writers read the task before taking the shared academic lock, so a second writer could act on what it had read after the first had changed it. Migration 0022 moved the lock first, but the finding stayed open: the fix was asserted as text, because PGlite runs one transaction at a time and cannot interleave two writers.
+
+`tests/concurrency.pg.test.ts` runs the races on PostgreSQL 17 with two real connections. It waits until the second writer is actually blocked on the lock before the first commits, so the interleaving is certain rather than hoped for. It installs each migration's own definition of the two functions in turn. **Under 0021 both races happen**: the second manager's retitle silently overwrites the first, and an adviser's mark of 15 is saved against a maximum another manager had just lowered to 10. **Under 0022 both are refused**, with `P0003` and `P1605`. It runs through the granted `update_assessment_task` wrapper and the HTTP-seeded data, the same path as production.
+
+It is opt-in because it needs Docker: it skips unless `EDUNEXUS_RACE_PG_URL` is set, and `npm run test:race` starts a disposable container, runs it and removes it. `npm run check` is unchanged and needs neither. It passed four runs in a row. No code, migration or schema changed; the finding is closed in [the review](docs/backend-review-2026-09-20.md).
 
 ## 0.37.2 — Contracts that git could not read
 

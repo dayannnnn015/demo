@@ -32,6 +32,8 @@ The temporary synthetic regression cases reproduced all four categories. They ar
 
 **Partly addressed.** Migration `0022` moves `pg_advisory_xact_lock(82412001)` ahead of those reads in both functions, and a test asserts that ordering in the stored function source. **The finding stays open**: the ordering is asserted as text, not demonstrated under concurrency, and the multi-connection regression this paragraph asks for does not exist. PGlite cannot provide it.
 
+**Closed on 2026-09-25 (0.37.3).** `tests/concurrency.pg.test.ts` runs both races on a real PostgreSQL 17 server with two connections, waiting until the second writer is genuinely blocked on the lock before the first commits. Against the 0021 definitions both races happen: the second manager's retitle silently overwrites the first, and a mark of 15 is recorded against a maximum that had just been lowered to 10. Against the 0022 definitions the stale retitle answers `P0003` and the mark answers `P1605`. It is opt-in, because it needs Docker: `npm run test:race` starts a disposable container, runs it and removes it.
+
 Account provisioning holds the shared academic lock during an external call of up to ten seconds, while other transactions use a three-second lock timeout. The outcome is bounded refusal/retry, but this has not been load-tested with real invitations. The account service remains unverified in the deployed workflow; this review does not send mail or configure the function.
 
 The score-entry gate in `constraints.md` still disagrees with the implemented raw-score module's documentation. Reviewing defects does not resolve that policy conflict or authorize expanding score functionality. No calculation, grading rule, automatic alert, new endpoint or P17xx code is introduced.
