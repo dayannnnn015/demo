@@ -29,11 +29,11 @@ import {ids} from './helpers/database.js';
  */
 const url=process.env.EDUNEXUS_RACE_PG_URL;
 
-describe.skipIf(!url)('score writers under real concurrency',{timeout:60000},()=>{
+describe.skipIf(!url)('academic writers and attendance readers under real concurrency',{timeout:60000},()=>{
   const name='edunexus_race';
   let admin:pg.Pool,pool:pg.Pool,app:ReturnType<typeof createApp>;
-  const year=randomUUID(),section=randomUUID(),period=randomUUID();
-  let offering='',enrollment='',sequence=0;
+  const year=randomUUID(),section=randomUUID(),period=randomUUID(),other=randomUUID();
+  let offering='',enrollment='',otherEnrollment='',sequence=0;
   const reason='Synthetic race regression on a disposable database.';
   const http=(method:'post'|'get',path:string,body?:object)=>{const r=request(app)[method](`/api/v1${path}`).set('Authorization',`Bearer ${ids.principal}`);return body?r.send(body):r;};
   const sql=(text:string,params:unknown[]=[])=>pool.query(text,params);
@@ -113,6 +113,31 @@ describe.skipIf(!url)('score writers under real concurrency',{timeout:60000},()=
     });
   };
 
+  // ------------------------------------------------------------ attendance
+  // Migration 0023: attendance reads take the academic lock shared, and the one
+  // writer that relied on them for its exclusive lock takes it itself, first.
+  const day='2001-06-04';
+  /** 0011 named the context attendance_context; 0012 renamed it to wrap it, so that is where its body lives now. */
+  const installAttendance=async(context:string,commit:string)=>{
+    const named=context.startsWith('0011')?'attendance_context':'attendance_context_before_months';
+    await sql((await definition(context,named)).replace('edunexus.attendance_context(','edunexus.attendance_context_before_months('));
+    await sql(await definition(commit,'commit_daily_attendance'));
+  };
+  const read=(s:Awaited<ReturnType<typeof session>>)=>s.client.query(`select edunexus.read_daily_attendance($1,$2,100,null) sheet`,[section,day]);
+  const commit=(s:Awaited<ReturnType<typeof session>>,version:number,mark:string|null,hash:string,where=section,who=enrollment)=>
+    s.client.query(`select * from edunexus.commit_daily_attendance($1,$2,$3,$4::jsonb,$5,$6)`,[where,day,version,JSON.stringify([{enrollment_id:who,am:mark,pm:mark}]),reason,hash]);
+  /** The reviewed hash for marking a learner, as the screen gets it before confirming. */
+  const reviewed=async(version:number,mark:string|null,where=section,who=enrollment)=>{
+    const r=await http('post',`/sections/${where}/attendance/preview`,{day_on:day,version,changes:[{enrollment_id:who,am:mark,pm:mark}],reason});
+    expect(r.status,JSON.stringify(r.body)).toBe(201);return r.body.data.review_hash as string;
+  };
+  const dayVersion=async(where=section)=>(await sql('select version from edunexus.attendance_days where section_id=$1 and day_on=$2',[where,day])).rows[0]?.version as number??0;
+  const markOnFile=async(who=enrollment)=>(await sql('select am from edunexus.attendance_marks where enrollment_id=$1 and day_on=$2',[who,day])).rows[0]?.am as string|undefined;
+  /** A mark different from the one on file, so a proposal is never an unchanged no-op. */
+  const another=async(who=enrollment)=>{const current=(await markOnFile(who))??null;return current==='present'?'absent':'present';};
+  /** Resolves with the query's result if it finishes within the window, or 'blocked' if it is still waiting. */
+  const within=<T,>(work:Promise<T>,ms:number)=>Promise.race([work,new Promise<'blocked'>(resolve=>setTimeout(()=>resolve('blocked'),ms))]);
+
   beforeAll(async()=>{
     admin=new pg.Pool({connectionString:url,max:2});
     await admin.query(`drop database if exists ${name} with (force)`);
@@ -143,7 +168,7 @@ describe.skipIf(!url)('score writers under real concurrency',{timeout:60000},()=
 
     await sql("insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,2001,'2001-06-01','2002-03-31')",[year]);
     await sql("insert into edunexus.reporting_periods(id,academic_year_id,ordinal,name,starts_on,ends_on) values($1,$2,1,'Synthetic term','2001-06-01','2002-03-31')",[period,year]);
-    await sql("insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,4,'Synthetic Race',$3)",[section,year,ids.teacher]);
+    await sql("insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,4,'Synthetic Race',$3),($4,$2,4,'Synthetic Other',$5)",[section,year,ids.teacher,other,ids.otherTeacher]);
     await sql("update edunexus.academic_years set status='active' where id=$1",[year]);
     const subject=await http('post','/subjects',{code:'SCI4',name:'Science',kind:'learning_area',grade_levels:[4],active:true,reason});
     const offered=await http('post',`/sections/${section}/subjects`,{subject_id:subject.body.data.id,subject_version:1,display_order:1,reason});offering=offered.body.data.id;
@@ -157,6 +182,12 @@ describe.skipIf(!url)('score writers under real concurrency',{timeout:60000},()=
     const learner=await http('post','/learners',{first_name:'Synthetic',last_name:'Racer',birth_date:'1994-01-01',sex:'female'});
     const enrolled=await http('post','/enrollments',{learner_id:learner.body.data.id,section_id:section,enrolled_on:'2001-06-01'});
     expect(enrolled.status,JSON.stringify(enrolled.body)).toBe(201);enrollment=enrolled.body.data.id;
+    const second=await http('post','/learners',{first_name:'Synthetic',last_name:'Neighbour',birth_date:'1994-01-01',sex:'male'});
+    const placed=await http('post','/enrollments',{learner_id:second.body.data.id,section_id:other,enrolled_on:'2001-06-01'});
+    expect(placed.status,JSON.stringify(placed.body)).toBe(201);otherEnrollment=placed.body.data.id;
+    const calendar={version:0,section_id:null,reason,changes:[{day_on:day,action:'set',am:'classroom',pm:'classroom',day_type:'regular',label:'Synthetic day'}]};
+    const cp=await http('post',`/academic-years/${year}/calendar/preview`,calendar);expect(cp.status,JSON.stringify(cp.body)).toBe(201);
+    expect((await http('post',`/academic-years/${year}/calendar/corrections`,{...calendar,review_hash:cp.body.data.review_hash,reviewed:true})).status).toBe(201);
   },120000);
 
   afterAll(async()=>{
@@ -186,5 +217,114 @@ describe.skipIf(!url)('score writers under real concurrency',{timeout:60000},()=
     await install('0022_assessment_score_corrections.sql');
     const result=await markAboveNewMaximum();
     expect(result).toEqual({mark:'P1605',maximum:10,scores:[]});
+  });
+
+  it('queues one register read behind another under 0011, which is what failed at 27 advisers',async()=>{
+    await installAttendance('0011_daily_attendance.sql','0011_daily_attendance.sql');
+    await pair(async(first,second)=>{
+      await read(first);
+      const pending=read(second);
+      await waiting(second.pid);
+      await first.client.query('commit');
+      expect((await pending).rows[0].sheet.items).toHaveLength(1);
+    });
+  });
+
+  it('lets register reads run side by side under 0023',async()=>{
+    await installAttendance('0023_attendance_read_lock.sql','0023_attendance_read_lock.sql');
+    await pair(async(first,second)=>{
+      await read(first);
+      // The first read still holds its lock, uncommitted; the second no longer waits for it.
+      const result=await within(read(second),3000);
+      expect(result).not.toBe('blocked');
+    });
+  });
+
+  it('still keeps a reader and a writer apart under 0023, in both orders',async()=>{
+    await installAttendance('0023_attendance_read_lock.sql','0023_attendance_read_lock.sql');
+    // A writer holding the lock makes a reader wait, and the reader then sees the finished write.
+    const before=await dayVersion(),hash=await reviewed(before,'present');
+    await pair(async(writer,reader)=>{
+      await commit(writer,before,'present',hash);
+      const pending=read(reader);
+      await waiting(reader.pid);
+      await writer.client.query('commit');
+      const sheet=(await pending).rows[0].sheet;
+      expect(sheet.version).toBe(before+1);
+      expect(sheet.items[0]).toMatchObject({am:'present',pm:'present'});
+    });
+    // A reader holding the lock makes a writer wait until the read is over.
+    const next=await dayVersion(),absent=await reviewed(next,'absent');
+    await pair(async(reader,writer)=>{
+      await read(reader);
+      const pending=outcome(commit(writer,next,'absent',absent));
+      await waiting(writer.pid);
+      await reader.client.query('commit');
+      expect(await pending).toBe('saved');
+      await writer.client.query('commit');
+    });
+    expect(await markOnFile()).toBe('absent');
+  });
+
+  it('refuses the second of two writers from the same version with a version conflict under 0023',async()=>{
+    // With the shared context but 0011's commit, two confirmations interleave: only the journal's
+    // unique key stops the second, as a raw constraint violation rather than a version conflict.
+    await installAttendance('0023_attendance_read_lock.sql','0011_daily_attendance.sql');
+    const race=async()=>{
+      // Two proposals that both differ from what is on file, so neither is an unchanged no-op.
+      const version=await dayVersion(),current=(await markOnFile())??null;
+      const [x,y]=(['present','absent',null] as (string|null)[]).filter(m=>m!==current) as [string|null,string|null];
+      const hx=await reviewed(version,x),hy=await reviewed(version,y);
+      return pair(async(first,second)=>{
+        // Each confirmation ends its transaction the moment its call returns, as the API's does.
+        const settle=(s:Awaited<ReturnType<typeof session>>,work:Promise<unknown>)=>outcome(work).then(async r=>{await s.client.query(r==='saved'?'commit':'rollback');return r;});
+        const [a,b]=await Promise.all([settle(first,commit(first,version,x,hx)),settle(second,commit(second,version,y,hy))]);
+        return {outcomes:[a,b].sort(),version:(await dayVersion())-version};
+      });
+    };
+    expect(await race()).toEqual({outcomes:['23505','saved'],version:1});
+    // With 0023's commit taking the lock first, the second waits, then fails the version check it exists for.
+    await installAttendance('0023_attendance_read_lock.sql','0023_attendance_read_lock.sql');
+    expect(await race()).toEqual({outcomes:['P0003','saved'],version:1});
+  });
+
+  it('lets confirmations for two different sections run side by side under 0023',async()=>{
+    await installAttendance('0023_attendance_read_lock.sql','0023_attendance_read_lock.sql');
+    const mine=await another(),theirs=await another(otherEnrollment);
+    const va=await dayVersion(),vb=await dayVersion(other);
+    const ha=await reviewed(va,mine),hb=await reviewed(vb,theirs,other,otherEnrollment);
+    await pair(async(first,second)=>{
+      await commit(first,va,mine,ha);
+      // The first confirmation is still open; the other section's does not wait for it.
+      const result=await within(outcome(commit(second,vb,theirs,hb,other,otherEnrollment)),3000);
+      expect(result).toBe('saved');
+      await first.client.query('commit');await second.client.query('commit');
+    });
+    expect([await markOnFile(),await markOnFile(otherEnrollment)]).toEqual([mine,theirs]);
+  });
+
+  it('still makes a confirmation and a school-wide writer wait for each other under 0023',async()=>{
+    await installAttendance('0023_attendance_read_lock.sql','0023_attendance_read_lock.sql');
+    const lockSchool=(s:Awaited<ReturnType<typeof session>>)=>s.client.query('select pg_advisory_xact_lock(82412001)');
+    // A school-wide writer — a calendar change, a timeline correction, a month submission — holds the lock first.
+    let mark=await another(),version=await dayVersion(),hash=await reviewed(version,mark);
+    await pair(async(writer,adviser)=>{
+      await lockSchool(writer);
+      const pending=outcome(commit(adviser,version,mark,hash));
+      await waiting(adviser.pid);
+      await writer.client.query('commit');
+      expect(await pending).toBe('saved');
+      await adviser.client.query('commit');
+    });
+    // And the other way round: an open confirmation holds the school-wide writer back.
+    mark=await another();version=await dayVersion();hash=await reviewed(version,mark);
+    await pair(async(adviser,writer)=>{
+      await commit(adviser,version,mark,hash);
+      const pending=outcome(lockSchool(writer));
+      await waiting(writer.pid);
+      await adviser.client.query('commit');
+      expect(await pending).toBe('saved');
+    });
+    expect(await markOnFile()).toBe(mark);
   });
 });

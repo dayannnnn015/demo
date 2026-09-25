@@ -94,7 +94,7 @@ describe('Section 4B.1 assessment tasks and raw score entry',()=>{
 
   it('takes the shared academic lock before reading the state it checks against',async()=>{
     // A text assertion, because PGlite serializes transactions and cannot show
-    // the race itself. A real multi-connection regression is still owed.
+    // the race itself; tests/concurrency.pg.test.ts shows it on a real server.
     for(const name of ['write_assessment_task','record_assessment_scores']){
       const [row]=(await db.pg.query(`select prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='edunexus' and p.proname=$1`,[name])).rows as any[];
       const source=row.prosrc as string;

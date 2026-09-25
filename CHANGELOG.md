@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.38.0 | The daily register no longer queues the whole school: shared reads, per-section confirmations | 0023 |
 | 0.37.4 | Local load measurement: the morning register fails at 27 advisers; cause found, fix awaiting authorization | — |
 | 0.37.3 | The score-writer lock races reproduced on real PostgreSQL; the review's open finding closed | — |
 | 0.37.2 | Two contracts made plain text again, so their diffs can be reviewed | — |
@@ -53,6 +54,16 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.38.0 — The whole school can take the register at once
+
+0.37.4 measured the busiest moment of the school day, 27 advisers opening, marking and confirming the register at once, and found more than half refused before they saw a learner. Every register read took the exclusive academic lock, so every section waited for every other. The user authorized the fix.
+
+**Migration 0023** gives the register two locks, always taken first and in the same order: the academic lock, then a lock for the one section. A read takes both shared. A confirmation takes the academic lock shared and its own section's lock exclusively, and every school-wide writer keeps the academic lock exclusive. Registers of different sections are now read and confirmed side by side. A read still never overlaps a confirmation of its own section or any roster, calendar or month change, and two confirmations of one section still queue. Apart from the locks, both function bodies are exactly those of 0011.
+
+The first design made confirmations exclusive on the whole academic lock. It cleared every read refusal but still refused 2 of 81 confirmations, which is why a confirmation now locks only its section. A race test then caught that version letting a read overlap its own section's confirmation, which could have shown one version's number beside the next version's marks. So reads take their section's lock too.
+
+**Result, 27 advisers at once:** no refusals in any wave, where 17, 16, 11 and 77 had been refused before. The morning wave takes about 1.3 s instead of 4.6 s, confirmation p95 is about 250 ms instead of over 3 s, and all 1,890 expected marks are written. `tests/concurrency.pg.test.ts` gains six cases on a real server covering readers in parallel, reader/writer exclusion both ways, same-section writers queuing with `P0003`, different sections in parallel, and school-wide writers excluded both ways. An always-on test pins the lock order in the stored functions. `scripts/disposable-postgres.ts` now waits for the image's init restart, which had cut a connection mid-seed. Documented in [the measurement](docs/load-measurement-2026-09-25.md), AGENTS.md and the architecture.
 
 ## 0.37.4 — The morning register, under the school's own load
 

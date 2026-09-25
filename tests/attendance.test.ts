@@ -213,4 +213,25 @@ describe('Section 3B.1 reviewed classroom attendance', () => {
     await db.pg.query("update edunexus.academic_years set status='active' where id=$1", [futureYear]);
     expect((await preview([marks(e.id)], { day_on: '2027-01-01' }, ids.principal, futureSection)).body.error.code).toBe('ATTENDANCE_YEAR');
   });
+
+  it('locks the register in the order migration 0023 relies on, before reading anything', async () => {
+    // PGlite runs one transaction at a time, so this pins the text; tests/concurrency.pg.test.ts
+    // shows the behaviour on a real server. Reads share both locks, a confirmation shares the
+    // school-wide lock and holds its own section's exclusively, and both come first, in that order.
+    const source = async (name: string) => String((await db.pg.query<{ prosrc: string }>(
+      "select prosrc from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='edunexus' and p.proname=$1", [name])).rows[0]!.prosrc);
+    const context = await source('attendance_context_before_months');
+    const commit = await source('commit_daily_attendance');
+    const order = (text: string, parts: string[]) => parts.map(part => text.indexOf(part));
+    const [school, own, read] = order(context, ['pg_advisory_xact_lock_shared(82412001)', 'pg_advisory_xact_lock_shared(82412002,hashtext(p_section::text))', 'select * into s']);
+    expect(school).toBeGreaterThan(-1);
+    expect(own).toBeGreaterThan(school!);
+    expect(read).toBeGreaterThan(own!);
+    expect(context).not.toContain('pg_advisory_xact_lock(82412001)');
+    const [shared, section, plan] = order(commit, ['pg_advisory_xact_lock_shared(82412001)', 'pg_advisory_xact_lock(82412002,hashtext(p_section::text))', 'plan:=']);
+    expect(shared).toBeGreaterThan(-1);
+    expect(section).toBeGreaterThan(shared!);
+    expect(plan).toBeGreaterThan(section!);
+    expect(commit).not.toContain('pg_advisory_xact_lock(82412001)');
+  });
 });

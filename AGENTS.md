@@ -50,6 +50,7 @@ Work lands as one reviewable increment per commit. Every module in `src/modules/
 ### Database conventions
 
 - Writers acquire `pg_advisory_xact_lock(82412001)`, the shared academic-setup lock, then `select ... for share` on the school year row when year status matters.
+- **The daily register is the one exception, because 27 advisers use it at once.** Since `0023` its reads take `82412001` shared plus their section's lock `(82412002, hashtext(section_id))` shared, and a confirmation takes `82412001` shared plus its section's lock exclusively. Take locks first, before any read, and always in that order: a transaction holding a lock shared must never then ask for it exclusively. `npm run test:race` and `npm run test:load` are the proof; run both after touching any of this.
 - Every mutation takes the caller's last-read `version` and raises `P0003` on a mismatch. Never silently overwrite.
 - Every mutation writes an immutable journal row in the same transaction, with before/after snapshots, actor, reason and request ID. If the journal cannot be written, the whole change rolls back — there is a test for this in every module.
 - A reason is 10–500 single-line characters. Reuse `subjectReason` from `src/modules/subjects/contracts.ts`.

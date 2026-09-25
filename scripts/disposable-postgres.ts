@@ -16,10 +16,13 @@ export async function withPostgres<T>(name: string, port: string, work: (url: st
     '-c', 'max_connections=200');
   if (started.status !== 0) throw new Error(`Could not start a PostgreSQL container. Is Docker running?\n${started.stderr}`);
   try {
-    // pg_isready answers before the entrypoint's own restart finishes, so wait for a real query.
+    // The image runs a temporary server while it initialises, answers queries on
+    // it, then restarts. A query that lands in that window succeeds and the next
+    // connection is cut, so wait for the log line marking the real start first.
     let ready = false;
     for (let attempt = 0; attempt < 90 && !ready; attempt++) {
-      ready = docker('exec', name, 'psql', '-U', 'postgres', '-tAc', 'select 1').stdout.trim() === '1';
+      const initialised = docker('logs', name).stdout.includes('PostgreSQL init process complete');
+      ready = initialised && docker('exec', name, 'psql', '-U', 'postgres', '-tAc', 'select 1').stdout.trim() === '1';
       if (!ready) pause(1000);
     }
     if (!ready) throw new Error('PostgreSQL did not become ready.');
