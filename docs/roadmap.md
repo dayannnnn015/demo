@@ -58,6 +58,8 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.2 is implemented:** [section subject offerings](section-subjects.md) pin catalog details, support draft-only explicit refresh and preserve retirement/history. Teachers retain current adviser access without expanded learner permissions.
 
+**4A.1 and 4A.2 have had a screen since 0.33.0.** Managers maintain the catalog and each section's offerings on one screen, and advisers read their own section's subjects there.
+
 **Section 4A.3 is implemented:** [managerial assessment-policy drafts](assessment-policy-drafts.md) retain explicit Grades 1–6 applicability, source references and internally consistent component weights with versioned history. Draft and archived states are non-operational; no policy is approved, bound to offerings or used for calculations.
 
 **Section 4A.4 is implemented:** [reviewed assessment-policy adoption](assessment-policy-adoptions.md) records that the school adopted one exact unarchived draft revision for one school year, freezing that revision, an in-year adoption date and the school record reference carrying the decision. Later draft revisions never change a frozen snapshot, an adopted draft cannot be archived, one standing adoption exists per school year and policy, and withdrawal is a reviewed one-way action that preserves evidence.

@@ -12,6 +12,7 @@ import { Attendance } from './screens/Attendance';
 import { Months } from './screens/Months';
 import { Monitor } from './screens/Monitor';
 import { Followups } from './screens/Followups';
+import { Subjects } from './screens/Subjects';
 import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -141,14 +142,11 @@ export const routes: Route[] = [
   },
 
   {
-    id: 'subjects', nav: 'Subjects & offerings', icon: 'subjects', group: 'Academics', manager: true,
+    id: 'subjects', nav: 'Subjects & offerings', icon: 'subjects', group: 'Academics', built: true, ownHeader: true,
     title: 'Subjects and section offerings',
     lede: 'The subject catalog, and what each section takes.',
     record: 'subjects, section_subjects',
-    render: soon(
-      'Maintain the catalog and pick each section\'s subjects.',
-      'An offering pins the exact catalog revision it was chosen from, so a later edit to a subject never silently rewrites a section that already started.',
-    ),
+    render: p => <Subjects {...p} />,
   },
   {
     id: 'policies', nav: 'Assessment policies', icon: 'policies', group: 'Academics', manager: true,

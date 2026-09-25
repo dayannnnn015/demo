@@ -1336,6 +1336,9 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
    for assistive technology but loses the browser's inset border. */
 fieldset.choose { border: 0; margin: 0 0 var(--s4); padding: 0; min-width: 0; }
 fieldset.choose > legend { padding: 0; margin-bottom: var(--s2); }
+ul.plain { list-style: none; margin: 0; padding: 0; }
+.checks { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+.checks .check-line { min-height: 28px; }
 .month-nav { display: inline-flex; align-items: center; gap: var(--s2); }
 .month-nav b { min-width: 12ch; text-align: center; font-size: var(--t-13); font-weight: 650; color: var(--ink-900); }
 .month-nav .btn { padding: var(--s1) var(--s2); }

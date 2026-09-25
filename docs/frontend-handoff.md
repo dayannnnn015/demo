@@ -222,11 +222,15 @@ The screen states its window beside every count, says that a run may have starte
 
 Owners are named from the whole staff list, so a suspended manager still appears against their cases; only active principals and administrative officers are offered as a new owner. There is no reminder, badge or alert anywhere on the screen, and it says why.
 
-## Academic setup screens to build
+## The subjects and offerings screen
 
-[Subject catalog](subject-catalog.md) and [section offerings](section-subjects.md) are API-only. Staff can read catalog metadata; managers maintain it and read history. Show subject code, kind, grade applicability, active state and version. Grade 0 means Kindergarten, not a numeric grading policy. Catalog archival preserves existing offerings.
+[Subject catalog](subject-catalog.md) and [section offerings](section-subjects.md) share one screen: `web/screens/Subjects.tsx`, at `/subjects`. It is open to advisers, because the API lets them read the catalog and the offerings of the sections they currently advise; the add, offer, edit and history controls appear only for managers, and the API refuses them to anyone else regardless.
 
-Managers select active, applicable subjects using the current catalog version. Display offering `subject_snapshot` as the preserved selection, separately from current catalog metadata. Refresh is explicit and draft-year only. Save the current offering version and reason; send a null subject version unless refreshing. Retired offerings remain available through the active filter. Closed years are read-only for managers and unavailable to teachers. Teachers see only their current advised open-year sections. Pagination is UUID-based; sort collected results by display order, then code/id. Inspect history after lost responses and require a new decision after conflicts. No grading controls should be inferred from these metadata endpoints.
+**Two tables that are allowed to disagree.** Section offerings come first, because that is what a section is actually taught; the catalog sits beneath. Each offering row shows the subject *as chosen* from `subject_snapshot`, its pinned version, and a "Catalog now" badge comparing it with the current catalog record, so a later rename is visible without being applied. Opening the row explains the difference and, only in a draft year, offers the explicit refresh — which sends `refresh_subject: true` with the current catalog version. Every other offering save sends `refresh_subject: false` and `subject_version: null`.
+
+**Offering a subject** offers only catalog subjects that are available, apply to the section's grade, and are not already offered there — retired ones included, since adding a retired subject again is a reactivation, not a second row. The chosen subject's current version is what gets pinned. Both lists are UUID-paged, so the screen collects every page before sorting offerings by display order, then code, then id (`byDisplay`).
+
+**Grade applicability is a set of checkboxes.** `Editor` gained a `checkboxes` field type for it: held as a comma-joined string like every other value, submitted as the option keys in option order, and marked like any other field when the server rejects it. Grade 0 is always written "Kindergarten" (`gradesText`) and is a grade level, never a numeric grading target. Nothing on this screen carries a weight, component or formula, and it says so.
 
 ## Assessment-policy draft screens to build
 

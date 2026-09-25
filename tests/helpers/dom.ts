@@ -1,7 +1,9 @@
-import { act, type ReactNode } from 'react';
+import { act, createElement, useMemo, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import request from 'supertest';
 import { ApiError, type Api } from '../../web/api';
+import type { Route } from '../../web/routes';
+import type { Status } from '../../web/components/primitives';
 
 /**
  * Drives a workspace screen in a real DOM against the real API.
@@ -43,8 +45,30 @@ export async function mount(node: ReactNode) {
   await act(async () => { root.render(node); });
   return {
     host,
+    async rerender(next: ReactNode) { await act(async () => { root.render(next); }); },
     async unmount() { await act(async () => { root.unmount(); }); host.remove(); },
   };
+}
+
+/**
+ * A route rendered the way the shell renders it: one API client for the life
+ * of the screen, and a `reload` that advances the token every fetch is keyed
+ * on. A client rebuilt on each render would change identity every time and
+ * re-run every effect that depends on it. Statuses the screen reports are
+ * collected so a test can read what the page's own status line would say.
+ */
+export async function showRoute(app: Parameters<typeof request>[0], route: Route, { actor, manager, log = [] }: { actor: string; manager: boolean; log?: string[] }) {
+  const statuses: Status[] = [];
+  function Host() {
+    const [token, setToken] = useState(0);
+    const api = useMemo(() => serverApi(app, actor, log), []);
+    return route.render({
+      api, me: { user_id: actor, role: manager ? 'principal' : 'teacher', display_name: 'Synthetic staff' }, manager,
+      setStatus: status => { statuses.push(status); }, reload: () => setToken(t => t + 1), token, route,
+    });
+  }
+  const view = await mount(createElement(Host));
+  return { ...view, statuses, lastStatus: () => statuses[statuses.length - 1] };
 }
 
 /** Lets pending fetches land and React commit what they set. */
@@ -94,6 +118,16 @@ export async function fill(element: Element | undefined | null, value: string) {
     element.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await settle();
+}
+
+/** Picks an option by value once it exists — a select rendered before its list loads has nothing to pick yet. */
+export async function choose(root: ParentNode, label: string | RegExp, value: string) {
+  const select = await waitFor(() => {
+    const found = byLabel<HTMLSelectElement>(root, label);
+    return found && [...found.options].some(o => o.value === value) && found;
+  }, `the option ${value} under ${label}`);
+  if (select.value !== value) await fill(select, value);
+  return select;
 }
 
 export async function check(element: Element | undefined | null) {

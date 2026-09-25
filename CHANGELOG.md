@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.33.0 | The subjects and offerings screen; the shared form no longer loses what is being typed | — |
 | 0.32.0 | The follow-up cases screen, and screen tests that drive the real API in a DOM | — |
 | 0.31.0 | The attendance section gets its screens: the daily register, monthly consolidation and the absence monitor | — |
 | 0.30.0 | The instructional calendar screen: a month at a time, preview and confirm, change history | — |
@@ -44,6 +45,16 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.33.0 — Subjects and offerings get a screen
+
+Sections 4A.1 and 4A.2 have had an API since 0.13.0 and 0.14.0. `web/screens/Subjects.tsx` puts the subject catalog and each section's offerings on one screen. It is open to advisers for reading, since the API already lets them read the catalog and their own sections' offerings. Adding, offering, editing and history are for managers only.
+
+**An offering keeps the revision it was chosen from, and the screen shows when the catalog has moved on.** Each row shows the subject as chosen, its pinned version and a "Catalog now" badge. The explicit refresh is offered only in a draft year, which is the only time the API allows it. **Offering a subject** lists only available catalog subjects that apply to the section's grade and are not already there, including retired ones. **Grade applicability** is a set of checkboxes, written back as a register would write it — "Kindergarten, Grades 1–3". Nothing on the screen carries a weight, a component or a formula.
+
+**Fixed: the shared form lost what was being typed.** `Editor` reset its values whenever its `fields` or `initial` changed identity, and nearly every screen builds both inline, so any re-render of the parent — a fetch landing, a status update — wiped a half-typed form. The first subject test found it. The form now resets only when the fields or the initial record actually differ, and `tests/web-editor.test.ts` reproduces the old behaviour (it fails against the previous code) and checks that a genuinely new record still resets the form. `Editor` also gained the `checkboxes` field type.
+
+`tests/web-subjects.test.ts` drives the screen against the real API. It adds a subject with grades chosen as a set and checks the stored row. It shows a rejection beside its field. It offers only applicable subjects and pins the revision chosen. It shows a section keeping its revision after a rename, refuses a refresh in an active year and performs one in a draft year. It retires an offering and hides it until retired ones are included. It turns a stale edit into a conflict rather than an overwrite, and gives an adviser a read-only view of the one section they advise. 362 tests across 28 files. No migration, endpoint, schema or permission change, and no gate opened.
 
 ## 0.32.0 — Follow-up cases get a screen
 

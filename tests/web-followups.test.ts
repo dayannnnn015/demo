@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createElement, useState } from 'react';
+import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import request from 'supertest';
 import pino from 'pino';
 import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/http-app.js';
 import { testDatabase, ids } from './helpers/database.js';
-import { byLabel, byText, check, click, fill, mount, serverApi, waitFor } from './helpers/dom';
-import { Due, actionsFor, changeBody, dueProblem, issueText, monitorView, Followups } from '../web/screens/Followups';
+import { byLabel, byText, check, click, fill, showRoute, waitFor } from './helpers/dom';
+import { Due, actionsFor, changeBody, dueProblem, issueText, monitorView } from '../web/screens/Followups';
 import { routes } from '../web/routes';
 
 /**
@@ -75,16 +75,8 @@ describe('the follow-up screen against the API', () => {
   const post = (url: string, body: object) => request(app).post(`/api/v1${url}`).set('Authorization', `Bearer ${ids.principal}`).send(body);
   const route = routes.find(r => r.id === 'followups')!;
 
-  /** The screen as the shell hosts it, with a real `reload` that re-keys every fetch. */
-  function Host({ actor, log }: { actor: string; log: string[] }) {
-    const [token, setToken] = useState(0);
-    const api = serverApi(app, actor, log);
-    return createElement(Followups, {
-      api, me: { user_id: actor }, manager: true, setStatus: () => {}, reload: () => setToken(t => t + 1), token, route,
-    });
-  }
   const show = async (actor = ids.principal, log: string[] = []) => {
-    const view = await mount(createElement(Host, { actor, log }));
+    const view = await showRoute(app, route, { actor, manager: actor !== ids.teacher, log });
     unmount = view.unmount;
     return view.host;
   };

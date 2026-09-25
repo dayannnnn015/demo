@@ -8,6 +8,8 @@ import type { Route } from '../routes';
 export type Field = {
   key: string;
   label: string;
+  /** `checkboxes` is a set chosen from `options`. It is held as a comma-joined
+   *  string like every other value and submitted as an array of option keys. */
   type?: string;
   optional?: boolean;
   options?: [string, string][];
@@ -140,6 +142,34 @@ function Control({ field, id, value, error, onChange, compact }: {
     'aria-invalid': error ? true : undefined,
     'aria-describedby': describedBy,
   };
+  if (field.type === 'checkboxes') {
+    const chosen = value ? value.split(',') : [];
+    return (
+      <fieldset className={`field choose${field.wide ? ' wide' : ''}${error ? ' bad' : ''}`} id={id} tabIndex={-1} aria-invalid={error ? true : undefined} aria-describedby={describedBy}>
+        <legend className="label">{field.label}</legend>
+        <span className="checks">
+          {(field.options ?? []).map(([key, text]) => (
+            <label key={key} className="check-line">
+              <input
+                type="checkbox"
+                name={field.key}
+                value={key}
+                checked={chosen.includes(key)}
+                onChange={e => {
+                  const next = e.target.checked ? [...chosen, key] : chosen.filter(k => k !== key);
+                  // Kept in option order, so the same set always reads the same way.
+                  onChange((field.options ?? []).map(([k]) => k).filter(k => next.includes(k)).join(','));
+                }}
+              />
+              <span>{text}</span>
+            </label>
+          ))}
+        </span>
+        {error ? <span className="field-error" id={errorId}><Icon name="alert" size={14} />{error}</span> : null}
+        {field.hint && !compact ? <span className="hint" id={hintId}>{field.hint}</span> : null}
+      </fieldset>
+    );
+  }
   return (
     <div className={`field${field.wide ? ' wide' : ''}${error ? ' bad' : ''}`}>
       <label className="label" htmlFor={id}>
@@ -194,7 +224,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   const controlId = (key: string) => `${scope}-${key}`;
   const start = useCallback(() => Object.fromEntries(fields.map(f => {
     const raw = initial?.[f.key];
-    return [f.key, raw === null || raw === undefined ? (f.options ? (f.options[0]?.[0] ?? '') : '') : String(raw)];
+    return [f.key, raw === null || raw === undefined ? (f.options && f.type !== 'checkboxes' ? (f.options[0]?.[0] ?? '') : '') : String(raw)];
   })), [fields, initial]);
   const [values, setValues] = useState<Record<string, string>>(start);
   const [busy, setBusy] = useState(false);
@@ -203,7 +233,12 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   const [rejected, setRejected] = useState(0);
   const summary = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setValues(start()); setBad([]); }, [start]);
+  // Reset only when what the form describes changes. Screens build `fields`
+  // and `initial` inline, so their identity changes on every render of the
+  // parent, and resetting on identity wiped whatever was being typed the
+  // moment an unrelated fetch landed.
+  const signature = JSON.stringify([fields.map(f => [f.key, f.type ?? '', f.options?.map(o => o[0]) ?? null]), initial ?? null]);
+  useEffect(() => { setValues(start()); setBad([]); }, [signature]);
 
   // A failed save can reject several fields at once in a form taller than the
   // window, so the reader is put in one place that names every problem and
@@ -227,7 +262,9 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
       const payload: Record<string, unknown> = {};
       for (const field of fields) {
         const text = values[field.key] ?? '';
-        payload[field.key] = field.type === 'number' ? Number(text) : (text.trim() || null);
+        payload[field.key] = field.type === 'number' ? Number(text)
+          : field.type === 'checkboxes' ? (text ? text.split(',') : [])
+          : (text.trim() || null);
       }
       try {
         await onSubmit(payload);
