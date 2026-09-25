@@ -3,6 +3,7 @@ import type { Api, Page, Row } from '../api';
 import { query } from '../api';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
+import { IdentityHistory, IdentitySheet, LrnCorrection, LrnHistory, ReviewActions } from './Reviews';
 import {
   Badge, Button, Callout, Cell, Editor, EmptyState, Finder, FormSheet, PageHeader, Pager, PrintButton,
   Table, Task, Unrecorded, gradeName, learnerName, sentence, value, type Field, type Status,
@@ -29,11 +30,13 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
   const [sections, setSections] = useState<Row[]>([]);
   const [records, setRecords] = useState<Record<string, Row[]>>({});
   const [adding, setAdding] = useState(false);
+  const [linked, setLinked] = useState(false);
+  const [identity, setIdentity] = useState<{ learner: Row; action: 'link' | 'unlink' } | null>(null);
 
   useEffect(() => {
     setRows(null);
-    void api<Page>(`/learners${query({ ...filters, limit: 25, offset })}`).then(setRows).catch(() => setRows({ items: [] }));
-  }, [api, filters, offset, token]);
+    void api<Page>(`/learners${query({ ...filters, include_linked: linked ? 'true' : undefined, limit: 25, offset })}`).then(setRows).catch(() => setRows({ items: [] }));
+  }, [api, filters, linked, offset, token]);
 
   useEffect(() => {
     void api<Page>('/academic-years').then(r => setYears(r.items)).catch(() => setYears([]));
@@ -81,6 +84,12 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
               { key: 'birth_date', label: 'Birth date', type: 'date', optional: true },
             ]}
           />
+          {manager ? (
+            <label className="check-line">
+              <input type="checkbox" checked={linked} onChange={event => { setLinked(event.target.checked); setOffset(0); }} />
+              <span>Include records linked into another</span>
+            </label>
+          ) : null}
         </div>
         <Table
           loading={rows === null}
@@ -93,7 +102,7 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
             {
               header: 'Learner',
               cell: r => <Cell
-                title={learnerName(r)}
+                title={<>{learnerName(r)}{r.merged_into ? <> <Badge tone="info">Linked</Badge></> : null}</>}
                 // An LRN the school has not been issued yet is a gap in the
                 // record, not a value someone left out.
                 meta={r.lrn == null ? <Unrecorded label="LRN not issued" /> : `LRN ${value(r, 'lrn')}`}
@@ -107,6 +116,19 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
           detail={row => {
             const id = String(row.id);
             const loaded = records[id];
+            if (manager && row.merged_into) {
+              return (
+                <>
+                  <Callout tone="info" title="Linked into another record">
+                    This entry was recorded as the same child as another, which is now the record that counts. It is kept as it was and cannot be edited, given an LRN or enrolled.
+                  </Callout>
+                  <ReviewActions>
+                    <button type="button" className="btn secondary" onClick={() => setIdentity({ learner: row, action: 'unlink' })}>Reverse this link</button>
+                  </ReviewActions>
+                  <Task title="Identity links" note="Newest first"><IdentityHistory api={api} learnerId={id} /></Task>
+                </>
+              );
+            }
             return (
               <>
                 {manager ? (
@@ -123,7 +145,20 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
                           fields={[{ key: 'lrn', label: 'Learner Reference Number', pattern: '[0-9]{12}', maxLength: 12, hint: 'Exactly twelve digits, leading zeroes included.' }]}
                           onSubmit={data => api(`/learners/${row.id}/lrn`, 'PATCH', { ...data, version: row.version })} />
                       </Task>
-                    ) : null}
+                    ) : (
+                      <Task title="Correct the assigned LRN" note="Reviewed, and the old number kept">
+                        <LrnCorrection api={api} learner={row} setStatus={setStatus} onDone={reload} />
+                        <h3>Earlier corrections</h3>
+                        <LrnHistory api={api} learnerId={id} />
+                      </Task>
+                    )}
+                    <Task title="Identity links" note="Duplicate records of the same child">
+                      <p className="muted">When two registry entries are the same child, link the duplicate to the record that is kept. Both stay on file.</p>
+                      <ReviewActions>
+                        <button type="button" className="btn secondary" onClick={() => setIdentity({ learner: row, action: 'link' })}>This is the same child as another record</button>
+                      </ReviewActions>
+                      <IdentityHistory api={api} learnerId={id} />
+                    </Task>
                   </>
                 ) : null}
 
@@ -157,10 +192,14 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
         <Pager offset={offset} count={found} hasMore={Boolean(rows?.pagination?.has_more)} onChange={setOffset} />
       </div>
 
-      {manager ? (
-        <Callout tone="info" title="Not on this screen yet">
-          Correcting an assigned LRN, merging two records for the same child, and voiding a record entered by mistake exist in the API but have no screen.
-        </Callout>
+      {identity ? (
+        <IdentitySheet
+          api={api}
+          learner={identity.learner}
+          action={identity.action}
+          onClose={() => setIdentity(null)}
+          onDone={text => { setIdentity(null); setStatus({ text, kind: 'done' }); reload(); }}
+        />
       ) : null}
 
       {adding ? (

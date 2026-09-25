@@ -183,6 +183,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
 - **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
+- **Reviewed corrections**: correct a recorded timeline or a year's grade, void or restore an annual record, correct an assigned LRN, and link or unlink duplicate registry entries for the same child. Each shows the server's own review of the change before it is confirmed, and every original stays on file.
 
 **A record that does not exist is drawn, not left blank.** An unmarked attendance session and an unentered score are null, never zero and never "present", so a missing value carries a ruled diagonal mark and says what is missing — "LRN not issued", "No adviser". The same mark, at panel size, is what the Overview uses to name the general average, attendance rate, academic standing and class ranking this system may not state, and what each of them waits on. An em dash would read as a value somebody typed.
 
@@ -194,7 +195,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 
 Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
 
-Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed learner corrections stay API-only. Advisers read the subjects offered to their own sections; only managers change the catalog or an offering. Attendance does not: an adviser marks and monitors their own sections, while consolidation, calendars and every change history are manager-only.
+Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed learner corrections — an LRN, a timeline, a duplicate identity, a voided record, a grade placement — are manager-only and each goes through a review before it is confirmed. Advisers read the subjects offered to their own sections; only managers change the catalog or an offering. Attendance does not: an adviser marks and monitors their own sections, while consolidation, calendars and every change history are manager-only.
 
 A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
 

@@ -4,9 +4,10 @@ import { message, query } from '../api';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
+import { PlacementSheet, RecordHistory, RecordSheet, ReviewActions, TimelineHistory, TimelineSheet } from './Reviews';
 import {
   Badge, Callout, Cell, Editor, EmptyState, Finder, PageHeader, PrintButton, Select, StatusLine, Table,
-  TableSkeleton, Unrecorded, gradeName, idle, learnerName, sentence, value, yearName, type Status,
+  TableSkeleton, Task, Unrecorded, gradeName, idle, learnerName, sentence, value, yearName, type Status,
 } from '../components/primitives';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -98,14 +99,12 @@ function MovementForm({ api, enrollment, sections, setStatus, reload }: {
   );
 }
 
+/** The movements as they were first recorded. A correction supersedes them without rewriting them. */
 function History({ api, enrollment }: { api: Api; enrollment: Row }) {
   const [rows, setRows] = useState<Page | null>(null);
-  const [open, setOpen] = useState(false);
   useEffect(() => {
-    if (!open) return;
     void api<Page>(`/enrollments/${enrollment.id}/history${query({ limit: 50 })}`).then(setRows).catch(() => setRows({ items: [] }));
-  }, [api, enrollment.id, open]);
-  if (!open) return <button type="button" className="btn ghost small" onClick={() => setOpen(true)}><Icon name="activity" size={14} />Show movement history</button>;
+  }, [api, enrollment.id]);
   return (
     <Table
       loading={rows === null}
@@ -198,6 +197,53 @@ function EnrolSheet({ api, sectionId, sectionLabel, reload, onClose, onDone }: {
   );
 }
 
+type Review = 'timeline' | 'placement' | 'void' | 'restore';
+
+/**
+ * Everything a manager can do to one annual record: record a real movement,
+ * or correct what was recorded — its dated history, its grade, or whether it
+ * counts at all. The histories sit underneath, because a lost response is
+ * checked there before anything is tried twice.
+ */
+function RecordPanel({ api, row, closed, sections, sectionName, name, setStatus, reload }: {
+  api: Api; row: Row; closed: boolean; sections: Row[]; sectionName: (id: string) => string; name: string;
+  setStatus: (s: Status) => void; reload: () => void;
+}) {
+  const [review, setReview] = useState<Review | null>(null);
+  const voided = row.record_state === 'voided';
+  const done = (text: string) => { setReview(null); setStatus({ text, kind: 'done' }); reload(); };
+  return (
+    <>
+      {voided ? (
+        <Callout tone="attention" title="This record is voided">
+          It does not count, and it is kept only as evidence: no movement or correction can be recorded against it until it is restored.
+        </Callout>
+      ) : null}
+      {closed ? <p className="muted">A closed school year cannot take further movements or corrections. Its histories are below.</p> : null}
+      {!voided && !closed ? <MovementForm api={api} enrollment={row} sections={sections} setStatus={setStatus} reload={reload} /> : null}
+      {!closed ? (
+        <ReviewActions>
+          {voided ? <button type="button" className="btn secondary" onClick={() => setReview('restore')}>Restore this enrollment</button> : (
+            <>
+              <button type="button" className="btn secondary" onClick={() => setReview('timeline')}>Correct the timeline</button>
+              <button type="button" className="btn secondary" onClick={() => setReview('placement')}>Correct the grade</button>
+              <button type="button" className="btn secondary" onClick={() => setReview('void')}>Void this enrollment</button>
+            </>
+          )}
+        </ReviewActions>
+      ) : null}
+      <hr className="rule" />
+      <Task title="Movements as first recorded" note="Never rewritten"><History api={api} enrollment={row} /></Task>
+      <Task title="Corrections" note="Timeline and grade, newest first"><TimelineHistory api={api} enrollmentId={String(row.id)} sectionName={sectionName} /></Task>
+      <Task title="Void and restore reviews" note="Newest first"><RecordHistory api={api} enrollmentId={String(row.id)} /></Task>
+
+      {review === 'timeline' ? <TimelineSheet api={api} enrollment={row} sections={sections} sectionName={sectionName} onClose={() => setReview(null)} onDone={done} /> : null}
+      {review === 'placement' ? <PlacementSheet api={api} enrollment={row} sections={sections} sectionName={sectionName} onClose={() => setReview(null)} onDone={done} /> : null}
+      {review === 'void' || review === 'restore' ? <RecordSheet api={api} enrollment={row} action={review} learnerName={name} onClose={() => setReview(null)} onDone={done} /> : null}
+    </>
+  );
+}
+
 export function Enrollment({ api, manager, setStatus, reload, token, route }: Props) {
   const [years, setYears] = useState<Row[] | null>(null);
   const [yearId, setYearId] = useState('');
@@ -257,6 +303,7 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
   const closed = year?.status === 'closed';
   const label = section ? `${gradeName(section.grade_level)} · ${String(section.name)}` : 'this section';
   const named = (row: Row) => { const learner = learners[String(row.learner_id)]; return learner ? learnerName(learner) : 'Loading…'; };
+  const sectionName = (id: string) => String(sections.find(s => s.id === id)?.name ?? 'a section outside this year');
   const listed = rows?.items.length ?? 0;
 
   return (
@@ -311,22 +358,14 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
           detailLabel="Open"
           actionsLabel="Movement"
           detail={row => {
-            if (row.record_state === 'voided') return <p className="muted">This record was voided and is kept only as evidence. Restoring it is a reviewed workflow that has no screen yet.</p>;
-            if (closed) return <p className="muted">A closed school year cannot take further movements.</p>;
-            if (!manager) return <p className="muted">Only a principal or administrative officer can record movements.</p>;
-            return (
-              <>
-                <MovementForm api={api} enrollment={row} sections={sections} setStatus={setStatus} reload={reload} />
-                <hr className="rule" />
-                <History api={api} enrollment={row} />
-              </>
-            );
+            if (!manager) return <p className="muted">Only a principal or administrative officer can record movements or corrections.</p>;
+            return <RecordPanel api={api} row={row} closed={closed} sections={sections} sectionName={sectionName} name={named(row)} setStatus={setStatus} reload={reload} />;
           }}
         />
       </div>
 
-      <Callout tone="info" title="Not on this screen yet">
-        Correcting a recorded movement, voiding an enrollment entered by mistake and correcting a grade placement exist in the API but have no screen. Promotion to the next grade is not built at all.
+      <Callout tone="info" title="Not built">
+        Promotion to the next grade does not exist yet. Correcting a grade here fixes a year recorded under the wrong grade; it never moves a learner up.
       </Callout>
 
       {enrolling && section ? (

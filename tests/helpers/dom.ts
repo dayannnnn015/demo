@@ -130,6 +130,13 @@ export async function choose(root: ParentNode, label: string | RegExp, value: st
   return select;
 }
 
+/** Opens a table row's panel, leaving it alone if it is already open — the table keeps a row open across a reload. */
+export async function expand(row: Element | undefined | null) {
+  const toggle = row?.querySelector<HTMLButtonElement>('button.row-toggle');
+  if (!toggle) throw new Error('That row has no panel to open.');
+  if (toggle.getAttribute('aria-expanded') !== 'true') await click(toggle);
+}
+
 export async function check(element: Element | undefined | null) {
   if (!element) throw new Error('No checkbox or radio to choose.');
   await act(async () => { (element as HTMLInputElement).click(); });

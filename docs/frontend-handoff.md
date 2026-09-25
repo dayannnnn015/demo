@@ -166,25 +166,21 @@ On a lost response, retry the same preview ID and payload or fetch its receipt. 
 
 For LRN correction, show the current LRN and version, collect the corrected value and reason, and obtain explicit manager review before posting `reviewed=true`. Refresh after a conflict. The separate history endpoint contains sensitive old/new LRNs and reasons; render with text properties and keep it manager-only. This is a review by the acting manager, not a second-person approval queue.
 
-## Enrollment timeline review screens to build
+## The reviewed correction screens
 
-Read `/api/v1/enrollments/:id/timeline` for effective history. The older `/history` route is an original-movement audit and now labels its interpretation; it must not be used alone for attendance/report calculations after corrections. Display correction history separately, using the `before_version` cursor and at most ten snapshots per page.
+Sections 2B.1 (LRN correction), 2B.2, 2B.3, 2B.4 and 2B.5 are drawn by `web/screens/Reviews.tsx` and hosted where the records already live: an annual record's panel on the **Enrollment** screen offers *Correct the timeline*, *Correct the grade* and *Void this enrollment* (or *Restore* on a voided record), and a learner's panel on the **Learner registry** offers *Correct the assigned LRN* and the identity links. All of them are manager-only, like the endpoints.
 
-Managers edit the complete effective sequence, then POST its current version, entries, and correction reason to `/timeline/preview`. Show the returned before/after entries, sections/advisers, earliest affected date, and previous/proposed latest state. Confirmation sends `after_entries` as `entries`, the unchanged reason/version/hash, and `reviewed=true` to `/timeline/corrections`. These two POST routes and the placement preview/correction routes accept up to 256 KiB/1000 entries. Preserve dates as calendar strings.
+**One shape for all five.** Propose, read the server's own review, confirm that exact review: `useReview` holds the preview, sends the unchanged body with `review_hash` and `reviewed: true`, and drops the review on a conflict because its hash is dead. Confirmation is disabled whenever `can_commit` is false or no hash came back, and every `issues` code is rendered as the sentence saying what to do (`identityIssues`, `recordIssues`). LRN correction has no server preview, so its review — old and new numbers side by side — is drawn in the client before `reviewed: true` is sent.
 
-Refresh and require new review after conflicts. If a response was lost, inspect history for the submitted `review_hash` and actor before attempting another change; correction commits use version conflicts rather than import-style retry receipts. Clear timeline snapshots on sign-out and render all record/reason text safely. Closed years, annual-record cancellation, and grade/year changes are not editable through this workflow.
+**Timelines are edited whole.** The sheet loads `/timeline`, lets a manager change dates, sections and reasons, remove a movement or add a missed one, and sends the complete sequence. `timelineProblems()` restates the API's rules and marks the offending entry before a request is spent; `normalise()` keeps a withdrawal in the section it left. Sections are limited to the enrollment's own grade and year. The review draws the record as it is beside the record as it would be, with the earliest affected date and both latest states; confirmation sends `after_entries`. The original movements stay on file and are shown separately as *Movements as first recorded*.
 
-## Learner identity review screens to build
+**A grade correction maps sections.** Choose the verified grade, then a section in it for every section the year passed through (`sectionsOf`, `remap`); dates, types and reasons are untouched, and the screen says plainly it is not a promotion.
 
-[Section 2B.3](learner-identity.md) provides manager-only preview, confirmation, and history for duplicate links and reversal. Show both profiles and affected annual records, require a reason, display every blocking issue, and confirm only the unchanged preview with `reviewed=true`. Refresh both profile versions and rosters afterward. Inspect history on a lost response before retrying.
+**Voiding is not withdrawal.** The sheet offers *entered in error* or *duplicate of an enrollment that is kept*; the second finds the kept record through a registry search, which reads only when asked. A voided record's panel explains that it counts for nothing and offers only restoration, and the class list marks it.
 
-Enrollment `learner_id` now identifies the retained profile; `recorded_learner_id` preserves original ownership. Use the retained ID for current profile display. Linked profiles are read-only and hidden from normal lists; managers can use `include_linked=true` for reconciliation work. Clear all snapshots on sign-out. No learner or reconciliation UI was added in this release.
+**Identity links keep both records.** From a learner's panel a manager searches for the other entry, chooses which record is kept, reviews both profiles and every enrollment of both, and confirms. Linked entries are hidden from the registry unless *Include records linked into another* is ticked, and a linked entry's panel offers only *Reverse this link*.
 
-## Annual enrollment record review screens to build
-
-[Section 2B.4](enrollment-records.md) adds manager-only preview, confirmation, and history for void/restoration. Show validity separately from enrolled/withdrawn status. Display both timelines and profiles for duplicate cases, the retained enrollment, all blocking issues, and an explicit reason before confirmation. Record-review snapshot enrollment IDs preserve original ownership; use its separate `learner`/`recorded_learner` objects to distinguish retained and original profiles.
-
-Enrollment lists default to valid records. Managers can request `record_state=voided` or `all`; teachers remain restricted. Show voided timeline/history as evidence with `usable_for_reporting=false`, and disable movement/timeline edits until restored. A historical import receipt does not prove current record validity. Use current versions and unchanged review hashes; inspect history on a lost response. Clear all protected snapshots on sign-out. These screens remain unimplemented.
+Each record's histories — corrections, void and restore reviews, identity links, LRN corrections — sit under its panel, because a lost response is checked there before anything is tried twice.
 
 ## The daily attendance screen
 
@@ -283,10 +279,3 @@ Do not compute or display a total, average, percentage or grade anywhere on thes
 **Conflicts are explained, not printed.** `SECTION_OVERRIDES_PRESENT` and `BASE_DAY_UNCONFIGURED` are rendered as the sentence that says what to do next, with the affected sections named. A bare code tells a school head nothing.
 
 Two things this screen does not do. It has no field-level error mapping, because `Editor` cannot express a two-step review; a server rejection goes to the sheet's own status line, and the client enforces the length and required rules so most never reach it. And it is manager-only, so an adviser cannot yet see the schedule for their own section, which the API would allow — the daily attendance screen shows the effective schedule for the day it is marking, which is the case that matters.
-
-## Grade-placement review screens to build
-
-
-[Section 2B.5](grade-placement.md) adds manager-only whole-year grade correction. Read the current effective timeline, select the verified target grade, and map every entry to a section in that grade and year. Dates, types, and reasons stay unchanged. Show old/new grades, before/after sections and advisers, and the reason before submitting the unchanged version/hash with `reviewed=true`. This is not a promotion action.
-
-Unified timeline correction history now includes `correction_kind`, `previous_grade_level`, and `corrected_grade_level`; legacy null grades mean unknown, not Kindergarten. The placement history endpoint filters to placement revisions. Current timeline responses include grade/year; original history can reference sections from the previously recorded grade. Refresh rosters and versions after confirmation, require new review after conflicts, and inspect history on lost responses. No new frontend screens were added.

@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.34.0 | Screens for the reviewed corrections: timeline, grade placement, void and restore, LRN, identity links | — |
 | 0.33.0 | The subjects and offerings screen; the shared form no longer loses what is being typed | — |
 | 0.32.0 | The follow-up cases screen, and screen tests that drive the real API in a DOM | — |
 | 0.31.0 | The attendance section gets its screens: the daily register, monthly consolidation and the absence monitor | — |
@@ -45,6 +46,18 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.34.0 — The reviewed corrections get screens
+
+Five manager-only workflows have had APIs since 0.3.0–0.7.0: LRN correction, enrollment timeline correction, identity links, void and restoration, and grade-placement correction. `web/screens/Reviews.tsx` draws all five, and they open where the records already live. An annual record's panel on the Enrollment screen offers the timeline, grade and void or restore reviews. A learner's panel in the registry offers LRN correction and identity links.
+
+**One shape for all five.** Propose, read the server's own review, then confirm that exact review with its hash. A conflict drops the review rather than retrying it, and every blocking issue code is written as the sentence saying what to fix. LRN correction has no server preview, so the screen draws the old and new numbers side by side before `reviewed: true` is sent.
+
+**Timelines are edited whole and checked first.** A manager changes dates, sections and reasons, removes a movement recorded in error or adds a missed one. `timelineProblems()` marks an impossible entry before any request, and the review sets the record as it is beside the record as it would be. A grade correction maps each section the year passed through to one in the corrected grade, keeps every date, and says it is not a promotion. Voiding offers *entered in error* or *duplicate of an enrollment that is kept*, found through the registry. Linking lets the manager choose which record is kept and review both profiles and every enrollment before confirming. Linked entries are hidden unless asked for, and then offer only reversal.
+
+Each record's histories sit under its panel: movements as first recorded, corrections, void and restore reviews, identity links and LRN corrections.
+
+`tests/web-reviews.test.ts` has 13 cases, most of them driving the screens against the real API. It corrects a movement date and checks that the original movement is still on file. It refuses an impossible timeline without sending it. It corrects a year's grade by mapping sections, voids and restores a record, and voids a duplicate that names the record kept. It corrects an LRN, links and reverses a duplicate identity, and shows the refusal to link away an LRN-bearing record. No migration, endpoint, schema or permission change, and no gate opened.
 
 ## 0.33.0 — Subjects and offerings get a screen
 
