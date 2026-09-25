@@ -1,24 +1,24 @@
 # Where things stand
 
-**Updated:** 2026-09-25 · **Version:** 0.36.0 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-25 · **Version:** 0.37.0 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
 
-**0.36.0 gave assessment policies a screen** (`web/screens/Policies.tsx`): drafts, adoptions and bindings, with weights typed from school documents, no defaults, and nothing computed from them. Only the Scores route is still a placeholder, and it waits on the user's decision below.
+**0.37.0 added `GET /enrollment-counts`** — learner counts by grade and status that name nobody and write no access row — and the Overview now shows *Learners enrolled* and *Learners by grade* from it.
 
-Earlier this session: **0.35.0** roster import, **0.34.0** the reviewed corrections (timeline, grade, void/restore, LRN, identity links), **0.33.0** subjects and offerings plus a fix to the shared `Editor` losing input, **0.32.0** follow-up cases and DOM tests against the real API (`tests/helpers/dom.ts`, `tsconfig.web-tests.json`; see AGENTS.md).
+Earlier this session: **0.36.0** assessment policies, **0.35.0** roster import, **0.34.0** the reviewed corrections, **0.33.0** subjects and offerings plus a fix to the shared `Editor` losing input, **0.32.0** follow-up cases and DOM tests against the real API (`tests/helpers/dom.ts`, `tsconfig.web-tests.json`; see AGENTS.md). Every route except Scores is now a real screen.
 
-No gate opened. No endpoint, schema, permission or academic behaviour changed.
+No gate opened. No migration, permission or academic behaviour changed.
 
 ## Single next action
 
-**Add the aggregate learner-count endpoint** so the Overview can show a roster count without writing an access row per learner, then point the DOM-test harness at the four attendance screens from 0.30.0–0.31.0, which have never had their data paths tested.
+**Point the DOM-test harness at the four attendance screens from 0.30.0–0.31.0** (calendar, daily register, months, monitor), which have never had their data paths tested, then write the load-test script and the restore-drill runbook.
 
 **Still waiting on the user:** the score-entry contradiction — [the frontend contract](frontend-handoff.md) says not to enable score screens while [constraints.md](constraints.md) lists score entry inside the closed grading gate although the raw-score module shipped. The Scores route stays a placeholder until that is decided.
 
 ## Verification and in flight
 
-All 394 tests across 31 files pass, along with all three type checks and the production build.
+All 401 tests across 33 files pass, along with all three type checks and the production build.
 
 The working tree is clean and nothing is in flight. No migration was needed, so none was written.
 

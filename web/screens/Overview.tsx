@@ -17,6 +17,11 @@ import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
  * counted 897 enrolments on each load would bury the privacy audit under its
  * own noise and make it useless for the thing it exists to catch.
  *
+ * How many learners are enrolled comes from `/enrollment-counts`, which answers
+ * with numbers by grade and names no record, so it writes no access row. It is
+ * the only learner figure here, and paging the roster to count it would defeat
+ * the audit this paragraph describes.
+ *
  * Nothing here is computed from a mark or a score. The figures are calendar and
  * roster facts: which stretch of the year today falls in, how many sections
  * exist at each grade, who holds access. Averages, attendance rates and
@@ -46,6 +51,8 @@ const GATED: [string, string][] = [
   ['Class ranking', 'Never requested by the school'],
 ];
 
+type Counts = { scope: 'school' | 'current_access'; enrolled: number; withdrawn: number; grades: { grade_level: number; enrolled: number; withdrawn: number }[] };
+
 export function Overview({ api, me, manager, token }: {
   api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number;
 }) {
@@ -55,6 +62,7 @@ export function Overview({ api, me, manager, token }: {
   const [staff, setStaff] = useState<Row[]>([]);
   const [pending, setPending] = useState<number | null>(null);
   const [recent, setRecent] = useState<Row[]>([]);
+  const [counts, setCounts] = useState<Counts | null>(null);
   const today = localToday();
 
   useEffect(() => {
@@ -79,6 +87,11 @@ export function Overview({ api, me, manager, token }: {
       }
       setSections(all);
     })().catch(() => setSections([]));
+  }, [api, yearId, token]);
+
+  useEffect(() => {
+    if (!yearId) { setCounts(null); return; }
+    void api<Counts>(`/enrollment-counts${query({ academic_year_id: yearId })}`).then(setCounts).catch(() => setCounts(null));
   }, [api, yearId, token]);
 
   useEffect(() => {
@@ -159,6 +172,12 @@ export function Overview({ api, me, manager, token }: {
           value={rooms.length}
           meta={byGrade.length ? `Across ${byGrade.length} grade ${byGrade.length === 1 ? 'level' : 'levels'}` : 'None created yet'}
         />
+        <StatTile
+          accent={4}
+          label={manager ? 'Learners enrolled' : 'Your learners'}
+          value={counts ? counts.enrolled : <Unrecorded label="Not read" />}
+          meta={counts ? `${counts.withdrawn} withdrawn this year · voided records not counted` : 'The count could not be read'}
+        />
         {manager ? (
           <StatTile
             accent={3}
@@ -200,6 +219,22 @@ export function Overview({ api, me, manager, token }: {
             )}
           </div>
         </div>
+
+        {counts?.grades.length ? (
+          <div className="card">
+            <div className="card-head"><div>
+              <h2>{manager ? 'Learners by grade' : 'Your learners by grade'}</h2>
+              <p className="card-note">Currently enrolled, from a count that names nobody. Withdrawn learners are not in the ring.</p>
+            </div></div>
+            <div className="card-body">
+              <Donut
+                slices={counts.grades.filter(g => g.enrolled).map(g => ({ label: gradeName(g.grade_level), count: g.enrolled }))}
+                centreValue={counts.enrolled}
+                centreLabel={counts.enrolled === 1 ? 'learner' : 'learners'}
+              />
+            </div>
+          </div>
+        ) : null}
 
         <div className="card">
           <div className="card-head"><div>

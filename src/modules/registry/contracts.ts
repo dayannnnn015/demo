@@ -16,6 +16,7 @@ export const registrySchemas = {
   enrollmentQuery: z.strictObject({ ...page, academic_year_id: uuid.optional(), section_id: uuid.optional(), learner_id: uuid.optional(), status: z.enum(['enrolled', 'withdrawn']).optional(), record_state: z.enum(['valid', 'voided', 'all']).default('valid') }),
   movement: z.strictObject({ version, action: z.enum(['reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid.nullable().default(null), exit_reason: z.enum(['transfer_out', 'withdrawal', 'dropout', 'death']).nullable().default(null) }).refine(v => v.action === 'withdrawn' ? v.section_id === null && v.exit_reason !== null : v.section_id !== null && v.exit_reason === null, 'Withdrawals require exit_reason and no section; reassignment/reentry require section_id and no exit_reason.'),
   historyQuery: z.strictObject(page),
+  countQuery: z.strictObject({ academic_year_id: uuid }),
   accessQuery: z.strictObject({ limit: page.limit, before_id: z.string().regex(/^[1-9][0-9]{0,17}$/).optional() }),
 };
 export const registryOperations = ([
@@ -29,6 +30,7 @@ export const registryOperations = ([
   { id: 'enrollmentGet', method: 'get', path: '/api/v1/enrollments/:id', summary: 'Read a visible annual enrollment' },
   { id: 'enrollmentMove', method: 'post', path: '/api/v1/enrollments/:id/movements', summary: 'Append a dated section change, withdrawal, or reentry; supply the current enrollment version', body: registrySchemas.movement, manager: true },
   { id: 'enrollmentHistory', method: 'get', path: '/api/v1/enrollments/:id/history', summary: 'Read original movement records, which may be superseded by corrections; use /timeline for effective history', query: registrySchemas.historyQuery, manager: true },
+  { id: 'enrollmentCounts', method: 'get', path: '/api/v1/enrollment-counts', summary: 'Count valid annual enrollments by grade and status within what the caller may read; names no learner or enrollment and writes no access record', query: registrySchemas.countQuery },
   { id: 'recordAccessList', method: 'get', path: '/api/v1/record-access-events', summary: 'Review access to learner and enrollment records without raw search terms or profile values', query: registrySchemas.accessQuery, manager: true },
 ] as const).map(operation => ({ ...operation, module: 'registry' as const }));
 export type RegistryOperationId = typeof registryOperations[number]['id'];
@@ -43,5 +45,7 @@ export const registryResponses: Record<string, z.ZodType> = {
   learnerList: paginated(learner), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
   enrollmentList: paginated(enrollment), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
   enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean(), current_grade_level: z.number().int(), academic_year_id: uuid }),
+  enrollmentCounts: z.object({ academic_year_id: uuid, scope: z.enum(['school', 'current_access']), record_state: z.literal('valid'), enrolled: z.number().int(), withdrawn: z.number().int(),
+    grades: z.array(z.object({ grade_level: z.number().int(), enrolled: z.number().int(), withdrawn: z.number().int() })) }),
   recordAccessList: z.object({ items: z.array(z.object({ id: z.string(), occurred_at: z.iso.datetime(), actor_user_id: uuid, request_id: uuid, resource: z.string(), record_ids: z.array(uuid) })), pagination: z.object({ limit: z.number(), next_before_id: z.string().nullable() }) }),
 };

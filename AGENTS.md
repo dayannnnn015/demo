@@ -86,7 +86,7 @@ The workspace content policy is `default-src 'none'`, which has two consequences
 
 Charts are hand-drawn SVG for the same reason: a library that rasterises to a canvas or injects a background image has nothing to draw into under this policy, and one that sizes a bar with `style={{ width }}` is dropped. SVG geometry attributes are not inline styles, so every data-dependent dimension is one of those.
 
-**The Overview reads no learner or enrollment record.** Every list under `/learners` and `/enrollments` writes a `record_access_events` row naming the exact records returned, so counting the roster on each dashboard load would bury the privacy audit in its own noise. A tile needing a learner count needs an aggregate endpoint, not a paged read.
+**The Overview reads no learner or enrollment record.** Every list under `/learners` and `/enrollments` writes a `record_access_events` row naming the exact records returned, so counting the roster on each dashboard load would bury the privacy audit in its own noise. A learner count comes from `GET /enrollment-counts` (0.37.0), which answers with numbers by grade, names no record and writes no access row; never page a list to count it.
 
 `tests/web-screens.test.ts` renders every route once. It catches a crash on first render, which a typecheck cannot, but effects do not run so it does not cover the data paths behind a fetch. `tests/web-shell.test.ts` renders the shell and asserts the two traps above are absent from the markup. Those files, and `tests/web-calendar.test.ts`, are excluded from the root `tsconfig.json` and listed in `tsconfig.web.json`; a new web test must be added to both or the server typecheck will fail on it.
 

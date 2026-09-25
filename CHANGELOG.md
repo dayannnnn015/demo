@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.37.0 | `GET /enrollment-counts`: learner counts by grade that name nobody, shown on the Overview | — |
 | 0.36.0 | The assessment policy screen: drafts, adoption, binding — no default weights, nothing computed | — |
 | 0.35.0 | The roster import screen: preview, explicit duplicate decisions, identical commit | — |
 | 0.34.0 | Screens for the reviewed corrections: timeline, grade placement, void and restore, LRN, identity links | — |
@@ -48,6 +49,14 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.37.0 — The Overview counts learners without reading one
+
+The Overview could not say how many learners were enrolled. Every list under `/enrollments` writes an access row naming each record it returns, and paging 897 enrollments on every dashboard load would bury the privacy audit in its own noise. **`GET /api/v1/enrollment-counts?academic_year_id=`** answers with valid enrollments counted by grade and status. It names no learner or enrollment, so it writes no access row, and it is the only learner read that may skip one. It is a grouped select under the existing enrollment row policy, with no migration, no function and no new error code. A teacher's count covers only the learners they may already read, and the response says so with `scope: "current_access"`. Voided records are not counted.
+
+The Overview gains a *Learners enrolled* tile (*Your learners* for an adviser) and a *Learners by grade* ring, both from that one call.
+
+`tests/enrollment-counts.test.ts` checks the counts by grade and status with a voided record left out, the teacher scoping and the refusal of suspended and outside accounts. It checks that neither role's call adds an access row while the paged list beside it adds one. `tests/web-overview.test.ts` loads the real screen as a manager and as a teacher and asserts the access log did not grow.
 
 ## 0.36.0 — Assessment policies get a screen
 

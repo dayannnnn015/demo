@@ -48,6 +48,7 @@ All routes below use `/api/v1` and a Supabase bearer token. The complete request
 | `POST /enrollments/:id/movements` | Append reassignment, withdrawal, or reentry with the current version |
 | `GET /enrollments/:id/history` | Manager-only chronological, paginated movement history |
 | `GET /record-access-events` | Manager-only audit, newest first with a `before_id` cursor |
+| `GET /enrollment-counts` | Valid enrollments of one school year counted by grade and status, within what the caller may read. Names no record and writes no access row; voided records are not counted. Added in 0.37.0 for the Overview. |
 
 Example movement body (the UUID must identify an existing section in the same year and grade):
 

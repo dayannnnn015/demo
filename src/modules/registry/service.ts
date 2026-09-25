@@ -50,6 +50,16 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
     case 'enrollmentGet': {
       const row = await enrollmentRow(input.id); await record([row.id]); return row;
     }
+    case 'enrollmentCounts': {
+      // A number names nobody, so this read writes no access record: that is
+      // the whole reason it exists beside the paged list. The row policy still
+      // applies, so a teacher counts only the learners they may already read.
+      const q = input.query as z.infer<typeof s.countQuery>;
+      const grades = await tx.query<{ grade_level: number; enrolled: number; withdrawn: number }>(`select grade_level,count(*) filter(where status='enrolled')::int enrolled,
+        count(*) filter(where status='withdrawn')::int withdrawn from edunexus.enrollments where academic_year_id=$1 and record_state='valid' group by grade_level order by grade_level`, [q.academic_year_id]);
+      const sum = (key: 'enrolled' | 'withdrawn') => grades.reduce((total, row) => total + row[key], 0);
+      return { academic_year_id: q.academic_year_id, scope: ctx.staff.role === 'teacher' ? 'current_access' : 'school', record_state: 'valid', enrolled: sum('enrolled'), withdrawn: sum('withdrawn'), grades };
+    }
     case 'enrollmentList': {
       const q = input.query as z.infer<typeof s.enrollmentQuery>;
       const rows = await tx.query(`${enrollmentSelect} where ($1::uuid is null or academic_year_id=$1)

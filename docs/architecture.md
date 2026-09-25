@@ -92,6 +92,8 @@ Updates require the previously read integer `version`. SQL includes that version
 
 Database triggers record writes in the same transaction, with actor, request ID, changed field names, and record ID. Values, learner names, credentials, and document contents are not copied into change-audit rows. Failed/rolled-back changes do not produce successful audit events. Learner read auditing is implemented in Section 2A; document/export auditing remains future work. Logs contain the route template, method, status, duration, and generated request ID; raw URLs, bodies, and tokens are excluded. Audit cursors sort the numeric database ID even though IDs are returned as strings, preserving chronological pagination beyond single-digit IDs.
 
+`GET /enrollment-counts` is the one learner read that writes no access row, because it returns counts by grade and status and names nobody. It is an ordinary `select … group by` under the existing enrollment row policy, so it needs no function or migration, and a teacher's count covers only what they may already read.
+
 Rate limiting is persistent per staff user: 180 requests per minute, shared across API instances. The counter commits independently of the business transaction. Invalid-token/anonymous abuse must be handled by provider and edge controls before it reaches this per-user limit.
 
 ## Instructional calendars
