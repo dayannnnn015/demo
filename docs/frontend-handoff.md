@@ -230,29 +230,15 @@ Owners are named from the whole staff list, so a suspended manager still appears
 
 **Grade applicability is a set of checkboxes.** `Editor` gained a `checkboxes` field type for it: held as a comma-joined string like every other value, submitted as the option keys in option order, and marked like any other field when the server rejects it. Grade 0 is always written "Kindergarten" (`gradesText`) and is a grade level, never a numeric grading target. Nothing on this screen carries a weight, component or formula, and it says so.
 
-## Assessment-policy draft screens to build
+## The assessment policy screen
 
-[Section 4A.3](assessment-policy-drafts.md) is manager-only and API-only. Label every record as an unapproved draft, including archived records. Allow explicit source references, Grades 1–6 applicability and 1–10 named components. Component weights use integer basis points totaling 10000 (100%); show a total and reject missing/duplicate components. No default weights, approval buttons, section binding, calculations or Kindergarten numeric forms are available.
+Sections [4A.3](assessment-policy-drafts.md), [4A.4](assessment-policy-adoptions.md) and [4A.5](assessment-policy-bindings.md) share one manager-only screen: `web/screens/Policies.tsx`, at `/policies`, in three cards — drafts, adoptions for the chosen school year, and bindings for the chosen section.
 
-Save all editable metadata with the current version and a reason. Canonical sorting does not represent component display priority. Archive preserves history; restore returns a record to the default draft list. Refresh on conflicts and inspect history after lost responses. Render source references and reasons as text, not executable markup; a supplied reference does not verify school approval. Teachers have no draft access.
+**No number is the system's.** A new draft starts with one empty component row and no weights; every code, name and percentage is typed from the school's documents, and a source reference says which. Weights are entered as percentages and sent as integer basis points by `basisPoints()`, which refuses a third decimal place rather than rounding it, because rounding a weight is a rule nobody has supplied. `componentProblem()` restates the API's rules — one to ten components, distinct codes, exactly 100% — and nothing more. The weights total is shown because the API requires it; it is the only sum on the screen and it is not a grade. Every draft is labelled *Unapproved draft*, archived or not.
 
-## Assessment-policy adoption screens to build
+**An adoption is the school's decision, frozen.** Recording one names the school year, the draft (its current version is the one frozen), an in-year date and the school record carrying the decision. Its panel draws `policy_snapshot`, not the draft, so a later revision of the draft never shows through. Withdrawal is one-way with a reason; `ADOPTION_BOUND` is shown in the sheet with the API's own instruction to release the bindings first.
 
-[Section 4A.4](assessment-policy-adoptions.md) is manager-only and API-only. Present adoption as recording a school decision, never as approval of the content: show `adoption_reference` as the school's own record and keep the existing "unapproved draft" labeling on the draft itself. Display `policy_snapshot` as the frozen adopted revision and keep it visually separate from the draft's current metadata, which may already have moved on.
-
-Adopt with the school year, the draft's current `policy_version`, an adoption date inside that year, a reference and a reason. Surface `ADOPTION_STATE` as "this draft is archived or already withdrawn", `ADOPTION_YEAR` as a closed year or out-of-range date, and `ALREADY_EXISTS` as an existing standing adoption for that school year and policy. Withdrawal is a separate reviewed action with the current adoption version and a reason; it happens once and nothing edits an adoption in place, so offer "withdraw and record a new adoption" rather than an edit form. Expect `POLICY_DRAFT_ADOPTED` when a manager tries to archive an adopted draft, and point them at the withdrawal first.
-
-Refresh on conflicts and inspect history after a lost response instead of adopting twice. Render references and reasons as text. No approval workflow, offering binding, score entry, transmutation or computed grade exists at any endpoint, so do not build a screen that implies one.
-
-## Assessment-policy binding screens to build
-
-[Section 4A.5](assessment-policy-bindings.md) is manager-only and API-only. Bind from a section's offering list: show the offering, its pinned subject, and the standing adoptions available for that school year whose grade levels include the section grade. Send both current versions, `offering_version` and `adoption_version`, with a reason.
-
-Surface `BINDING_SCOPE` as a specific mismatch rather than a generic failure — wrong school year, inapplicable grade, or a retired offering each need a different fix. `BINDING_STATE` means the adoption was withdrawn or the binding is already released, and `ALREADY_EXISTS` means that offering already has a standing binding, so release it before binding another.
-
-Release is a separate reviewed action on the current binding version; nothing edits a binding in place, so offer "release and bind again" rather than an edit form. Expect `ADOPTION_BOUND` when withdrawing an adoption and `OFFERING_BOUND` when retiring an offering, and point the manager at the release first. Closed years are read only.
-
-Do not present a binding as a grade setting or show any computed value beside it: no score entry, arithmetic, transmutation or grade exists at any endpoint. Teachers have no binding access in this increment.
+**A binding scopes, it does not grade.** The bindings card lists the chosen section's active offerings with the adoption governing each, drawn as *No policy bound* where there is none. Binding offers only standing adoptions of that year that cover the section's grade; release is one-way and says to bind again for a different adoption.
 
 ## Score entry screens to build
 

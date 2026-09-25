@@ -66,6 +66,8 @@ Acceptance: school-approved fixtures match all daily/monthly totals, partial att
 
 **Section 4A.4 is implemented:** [reviewed assessment-policy adoption](assessment-policy-adoptions.md) records that the school adopted one exact unarchived draft revision for one school year, freezing that revision, an in-year adoption date and the school record reference carrying the decision. Later draft revisions never change a frozen snapshot, an adopted draft cannot be archived, one standing adoption exists per school year and policy, and withdrawal is a reviewed one-way action that preserves evidence.
 
+**Sections 4A.3–4A.5 have had one manager screen since 0.36.0**: drafts, adoptions and bindings, with weights typed from school documents and nothing computed from them.
+
 **Section 4A.5 is implemented:** [offering binding](assessment-policy-bindings.md) records which section subject offering a standing adoption governs, on current offering and adoption versions, within one school year and an applicable section grade. One standing binding exists per offering, release is reviewed and one-way, and a standing binding blocks adoption withdrawal and offering retirement until released.
 
 **Section 4B.1 is implemented:** [assessment tasks and raw score entry](assessment-scores.md) records named assessments whose component codes come from the bound adopted revision, and raw learner marks in versioned batches. Unrecorded learners stay null, clearing preserves history, and nothing is summed, weighted, averaged, transmuted or turned into a grade. Migration `0022` corrected it: a former adviser loses a departed learner's marks, an omitted `raw_score` key no longer clears one, score reads write privacy access rows, and the documented maximum fits its column.

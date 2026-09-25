@@ -14,6 +14,7 @@ import { Monitor } from './screens/Monitor';
 import { Followups } from './screens/Followups';
 import { Subjects } from './screens/Subjects';
 import { Imports } from './screens/Imports';
+import { Policies } from './screens/Policies';
 import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -147,15 +148,11 @@ export const routes: Route[] = [
     render: p => <Subjects {...p} />,
   },
   {
-    id: 'policies', nav: 'Assessment policies', icon: 'policies', group: 'Academics', manager: true,
+    id: 'policies', nav: 'Assessment policies', icon: 'policies', group: 'Academics', manager: true, built: true, ownHeader: true,
     title: 'Assessment policies',
-    lede: 'Draft, adopt and bind the school\'s assessment policy.',
+    lede: 'Draft, adopt and bind the school’s assessment policy.',
     record: 'assessment_policy_drafts, adoptions, bindings',
-    render: soon(
-      'Draft, adopt and bind an assessment policy.',
-      'Adoption freezes the exact revision the school decided on, so revising a draft afterwards never changes what was adopted.',
-      'EDUNEXUS supplies no weights of its own. Every component and percentage here comes from the school.',
-    ),
+    render: p => <Policies {...p} />,
   },
   {
     id: 'scores', nav: 'Scores', icon: 'scores', group: 'Academics',

@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.36.0 | The assessment policy screen: drafts, adoption, binding — no default weights, nothing computed | — |
 | 0.35.0 | The roster import screen: preview, explicit duplicate decisions, identical commit | — |
 | 0.34.0 | Screens for the reviewed corrections: timeline, grade placement, void and restore, LRN, identity links | — |
 | 0.33.0 | The subjects and offerings screen; the shared form no longer loses what is being typed | — |
@@ -47,6 +48,16 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.36.0 — Assessment policies get a screen
+
+Sections 4A.3, 4A.4 and 4A.5 have had APIs since 0.15.0, 0.17.0 and 0.18.0. `web/screens/Policies.tsx` puts drafts, adoptions and bindings on one manager-only screen, in three cards.
+
+**No number on it is the system's.** A new draft starts with one empty component row and no weights. Every code, name and percentage is typed in from the school's documents, with a source reference saying which. `basisPoints()` turns a typed percentage into integer basis points and refuses a third decimal place rather than rounding it, because a rounding rule is exactly what nobody has supplied. `componentProblem()` checks the API's rules and nothing more, before any request is sent. The weights total is shown because the API requires one of exactly 100%. It is the only sum on the screen, and it is not a grade. Every draft is labelled *Unapproved draft*.
+
+**An adoption is the school's decision, frozen.** Its panel draws the revision as it was adopted, so a later revision of the draft never shows through. **A binding scopes a section subject to one standing adoption that covers its grade.** Withdrawing an adoption that still governs a subject is refused in the sheet with the instruction to release the binding first, and both withdrawal and release are one-way with a reason.
+
+`tests/web-policies.test.ts` has 8 cases, most of them driving the screen against the real API. It confirms that a new draft offers no weights of its own, and that a 90% total is refused without a request. It records 37.5%/62.5% exactly as 3750/6250 basis points, and adopts the draft and shows the adopted revision frozen after the draft is revised. It binds a section's subject, refuses withdrawal while bound, then releases the binding and withdraws the adoption. No migration, endpoint, schema or permission change. The grading gate is untouched, and nothing computes a total, average or grade.
 
 ## 0.35.0 — Roster import gets a screen
 
