@@ -13,6 +13,7 @@ import { Months } from './screens/Months';
 import { Monitor } from './screens/Monitor';
 import { Followups } from './screens/Followups';
 import { Subjects } from './screens/Subjects';
+import { Imports } from './screens/Imports';
 import { Overview } from './screens/Overview';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -95,14 +96,11 @@ export const routes: Route[] = [
     render: p => <Enrollment {...p} />,
   },
   {
-    id: 'imports', nav: 'Roster import', icon: 'imports', group: 'Learners', manager: true,
+    id: 'imports', nav: 'Roster import', icon: 'imports', group: 'Learners', manager: true, built: true, ownHeader: true,
     title: 'Roster import',
     lede: 'Bring in a class list from a reviewed CSV.',
     record: 'import_previews',
-    render: soon(
-      'Preview a class list, resolve duplicates, then commit.',
-      'The API validates up to 50 learners per file, reports every row issue and duplicate candidate, and commits only the exact file you reviewed.',
-    ),
+    render: p => <Imports {...p} />,
   },
 
   {

@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.35.0 | The roster import screen: preview, explicit duplicate decisions, identical commit | — |
 | 0.34.0 | Screens for the reviewed corrections: timeline, grade placement, void and restore, LRN, identity links | — |
 | 0.33.0 | The subjects and offerings screen; the shared form no longer loses what is being typed | — |
 | 0.32.0 | The follow-up cases screen, and screen tests that drive the real API in a DOM | — |
@@ -46,6 +47,14 @@ database changes are listed by their immutable migration number.
 | 0.3.0 | Section 2B.1 — roster import and LRN correction | 0005 |
 | 0.2.0 | Section 2A — learner registry and enrollment | 0004 |
 | 0.1.0 | Section 1 — staff authorization, school setup, workspace | 0001–0003 |
+
+## 0.35.0 — Roster import gets a screen
+
+Section 2B.1's import has had an API since 0.3.0. `web/screens/Imports.tsx` takes a section, a first day and an entry kind, then a CSV chosen as a file or pasted as text. The template can be downloaded from the page header.
+
+**The file never leaves the page until it is previewed.** It is measured the way the API measures it and refused before sending if it is over 24,000 bytes or 50 learners. **Each row is reviewed where it sits**: the server's refusal for a row is printed beside that row's data, and a possible duplicate or occupied LRN opens a decision in the row. The choice is one of the learners already on file, or a different child with a reason that is kept in the receipt. A changed decision marks the preview stale instead of discarding it, since the rows are where decisions are made, and nothing imports until the file is previewed again. **The commit sends the identical reviewed payload**, all rows or none. A retry after a lost response returns the original receipt rather than importing twice.
+
+`tests/web-imports.test.ts` has 11 cases, several driving the screen against the real API. It imports a class and checks both new learners and their enrollments, leaving a blank LRN pending. It shows a rejected row beside its data with no import offered, and resolves a possible duplicate to the learner already on file through a stale-then-fresh preview. It imports a namesake as a different child with the reason kept, reports a wrong header, and refuses a 51-row file without sending it. No migration, endpoint, schema or permission change, and no gate opened.
 
 ## 0.34.0 — The reviewed corrections get screens
 

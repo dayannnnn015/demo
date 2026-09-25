@@ -29,6 +29,7 @@
     "tests/helpers/dom.ts",
     "tests/web-editor.test.ts",
     "tests/web-followups.test.ts",
+    "tests/web-imports.test.ts",
     "tests/web-reviews.test.ts",
     "tests/web-subjects.test.ts"
   ]

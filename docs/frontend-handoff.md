@@ -158,13 +158,15 @@ The tab is deliberately read-only. Registration, LRN assignment, enrollment, mov
 
 Section and school-year names are resolved from `/sections` and `/academic-years` for display only. A missing entry means the row is outside the reader's scope, so it shows as unavailable rather than as a database identifier. Learner names, LRNs and birth dates are rendered as text and cleared on sign-out with the rest of the workspace.
 
-## Import and LRN review screens to build
+## The roster import screen
 
-[Section 2B.1](registry-review.md) supplies the connected import/correction APIs. Download the template through `GET /api/v1/roster-imports/template`, select an existing section and enrollment date, and keep CSV content only in memory. Preview must show normalized rows, target details, candidate records, row issues, and explicit duplicate resolutions. Re-preview after editing any input. Enable confirmation only when `can_commit=true`; submit the identical payload with `confirmed=true` to the returned preview ID's commit route. Do not reconstruct CSV from displayed rows between preview and commit.
+[Section 2B.1](registry-review.md) imports have a screen: `web/screens/Imports.tsx`, at `/imports`, manager-only. It takes a section, a first day and an entry kind, then a CSV chosen as a file or pasted as text, and the template is downloadable from the page header.
 
-On a lost response, retry the same preview ID and payload or fetch its receipt. Never silently create a new preview and commit it. On `PREVIEW_CHANGED` or expiry, require fresh review. Only the same manager can commit/read their preview; sign-out must clear pending CSV and displayed candidates. Templates use the minimum EDUNEXUS fields, not arbitrary XLSX/LIS mappings.
+**The file stays in the page.** It is read into memory, measured the way the API measures it (`csvStats`: UTF-8 bytes, data records after the header) and refused before sending if it is over 24,000 bytes or 50 learners (`csvProblem`). Nothing is uploaded until the preview, and the server keeps only a fingerprint.
 
-For LRN correction, show the current LRN and version, collect the corrected value and reason, and obtain explicit manager review before posting `reviewed=true`. Refresh after a conflict. The separate history endpoint contains sensitive old/new LRNs and reasons; render with text properties and keep it manager-only. This is a review by the acting manager, not a second-person approval queue.
+**Every row is reviewed where it sits.** The preview lists each normalised row with what will happen to it, and a row the server refused carries the server's own message beside its data. A possible duplicate or an occupied LRN opens a decision in that row: one of the learners already on file, or a different child with a reason that goes into the receipt. Changing a decision marks the preview stale rather than discarding it, because the rows are where decisions are made; nothing can be imported until it is previewed again.
+
+**The commit is the identical payload.** Confirmation sends exactly what was previewed with `confirmed: true`, so the import is all rows or none, and a retry after a lost response returns the original receipt instead of importing twice. `PREVIEW_CHANGED`, `PREVIEW_EXPIRED` and a deleted preview drop the review. The receipt lists each row's result and any reason given.
 
 ## The reviewed correction screens
 

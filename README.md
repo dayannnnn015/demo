@@ -179,7 +179,8 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 - **Section 1 setup**: school profile, staff authorization and access, school years, reporting periods, sections and advisers, and the change-audit history.
 - **Attendance, end to end**: configure the instructional calendar a month at a time, mark a section morning and afternoon, review a month and submit or lock it, read recorded absences and gaps over a chosen window, and open, reassign and resolve a follow-up case by hand.
 - **Subjects and section offerings**: managers maintain the subject catalog and choose each section's subjects, each offering pinned to the catalog revision it was chosen from; advisers read their own section's list.
-- **Every module still to come, listed honestly**: roster import, assessment policies and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
+- **Roster import**: preview a class list from the EDUNEXUS CSV template, decide each possible duplicate explicitly, then import the identical reviewed file into one section in one step, all rows or none.
+- **Every module still to come, listed honestly**: assessment policies and scores each appear in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
 - **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
