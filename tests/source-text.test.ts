@@ -22,7 +22,12 @@ describe('source files are plain text',()=>{
         if(at>=0)found.push(`${path} at character ${at}`);
       }
     };
-    for(const dir of ['src','web','database','scripts','docs','tests'])walk(dir);
+    for(const dir of ['src','web','database','scripts','docs','tests','supabase'])walk(dir);
+    // The root holds the working contract and the release history, which are read as closely as code.
+    for(const name of readdirSync('.'))if(!statSync(name).isDirectory()&&/\.(md|json|ts)$/.test(name)&&name!=='package-lock.json'){
+      const at=readFileSync(name,'utf8').search(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/);
+      if(at>=0)found.push(`${name} at character ${at}`);
+    }
     expect(found).toEqual([]);
   });
 });
