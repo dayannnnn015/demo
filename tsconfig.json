@@ -28,6 +28,7 @@
     "tests/web-screens.test.ts",
     "tests/web-shell.test.ts",
     "tests/helpers/dom.ts",
+    "tests/web-a11y.test.ts",
     "tests/web-access.test.ts",
     "tests/web-password.test.ts",
     "tests/web-scores.test.ts",

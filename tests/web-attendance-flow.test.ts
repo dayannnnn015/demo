@@ -159,6 +159,7 @@ describe('the attendance workflow through its screens', () => {
     await toJune(view.host);
     await waitFor(() => view.host.textContent?.includes('Not ready to submit'), 'the readiness check');
     expect(view.host.textContent).toContain('Some classroom sessions have no mark');
+    expect((byText(view.host, 'Submit this month') as HTMLButtonElement).disabled, 'a month that cannot be submitted offers no submission').toBe(true);
     await unmount!(); unmount = null;
 
     // The rest of the week, recorded through the API rather than the screen already tested above.

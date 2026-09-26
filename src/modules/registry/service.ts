@@ -13,7 +13,11 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
   const { tx } = ctx;
   const enrollmentSelect = 'select e.*,e.learner_id as recorded_learner_id,edunexus.visible_learner_identity(e.learner_id) as learner_id from edunexus.enrollments e';
   const enrollmentRow = async (id: unknown) => found(await tx.query(`${enrollmentSelect} where e.id=$1`, [id]));
-  async function record(ids: unknown[]) { await tx.query('select edunexus.record_access($1,$2::uuid[])', [id, ids]); }
+  // An access row holds at most 100 identifiers, so a longer disclosure is written as several rows.
+  async function record(ids: unknown[]) {
+    if (!ids.length) { await tx.query('select edunexus.record_access($1,$2::uuid[])', [id, []]); return; }
+    for (let n = 0; n < ids.length; n += 100) await tx.query('select edunexus.record_access($1,$2::uuid[])', [id, ids.slice(n, n + 100)]);
+  }
   switch (id) {
     case 'learnerCreate': {
       const b = input.body as z.infer<typeof s.learnerCreate>;
@@ -62,10 +66,18 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
     }
     case 'enrollmentList': {
       const q = input.query as z.infer<typeof s.enrollmentQuery>;
-      const rows = await tx.query(`${enrollmentSelect} where ($1::uuid is null or academic_year_id=$1)
-        and ($2::uuid is null or section_id=$2) and ($3::uuid is null or e.learner_id=$3 or edunexus.visible_learner_identity(e.learner_id)=$3) and ($4::text is null or status=$4)
-        and ($7::text='all' or e.record_state=$7) order by e.id limit $5 offset $6`, [q.academic_year_id ?? null, q.section_id ?? null, q.learner_id ?? null, q.status ?? null, q.limit + 1, q.offset, q.record_state]);
-      const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
+      // The learner's name and LRN come with each row, so a class list is one
+      // read and one access row naming both the enrollments and the learners,
+      // instead of a follow-up read per learner. Row security still applies:
+      // a learner the caller may not read joins as null.
+      const rows = await tx.query(`select e.*,e.learner_id as recorded_learner_id,edunexus.visible_learner_identity(e.learner_id) as learner_id,
+        case when l.id is null then null else jsonb_build_object('id',l.id,'last_name',l.last_name,'first_name',l.first_name,'middle_name',l.middle_name,'name_extension',l.name_extension,'lrn',l.lrn) end as learner
+        from edunexus.enrollments e left join edunexus.learners l on l.id=edunexus.visible_learner_identity(e.learner_id)
+        where ($1::uuid is null or e.academic_year_id=$1)
+        and ($2::uuid is null or e.section_id=$2) and ($3::uuid is null or e.learner_id=$3 or edunexus.visible_learner_identity(e.learner_id)=$3) and ($4::text is null or e.status=$4)
+        and ($7::text='all' or e.record_state=$7) order by lower(l.last_name),lower(l.first_name),e.id limit $5 offset $6`, [q.academic_year_id ?? null, q.section_id ?? null, q.learner_id ?? null, q.status ?? null, q.limit + 1, q.offset, q.record_state]);
+      const result = page(rows, q.limit, q.offset);
+      await record([...result.items.map(row => row.id), ...new Set(result.items.map(row => (row.learner as { id?: string } | null)?.id).filter(Boolean))]); return result;
     }
     case 'enrollmentHistory': {
       const state = found(await tx.query('select edunexus.get_enrollment_timeline($1) as timeline', [input.id])).timeline as { version: number; latest_correction_id: string | null; record_state: string; usable_for_reporting: boolean; grade_level: number; academic_year_id: string };

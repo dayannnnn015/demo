@@ -106,6 +106,7 @@ describe('Staff invitation records without a privileged runtime credential',()=>
     const r=await mint(withService(async q=>{asked=q;return user;}),invitation);
     expect(r.status,JSON.stringify(r.body)).toBe(201);
     expect(asked).toEqual({email:invitation.email,displayName:invitation.display_name,role:'teacher'});
+    expect((await request(withService(async()=>user)).get('/api/v1/me').set('Authorization',`Bearer ${ids.principal}`)).body.data.account_service).toBe(true);
     expect(responses.invitationProvisionIdentity!.safeParse(r.body.data).success).toBe(true);
     expect(r.body.data).toMatchObject({status:'provisioned',version:2});
     const staff=(await get('/api/v1/staff?limit=100')).body.data.items.find((v:any)=>v.user_id===r.body.data.linked_user_id);
@@ -118,6 +119,7 @@ describe('Staff invitation records without a privileged runtime credential',()=>
     const r=await mint(app,invitation);
     expect(r.status).toBe(501);
     expect(r.body.error.code).toBe('IDENTITY_SERVICE_DISABLED');
+    expect((await get('/api/v1/me')).body.data.account_service,'the workspace is told in advance').toBe(false);
     expect((await get(`${base}/${invitation.id}`)).body.data.status).toBe('requested');
   });
 

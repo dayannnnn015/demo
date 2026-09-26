@@ -29,7 +29,9 @@ function list(rows: Row[], limit: number, offset: number) {
 export async function executeOperation(id: OperationId, ctx: Context, input: { body: unknown; query: unknown; id?: string }) {
   const { tx, staff } = ctx;
   switch (id) {
-    case 'me': return staff;
+    // Whether "Create the account" can work here, so the workspace can stop
+    // offering an action it knows the deployment will refuse.
+    case 'me': return { ...staff, account_service: Boolean(ctx.identities) };
     case 'schoolGet': return found(await tx.query('select * from edunexus.school_profile where id = 1'));
     case 'schoolUpdate': {
       const b = input.body as z.infer<typeof schemas.schoolUpdate>;

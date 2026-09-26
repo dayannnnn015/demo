@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/http-app.js';
 import { testDatabase, ids } from './helpers/database.js';
 import { byLabel, byText, choose, click, fill, showRoute, waitFor } from './helpers/dom';
-import { markProblem, nextSequence, pendingEntries, shownMark, type SheetRow, type Task } from '../web/screens/Scores';
+import { byName, markProblem, nextSequence, pendingEntries, shownMark, taskChanges, type SheetRow, type Task } from '../web/screens/Scores';
 import { routes } from '../web/routes';
 
 const row = (id: string, raw: number | string | null, version = raw === null ? 0 : 1): SheetRow =>
@@ -45,6 +45,16 @@ describe('score sheet rules the screen applies before a request is spent', () =>
     const task = (component_code: string, sequence: number) => ({ component_code, sequence }) as Task;
     expect(nextSequence([task('WW', 1), task('WW', 2), task('PT', 1)], 'WW')).toBe(3);
     expect(nextSequence([task('PT', 1)], 'WW')).toBe(1);
+  });
+
+  it('orders a sheet by surname and names each revision of an assessment', () => {
+    const rows = [row('b', null), row('a', null)].map((r, i) => ({ ...r, last_name: ['Zamora', 'Abad'][i]! }));
+    expect([...rows].sort(byName).map(r => r.last_name)).toEqual(['Abad', 'Zamora']);
+    const before = { title: 'Quiz', max_score: '20.00', status: 'open' } as Task;
+    expect(taskChanges(null, before)).toEqual(['Added, out of 20']);
+    expect(taskChanges(before, { ...before, title: 'Quiz 1', max_score: 25 })).toEqual(['Title “Quiz” → “Quiz 1”', 'Maximum 20 → 25']);
+    expect(taskChanges(before, { ...before, status: 'archived' })).toEqual(['Archived']);
+    expect(taskChanges(before, { ...before })).toEqual(['No field changed']);
   });
 
   it('is a built screen every role can open', () => {
@@ -185,6 +195,28 @@ describe('the score screen against the API', () => {
     await waitFor(() => host.textContent?.includes('No assessment policy is bound to Synthetic arts'), 'the unbound explanation');
     expect((byText(host, 'Add an assessment') as HTMLButtonElement).disabled).toBe(true);
     expect(host.querySelector('.score-input')).toBeNull();
+  });
+
+  it('moves to the next learner on Enter and records nothing by itself', async () => {
+    const host = await sheetShown();
+    const first = box(host, 'Alvarez');
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await waitFor(() => document.activeElement === box(host, 'Bautista'), 'the next learner’s box');
+    expect(document.querySelector('.sheet'), 'Enter never opens the review').toBeNull();
+  });
+
+  it('shows a manager every recorded batch, newest first, with what each mark was', async () => {
+    const host = await show(ids.principal);
+    await waitFor(() => box(host, 'Alvarez'), 'the class sheet');
+    await click(byText(host, 'Show changes to these marks'));
+    const card = () => [...host.querySelectorAll('.card')].find(c => c.textContent?.includes('Changes to these marks'));
+    const rows = await waitFor(() => { const r = card()?.querySelectorAll('tbody tr'); return r && r.length >= 4 && [...r]; }, 'the batch history');
+    expect(rows[0]!.textContent).toContain(reason);
+    await click(rows[rows.length - 1]!.querySelector('button.row-toggle'));
+    const panel = card()!.querySelector('.row-panel')!;
+    expect(panel.textContent).toContain('Alvarez, Synthetic');
+    expect(panel.textContent).toContain('Not recorded');
   });
 
   it('never draws a total, average or percentage', async () => {

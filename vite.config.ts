@@ -25,5 +25,7 @@ export default defineConfig({
       },
     },
   },
-  server: { proxy: { '/api': 'http://127.0.0.1:3001', '/account/config': 'http://127.0.0.1:3001', '/openapi.json': 'http://127.0.0.1:3001' } },
+  // '/api/' and not '/api': the bare prefix also matches web/api.ts, which the
+  // dev server would then forward to Express instead of serving.
+  server: { proxy: { '/api/': 'http://127.0.0.1:3001', '/account/config': 'http://127.0.0.1:3001', '/openapi.json': 'http://127.0.0.1:3001' } },
 });

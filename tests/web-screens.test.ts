@@ -43,6 +43,18 @@ describe('workspace screens', () => {
     }
   });
 
+  it('draws each page header exactly once', () => {
+    // The shell draws a header for a route unless the route says the screen
+    // draws its own. A screen that draws one without saying so gets two.
+    for (const route of routes) {
+      for (const manager of route.manager ? [true] : [true, false]) {
+        const own = renderToString(route.render(props(manager, route)) as never).includes('class="view-head"');
+        // The converse does not hold: the Overview sets ownHeader and draws a greeting instead.
+        if (own) expect(route.ownHeader, `${route.id} draws its own header, so it must set ownHeader`).toBe(true);
+      }
+    }
+  });
+
   it('presents no computed grade as a column or field', () => {
     // Grading arithmetic is gated on the school's enclosure, so no screen may
     // offer one as data. Prose is exempt: several screens name these terms

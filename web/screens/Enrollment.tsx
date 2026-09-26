@@ -21,7 +21,7 @@ const exitReasons: [string, string][] = [
 
 /** The LRN on a learner record, or the mark that says none has been issued. */
 const lrnOf = (learner: Row | undefined) =>
-  learner?.lrn ? `LRN ${String(learner.lrn)}` : <Unrecorded label="LRN not issued" />;
+  !learner ? null : learner.lrn ? `LRN ${String(learner.lrn)}` : <Unrecorded label="LRN not issued" />;
 
 /**
  * A movement is a dated event, and which fields it needs depends on the action,
@@ -272,16 +272,14 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
     if (!sectionId) { setRows({ items: [] }); return; }
     setRows(null);
     void api<Page>(`/enrollments${query({ section_id: sectionId, limit: 100, record_state: manager ? 'all' : undefined })}`)
-      .then(async result => {
+      .then(result => {
         setRows(result);
-        // Names live on the learner record, not the enrollment, so resolve the
-        // ones on screen and keep them for the rest of the session.
-        const missing = [...new Set(result.items.map(r => String(r.learner_id)))].filter(id => !learners[id]);
-        if (!missing.length) return;
-        const fetched = await Promise.all(missing.map(id => api<Row>(`/learners/${id}`).catch(() => null)));
+        // Each row carries its learner's name and LRN, logged with the list in
+        // one access row. Reading every learner separately wrote one row per
+        // learner each time a class list opened.
         setLearners(current => {
           const next = { ...current };
-          for (const learner of fetched) if (learner) next[String(learner.id)] = learner;
+          for (const row of result.items) if (row.learner) next[String(row.learner_id)] = row.learner as Row;
           return next;
         });
       })
@@ -302,7 +300,7 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
   const section = sections.find(s => s.id === sectionId);
   const closed = year?.status === 'closed';
   const label = section ? `${gradeName(section.grade_level)} · ${String(section.name)}` : 'this section';
-  const named = (row: Row) => { const learner = learners[String(row.learner_id)]; return learner ? learnerName(learner) : 'Loading…'; };
+  const named = (row: Row) => { const learner = learners[String(row.learner_id)]; return learner ? learnerName(learner) : 'This learner'; };
   const sectionName = (id: string) => String(sections.find(s => s.id === id)?.name ?? 'a section outside this year');
   const listed = rows?.items.length ?? 0;
 
@@ -347,7 +345,7 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
           rowKey={r => String(r.id)}
           empty={<EmptyState title="Nobody enrolled here yet" body={closed ? 'This year is closed and its enrollment can no longer change.' : 'Find a learner in the registry and enrol them into this section.'} />}
           columns={[
-            { header: 'Learner', cell: r => <Cell title={named(r)} meta={lrnOf(learners[String(r.learner_id)])} /> },
+            { header: 'Learner', cell: r => (learners[String(r.learner_id)] ? <Cell title={named(r)} meta={lrnOf(learners[String(r.learner_id)])} /> : <Unrecorded label="Not readable to you" />) },
             { header: 'Status', cell: r => r.status === 'withdrawn'
               ? <Badge tone="stopped">{sentence(value(r, 'last_reason'))}</Badge>
               : <Badge tone="good">Enrolled</Badge> },

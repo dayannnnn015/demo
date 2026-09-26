@@ -425,7 +425,7 @@ const cellClass = <T,>(column: Column<T>) => [column.numeric ? 'numeric' : '', c
  * screen and leave the other eight hundred where they are, which looks like an
  * answer and is not one. Narrowing a list is the filter row's job.
  */
-export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', actionsLabel = 'Actions', rowKey, loading }: {
+export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', actionsLabel = 'Actions', rowKey, loading, stack }: {
   rows: T[];
   columns: Column<T>[];
   empty?: ReactNode;
@@ -434,6 +434,10 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
   actionsLabel?: string | undefined;
   rowKey: (row: T) => string;
   loading?: boolean | undefined;
+  /** On a phone, draw each row as a labelled block instead of a line that
+   *  scrolls sideways: for registers filled in on a phone, where a hidden
+   *  afternoon column is a mark nobody enters. */
+  stack?: boolean | undefined;
 }) {
   const scope = useId();
   const [open, setOpen] = useState<string | null>(null);
@@ -441,7 +445,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
   if (!rows.length) return <>{empty ?? <EmptyState title="Nothing here yet" body="Records you add will appear in this list." />}</>;
   const span = columns.length + (detail ? 1 : 0);
   return (
-    <div className="table-wrap">
+    <div className={stack ? 'table-wrap stack' : 'table-wrap'}>
       <table>
         <thead>
           <tr>
@@ -457,7 +461,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
             return (
               <Fragment key={key}>
                 <tr>
-                  {columns.map(column => <td key={column.header} className={cellClass(column)}>{column.cell(row)}</td>)}
+                  {columns.map(column => <td key={column.header} className={cellClass(column)} data-label={column.header}>{column.cell(row)}</td>)}
                   {detail ? (
                     <td className="actions">
                       <button
@@ -575,6 +579,14 @@ export const yearName = (row: Record<string, unknown>) => `${row.start_year}–$
 export const learnerName = (row: Record<string, unknown>) =>
   [value(row, 'last_name'), [value(row, 'first_name'), value(row, 'middle_name'), value(row, 'name_extension')].filter(Boolean).join(' ')]
     .filter(Boolean).join(', ');
+
+/**
+ * A class list in the order its paper register reads: surname, then given
+ * names. The API pages rosters by record id, which is stable but meaningless
+ * to a reader, so every screen that lists learners sorts what it has loaded.
+ */
+export const byLearnerName = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+  learnerName(a).localeCompare(learnerName(b)) || String(a.enrollment_id ?? a.id ?? '').localeCompare(String(b.enrollment_id ?? b.id ?? ''));
 
 /**
  * The line under the title, and the DepEd form these records end up on. The

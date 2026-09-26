@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { createApp } from '../src/http-app.js';
 import { testDatabase, ids } from './helpers/database.js';
 import { byLabel, byText, choose, click, expand, fill, showRoute, waitFor } from './helpers/dom';
-import { describeResource, recordFromHash } from '../web/screens/Access';
+import { accessCsv, csvCell, describeResource, recordFromHash } from '../web/screens/Access';
 import { routes } from '../web/routes';
 
 /**
@@ -31,6 +31,20 @@ describe('access log rules', () => {
     expect(recordFromHash(`#/access?record=${id.toUpperCase()}`)).toBe(id);
     expect(recordFromHash('#/access?record=not-an-id')).toBe('');
     expect(recordFromHash('#/access')).toBe('');
+  });
+
+  it('writes a spreadsheet that names nobody and runs no formula', () => {
+    expect(csvCell('plain')).toBe('plain');
+    expect(csvCell('a, b')).toBe('"a, b"');
+    expect(csvCell('say "hi"')).toBe('"say ""hi"""');
+    expect(csvCell('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`);
+    expect(csvCell('+1')).toBe("'+1");
+    expect(csvCell(null)).toBe('');
+    const id = randomUUID(), actor = randomUUID();
+    const csv = accessCsv([{ occurred_at: '2026-09-26T01:00:00Z', actor_user_id: actor, resource: 'learnerGet', request_id: 'r1', record_ids: [id] }], new Map([[actor, '=Synthetic Principal']]));
+    const [header, row] = csv.trim().split('\r\n');
+    expect(header).toBe('occurred_at,staff_member,staff_user_id,what_was_read,operation,request_id,record_count,record_ids');
+    expect(row).toBe(`2026-09-26T01:00:00Z,'=Synthetic Principal,${actor},Opened a learner record,learnerGet,r1,1,${id}`);
   });
 
   it('is a built, manager-only screen', () => {

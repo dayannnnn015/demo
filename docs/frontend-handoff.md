@@ -140,6 +140,19 @@ Dates are exact `YYYY-MM-DD` calendar dates in the school's Asia/Manila context.
 
 Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) supports learner profiles, annual enrollment, current rosters, and movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRNs as strings, display pending for null, and never generate identifiers or silently merge matching names. Movement requests use the enrollment version and first date of the new state. [Section 2B.2](enrollment-timeline.md) supports reviewed historical corrections; classroom attendance is now available through the Section 3B.1 API, while grades, report exports, and in-app invitations remain unavailable.
 
+## Polish carried by 0.42.0
+
+These are rules now, not one-off fixes; a new screen should follow them.
+
+- **A class list reads by surname.** Rosters come back in record-id order so they can be paged; `byLearnerName` in `primitives.tsx` sorts what a screen has loaded, and the register, month, monitor and score sheet use it. The enrollment list is ordered by the API itself.
+- **Read a list's names with the list.** `GET /enrollments` carries each learner. Never read learners one by one to label a list: each read is a row in the privacy access log.
+- **`Table stack`** turns each row into a labelled block below 640px, so a register filled in on a phone never hides a column off the right edge. The register, the score sheet and the assessment list use it; every cell carries `data-label` for it.
+- **The activity log speaks plainly.** `web/activity.ts` names each audited table ("Subject offering", "Attendance mark"), says Added or Changed rather than INSERT or UPDATE, and labels the history row every reviewed change also writes. The Overview's list skips those echoes and names who made each change.
+- **A button that can only lead to a refusal is not offered.** Submitting a month that is not ready is disabled, and Invitations hides *Create the account* when `/me` reports `account_service: false`.
+- **A screen that draws its own header sets `ownHeader`.** `tests/web-screens.test.ts` fails otherwise; the access log drew two until it did.
+- **Every screen passes axe's structural rules** as manager and adviser, in `tests/web-a11y.test.ts`, which also proves axe reports a violation in this environment. Colour contrast cannot be measured without layout and is checked by hand against the tokens.
+- **`npm run demo`** is the way to look at a screen: the real API and workspace over synthetic records, at http://127.0.0.1:5173/demo.html. `vite.config.ts` proxies `/api/` rather than `/api`, because the bare prefix also matched `web/api.ts` and broke `npm run dev:web` outright.
+
 ## The privacy access log screen
 
 `web/screens/Access.tsx`, manager-only, at `/access` (0.39.0). It reads `GET /record-access-events` 25 at a time with the `before_id` cursor, and narrows by `actor_user_id` and `record_id`. A staff member is named from `GET /staff`; one no longer on that list is drawn as unrecorded rather than as a raw UUID. Each operation code is named in words by `describeResource`, with the code beneath it so an unfamiliar one still reads.

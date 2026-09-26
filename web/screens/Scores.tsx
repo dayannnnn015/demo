@@ -76,6 +76,24 @@ export function pendingEntries(rows: SheetRow[], draft: Record<string, string>):
 export const nextSequence = (tasks: Task[], component: string) =>
   Math.min(99, Math.max(0, ...tasks.filter(t => t.component_code === component).map(t => t.sequence)) + 1);
 
+/** Surname, then given names, then id so that two learners of one name keep a stable order. */
+export const byName = (a: SheetRow, b: SheetRow) =>
+  a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name) || a.enrollment_id.localeCompare(b.enrollment_id);
+
+/**
+ * Enter moves to the next learner's box, as a marks list is typed down a
+ * column from a paper record, and never submits anything: recording a batch
+ * is always a separate, reviewed step.
+ */
+const nextOnEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  const boxes = [...document.querySelectorAll<HTMLInputElement>('input.score-input')];
+  const next = boxes[boxes.indexOf(event.currentTarget) + (event.shiftKey ? -1 : 1)];
+  next?.focus();
+  next?.select();
+};
+
 const taskName = (task: Task, components: Component[]) =>
   `${components.find(c => c.code === task.component_code)?.name ?? task.component_code} ${task.sequence}: ${task.title}`;
 
@@ -162,6 +180,116 @@ function RecordSheet({ api, task, entries, onClose, onDone, onConflict }: {
         </div>
       </form>
     </Sheet>
+  );
+}
+
+type ScoreEvent = { id: string; entries: { enrollment_id: string; before: number | string | null; after: number | string | null }[]; reason: string; recorded_at: string };
+type TaskEvent = { id: string; task_version: number; action: 'create' | 'update'; before_snapshot: Task | null; after_snapshot: Task; reason: string; recorded_at: string };
+
+/** What changed between two revisions of an assessment, in the words of its form. */
+export function taskChanges(before: Task | null, after: Task) {
+  if (!before) return [`Added, out of ${shownMark(after.max_score)}`];
+  const changes: string[] = [];
+  if (before.title !== after.title) changes.push(`Title “${before.title}” → “${after.title}”`);
+  if (stored(before.max_score) !== stored(after.max_score)) changes.push(`Maximum ${shownMark(before.max_score)} → ${shownMark(after.max_score)}`);
+  if (before.status !== after.status) changes.push(after.status === 'archived' ? 'Archived' : 'Reopened for marks');
+  return changes.length ? changes : ['No field changed'];
+}
+
+/**
+ * Manager-only. Every recorded batch of marks for one assessment, newest first,
+ * with what each learner's mark was and became. Closed until asked for, because
+ * reading it names learners and so writes a row into the privacy access log.
+ * Names come from the sheet already on screen; a learner no longer on it is
+ * named by that fact rather than by a bare identifier.
+ */
+function ScoreHistory({ api, taskId, rows }: { api: Api; taskId: string; rows: SheetRow[] }) {
+  const [events, setEvents] = useState<ScoreEvent[] | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setOpen(false); setEvents(null); setCursor(null); }, [taskId]);
+
+  const load = async (before?: string) => {
+    try {
+      const page = await api<{ items: ScoreEvent[]; pagination: { next_before_id: string | null } }>(`/assessment-tasks/${taskId}/score-events${query({ limit: 10, before_id: before })}`);
+      setEvents(current => [...(before ? current ?? [] : []), ...page.items]);
+      setCursor(page.pagination.next_before_id);
+    } catch { if (!before) setEvents([]); setCursor(null); }
+  };
+  useEffect(() => { if (open) void load(); }, [open, taskId]);
+
+  const name = (id: string) => {
+    const row = rows.find(r => r.enrollment_id === id);
+    return row ? learnerName(row) : <Unrecorded label="No longer on this sheet" />;
+  };
+
+  return (
+    <div className="card">
+      <div className="card-head"><h2>Changes to these marks</h2></div>
+      {!open ? (
+        <div className="card-body">
+          <p className="muted">Every recorded batch, newest first, with each mark as it was and as it became. Use it to check a save whose response you never saw before recording it again. Opening it is logged, because it names learners.</p>
+          <button type="button" className="btn ghost small" onClick={() => setOpen(true)}><Icon name="activity" size={14} />Show changes to these marks</button>
+        </div>
+      ) : (
+        <>
+          <Table
+            loading={events === null}
+            rows={events ?? []}
+            rowKey={e => e.id}
+            empty={<EmptyState title="No marks recorded yet" body="Each batch recorded against this assessment appears here." />}
+            columns={[
+              { header: 'Recorded', cell: e => <span className="mono">{new Date(e.recorded_at).toLocaleString()}</span> },
+              { header: 'Learners changed', numeric: true, cell: e => e.entries.length },
+              { header: 'Reason', cell: e => e.reason },
+            ]}
+            detailLabel="Open"
+            detail={e => (
+              <Table
+                rows={e.entries}
+                rowKey={entry => entry.enrollment_id}
+                empty={<p className="muted">This batch changed nothing.</p>}
+                columns={[
+                  { header: 'Learner', cell: entry => name(entry.enrollment_id) },
+                  { header: 'Was', cell: entry => <Mark value={stored(entry.before)} /> },
+                  { header: 'Became', cell: entry => (entry.after === null ? <Badge tone="attention">Cleared</Badge> : <Mark value={stored(entry.after)} />) },
+                ]}
+              />
+            )}
+          />
+          {cursor ? <div className="card-body"><button type="button" className="btn ghost small" onClick={() => void load(cursor)}>Show older changes</button></div> : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Manager-only. Every revision of one assessment: added, retitled, a new maximum, archived. */
+function TaskHistory({ api, taskId }: { api: Api; taskId: string }) {
+  const [events, setEvents] = useState<TaskEvent[] | null>(null);
+  const [cursor, setCursor] = useState<number | null>(null);
+  const load = async (before?: number) => {
+    try {
+      const page = await api<{ items: TaskEvent[]; pagination: { next_before_version: number | null } }>(`/assessment-tasks/${taskId}/events${query({ limit: 5, before_version: before })}`);
+      setEvents(current => [...(before ? current ?? [] : []), ...page.items]);
+      setCursor(page.pagination.next_before_version);
+    } catch { if (!before) setEvents([]); setCursor(null); }
+  };
+  useEffect(() => { void load(); }, [taskId]);
+  if (events === null) return <p className="muted">Loading…</p>;
+  if (!events.length) return <Unrecorded label="No history returned" />;
+  return (
+    <>
+      <ul className="history-list">
+        {events.map(e => (
+          <li key={e.id}>
+            <span className="mono">{new Date(e.recorded_at).toLocaleString()}</span> · {taskChanges(e.before_snapshot, e.after_snapshot).join('; ')}
+            <span className="muted"> — {e.reason}</span>
+          </li>
+        ))}
+      </ul>
+      {cursor !== null ? <button type="button" className="btn ghost small" onClick={() => void load(cursor)}>Show older</button> : null}
+    </>
   );
 }
 
@@ -264,7 +392,8 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
   const task = sheet?.task;
   const max = task ? Number(task.max_score) : 0;
   const editable = !!task && task.status === 'open' && !closed;
-  const rows = sheet?.items ?? [];
+  // A class list reads by surname, the way the paper record does.
+  const rows = [...(sheet?.items ?? [])].sort(byName);
   const entries = pendingEntries(rows, draft);
   const problems = rows.filter(row => row.enrollment_id in draft && markProblem(draft[row.enrollment_id]!, max));
   const unrecorded = rows.filter(row => stored(row.raw_score) === null).length;
@@ -332,6 +461,7 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
               </label>
             </div>
             <Table
+              stack
               loading={tasks === null}
               rows={tasks ?? []}
               rowKey={t => t.id}
@@ -349,6 +479,7 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
                   {t.id !== taskId ? (
                     <p><button type="button" className="btn secondary small" onClick={() => setTaskId(t.id)}>Show this class sheet</button></p>
                   ) : <p className="muted">This is the class sheet shown below.</p>}
+                  {manager ? <Disclosure title="History of this assessment" note="Newest first"><TaskHistory api={api} taskId={t.id} /></Disclosure> : null}
                   {!closed ? (
                     <Disclosure title="Correct this assessment" note="Title, maximum, or archive it">
                       <p className="muted">Its component and number are fixed once it exists. A maximum cannot go below a mark already recorded; correct that mark first.</p>
@@ -390,6 +521,7 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
           {sheetFailed ? <div className="card-body"><Callout tone="stopped" title="This sheet could not be read">The assessment is outside what you can open, or the request failed.</Callout></div> : null}
           {entries.length > 100 ? <div className="card-body"><Callout tone="stopped" title="Too many at once">The API records at most 100 marks in one batch. Record some of them first.</Callout></div> : null}
           <Table
+            stack
             loading={sheet === null && !sheetFailed}
             rows={rows}
             rowKey={r => r.enrollment_id}
@@ -416,8 +548,9 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
                         aria-describedby={problem ? `${inputId}-error` : undefined}
                         value={text}
                         onChange={e => { const next = e.target.value; setDraft(d => ({ ...d, [r.enrollment_id]: next })); }}
+                        onKeyDown={nextOnEnter}
                       />
-                      {!text.trim() ? <Unrecorded label={recorded === null ? 'Not recorded' : 'Will be cleared'} /> : null}
+                      {!text.trim() && recorded !== null ? <Unrecorded label="Will be cleared" /> : null}
                       <span className="mark-print">{recorded === null ? 'Not recorded' : shownMark(recorded)}</span>
                       {problem ? <span className="field-error" id={`${inputId}-error`}><Icon name="alert" size={14} />{problem}</span> : null}
                     </span>
@@ -445,6 +578,8 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
           ) : null}
         </div>
       ) : null}
+
+      {manager && taskId && bound && sheet ? <ScoreHistory api={api} taskId={taskId} rows={rows} /> : null}
 
       <Callout tone="info" title="No total, average or grade is computed">
         EDUNEXUS records the marks teachers give and nothing more. Totals, weighting, percentages, transmutation and grades wait on the school’s grading enclosure and sample class records, and no screen shows one before then.

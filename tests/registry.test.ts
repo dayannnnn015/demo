@@ -145,6 +145,22 @@ describe('Section 2A learner registry and enrollment boundaries', () => {
     const changeAudit = (await db.pg.query('select changed_fields from edunexus.audit_events where entity_id=$1', [learnerId])).rows;
     expect(JSON.stringify(changeAudit)).not.toContain('Corrected');
   });
+  it('names each enrollment’s learner in one read, in name order, and logs both', async () => {
+    for (const last of ['Zamora', 'Abad']) {
+      const l = await request(app).post('/api/v1/learners').set(header()).send({ first_name: 'Synthetic', last_name: last, birth_date: '2018-01-01', sex: 'female' });
+      expect((await request(app).post('/api/v1/enrollments').set(header()).send({ learner_id: l.body.data.id, section_id: sectionB, enrolled_on: '2025-06-01' })).status).toBe(201);
+    }
+    const r = await request(app).get('/api/v1/enrollments?limit=100').set(header());
+    const items = r.body.data.items as { id: string; learner_id: string; learner: { id: string; last_name: string; first_name: string } | null }[];
+    expect(items.length).toBeGreaterThan(1);
+    for (const item of items) expect(item.learner?.id, 'the learner is the retained identity').toBe(item.learner_id);
+    const names = items.map(i => `${i.learner!.last_name.toLowerCase()} ${i.learner!.first_name.toLowerCase()}`);
+    expect(names).toEqual([...names].sort());
+    const logged = (await request(app).get('/api/v1/record-access-events?limit=5').set(header())).body.data.items
+      .filter((e: { request_id: string }) => e.request_id === r.body.requestId).flatMap((e: { record_ids: string[] }) => e.record_ids);
+    for (const item of items) { expect(logged).toContain(item.id); expect(logged).toContain(item.learner_id); }
+    expect(JSON.stringify((await request(app).get('/api/v1/record-access-events?limit=5').set(header())).body)).not.toContain(items[0]!.learner!.last_name);
+  });
   it('narrows the read log to one staff member or one record without widening it', async () => {
     const read = await request(app).get(`/api/v1/learners/${learnerId}`).set(header(ids.officer));
     const byOfficer = (await request(app).get(`/api/v1/record-access-events?actor_user_id=${ids.officer}`).set(header())).body.data.items;

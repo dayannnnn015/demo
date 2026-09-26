@@ -186,7 +186,7 @@ export const routes: Route[] = [
     render: p => <Activity {...p} />,
   },
   {
-    id: 'access', nav: 'Privacy access log', icon: 'eye', group: 'People', manager: true, built: true,
+    id: 'access', nav: 'Privacy access log', icon: 'eye', group: 'People', manager: true, built: true, ownHeader: true,
     title: 'Privacy access log',
     lede: 'Who was shown which learner records, and when.',
     record: 'record_access_events',

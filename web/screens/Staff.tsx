@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
+import { actionName, fieldNames, isJournal, recordName } from '../activity';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
 import {
-  Badge, Callout, Editor, EmptyState, FormSheet, PageHeader, Pager, Select, Table, Task,
+  Badge, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, Pager, Select, Table, Task,
   Unrecorded, sentence, value, type Field, type Status,
 } from '../components/primitives';
 
@@ -79,7 +80,9 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
   );
 }
 
-export function Invitations({ api, setStatus, reload, token, route }: Props) {
+export function Invitations({ api, me, setStatus, reload, token, route }: Props) {
+  // An older API omits the flag; only an explicit false hides the action.
+  const canCreate = me?.account_service !== false;
   const [rows, setRows] = useState<Page | null>(null);
   const [status, setFilter] = useState('requested');
   const [asking, setAsking] = useState(false);
@@ -92,9 +95,15 @@ export function Invitations({ api, setStatus, reload, token, route }: Props) {
         actions={<button type="button" className="btn" onClick={() => setAsking(true)}><Icon name="plus" size={15} />Request an invitation</button>}
       />
 
-      <Callout tone="info" title="How an invitation works">
-        Record who should get an account, then open the request and create it. Your colleague is emailed an invitation and chooses their own password.
-      </Callout>
+      {canCreate ? (
+        <Callout tone="info" title="How an invitation works">
+          Record who should get an account, then open the request and create it. Your colleague is emailed an invitation and chooses their own password.
+        </Callout>
+      ) : (
+        <Callout tone="attention" title="Accounts are created by the operator here">
+          This deployment has no account service configured, so EDUNEXUS cannot create an account itself. Record the request, ask the system operator to create the identity, then link it with the ID they give you.
+        </Callout>
+      )}
 
       <div className="card">
         <div className="card-head">
@@ -129,11 +138,13 @@ export function Invitations({ api, setStatus, reload, token, route }: Props) {
                 {/* Three whole forms used to sit open on top of each other here,
                     so the two nobody wanted were always in the way of the one
                     they did. Each is now folded away until it is chosen. */}
-                <Task title="Create the account" note="Sends an invitation email">
-                  <Editor submitLabel="Create the account" setStatus={setStatus} onSaved={reload}
-                    fields={[{ ...reasonField, hint: 'An invitation email goes to this address and they choose their own password.' }]}
-                    onSubmit={data => api(`/staff-invitations/${row.id}/identity`, 'POST', { ...data, version: row.version })} />
-                </Task>
+                {canCreate ? (
+                  <Task title="Create the account" note="Sends an invitation email">
+                    <Editor submitLabel="Create the account" setStatus={setStatus} onSaved={reload}
+                      fields={[{ ...reasonField, hint: 'An invitation email goes to this address and they choose their own password.' }]}
+                      onSubmit={data => api(`/staff-invitations/${row.id}/identity`, 'POST', { ...data, version: row.version })} />
+                  </Task>
+                ) : null}
                 <Task title="Link an account the operator made by hand" note="Needs the Supabase Auth user ID">
                   <Editor submitLabel="Link the account" setStatus={setStatus} onSaved={reload}
                     fields={[{ ...idField, hint: 'Only needed when the operator created the identity in Supabase by hand.' }, reasonField]}
@@ -173,12 +184,14 @@ export function Invitations({ api, setStatus, reload, token, route }: Props) {
 export function Activity({ api, token }: { api: Api; token: number }) {
   const [rows, setRows] = useState<Page | null>(null);
   const [before, setBefore] = useState('');
+  const [staff, setStaff] = useState<Row[]>([]);
   useEffect(() => { setRows(null); void api<Page>(`/audit-events${query({ limit: 25, before_id: before })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, before, token]);
+  useEffect(() => { void api<Page>(`/staff${query({ limit: 100 })}`).then(r => setStaff(r.items)).catch(() => setStaff([])); }, [api, token]);
   return (
     <div className="card">
       <div className="card-head"><div>
         <h2>Recorded changes</h2>
-        <p className="card-note">Field names only. Values, learner names and credentials are never copied here.</p>
+        <p className="card-note">Field names only. Values, learner names and credentials are never copied here. A reviewed change also writes its own history entry, so it appears twice.</p>
       </div></div>
       <Table
         loading={rows === null}
@@ -186,12 +199,17 @@ export function Activity({ api, token }: { api: Api; token: number }) {
         rowKey={r => String(r.id)}
         empty={<EmptyState title="No activity yet" body="Every change made in EDUNEXUS is recorded here automatically." />}
         columns={[
-          { header: 'When', cell: r => new Date(String(r.occurred_at)).toLocaleString() },
-          { header: 'Record', cell: r => <code>{value(r, 'entity_table')}</code> },
-          { header: 'Action', cell: r => sentence(value(r, 'operation')) },
-          { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) && r.changed_fields.length
-            ? r.changed_fields.join(', ')
-            : <Unrecorded label="None listed" /> },
+          { header: 'When', cell: r => <span className="mono">{new Date(String(r.occurred_at)).toLocaleString()}</span> },
+          { header: 'Record', cell: r => <Cell title={recordName(String(r.entity_table))} meta={<code>{value(r, 'entity_table')}</code>} /> },
+          { header: 'Action', cell: r => (isJournal(String(r.entity_table)) ? <Badge tone="neutral">History entry</Badge> : actionName(r)) },
+          { header: 'By', cell: r => {
+            const who = staff.find(s => s.user_id === r.actor_user_id);
+            return who ? String(who.display_name) : <Unrecorded label="Not on the staff list" />;
+          } },
+          { header: 'Fields changed', cell: r => {
+            const fields = fieldNames(r.changed_fields);
+            return fields.length ? fields.join(', ') : <Unrecorded label="None listed" />;
+          } },
         ]}
       />
       <div className="pager">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
+import { actionName, isJournal, recordName } from '../activity';
 import {
   Badge, EmptyState, PrintButton, Table, TableSkeleton, Unrecorded,
   gradeName, localToday, sentence, value, yearName, type Status,
@@ -98,7 +99,8 @@ export function Overview({ api, me, manager, token }: {
     if (!manager) return;
     void api<Page>(`/staff${query({ limit: 100 })}`).then(r => setStaff(r.items)).catch(() => setStaff([]));
     void api<Page>(`/staff-invitations${query({ status: 'requested', limit: 50 })}`).then(r => setPending(r.items.length)).catch(() => setPending(null));
-    void api<Page>(`/audit-events${query({ limit: 6 })}`).then(r => setRecent(r.items)).catch(() => setRecent([]));
+    // History rows echo the change they record, so read past them to six real ones.
+    void api<Page>(`/audit-events${query({ limit: 40 })}`).then(r => setRecent(r.items.filter(e => !isJournal(String(e.entity_table))).slice(0, 6))).catch(() => setRecent([]));
   }, [api, manager, token]);
 
   const loading = years === null || (Boolean(yearId) && sections === null);
@@ -286,18 +288,19 @@ export function Overview({ api, me, manager, token }: {
         <div className="card">
           <div className="card-head"><div>
             <h2>Latest recorded changes</h2>
-            <p className="card-note">Field names only. Values, learner names and credentials are never copied into this log.</p>
+            <p className="card-note">What changed and who changed it. Values, learner names and credentials are never copied into this log; the Activity log has every entry.</p>
           </div></div>
           <Table
             rows={recent}
             rowKey={r => String(r.id)}
             columns={[
-              { header: 'When', cell: r => new Date(String(r.occurred_at)).toLocaleString() },
-              { header: 'Record', cell: r => <code>{value(r, 'entity_table')}</code> },
-              { header: 'Action', cell: r => sentence(value(r, 'operation')) },
-              { header: 'Fields changed', cell: r => Array.isArray(r.changed_fields) && r.changed_fields.length
-                ? r.changed_fields.join(', ')
-                : <Unrecorded label="None listed" /> },
+              { header: 'When', cell: r => <span className="mono">{new Date(String(r.occurred_at)).toLocaleString()}</span> },
+              { header: 'Record', cell: r => recordName(String(r.entity_table)) },
+              { header: 'Action', cell: r => actionName(r) },
+              { header: 'By', cell: r => {
+                const who = staff.find(s => s.user_id === r.actor_user_id);
+                return who ? String(who.display_name) : <Unrecorded label="Not on the staff list" />;
+              } },
             ]}
           />
         </div>

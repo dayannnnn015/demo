@@ -42,7 +42,7 @@ All routes below use `/api/v1` and a Supabase bearer token. The complete request
 | `GET /learners/:id` | Read a visible profile |
 | `PATCH /learners/:id` | Correct profile fields with the last-read version |
 | `PATCH /learners/:id/lrn` | Fill a pending official LRN once |
-| `GET /enrollments` | Scoped, paginated filter by year, section, learner, or status |
+| `GET /enrollments` | Scoped, paginated filter by year, section, learner, or status, in learner-name order. Since 0.42.0 each row carries `learner` — the retained identity's id, names and LRN, or null when the caller may not read them — and the access row names both the enrollments and those learners, so a class list is one read rather than one per learner |
 | `POST /enrollments` | Create an annual enrollment and initial event atomically |
 | `GET /enrollments/:id` | Read the latest visible enrollment state |
 | `POST /enrollments/:id/movements` | Append reassignment, withdrawal, or reentry with the current version |

@@ -1,18 +1,16 @@
 # Where things stand
 
-**Updated:** 2026-09-26 · **Version:** 0.41.0 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-26 · **Version:** 0.42.0 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
 
-The user asked for everything buildable without the school, and delegated the decisions ("decide for me too. im giving you full permission"). This session:
+**0.42.0 is a polish release**, made by walking every screen in the new `npm run demo` — the real API and workspace over synthetic records — as a principal and as an adviser, at desktop and phone width. What it fixed and added:
 
-- **0.41.0 — Scores screen, migration 0024.** Raw score entry for advisers and managers: add an assessment, type a class's marks, review and record them in one batch. Nothing is totalled, averaged or converted. This settled the score-entry contradiction that had been waiting on the user since 21 September: raw entry is out of the grading gate, and the arithmetic stays in it (recorded in [constraints](constraints.md)). `0024` adds `read_assessment_components`, so an adviser can see the bound component codes and names, never the weights.
-- **0.40.0 — change your own password** from the profile menu, after the current password is checked.
-- **0.39.1 — advisers read their own section's calendar**, read-only.
-- **0.39.0 — the privacy access log screen**, filterable by staff member or record ID, and linked from each learner's panel.
-- **[Runbooks](runbooks.md)** for removing access, rollback, restore, credential rotation and a possible data exposure. None has been drilled.
+- **Found and fixed:** `npm run dev:web` was broken outright (the `/api` proxy also caught `web/api.ts`); the Privacy access log drew its header twice; the Enrollment screen read every learner separately, writing one access row per learner per class list, and said "LRN not issued" while still loading; the register, month and monitor listed learners in record-id order; the register's afternoon column sat off the edge of a phone; the Scores header buttons pushed the page sideways on a phone; a month that could not be submitted still offered *Submit*.
+- **Added:** the access log downloads as a CSV (IDs only, formulas defused); managers see score-batch and assessment history; Enter moves down the score sheet; the register opens on the last classroom day when today has none; `/me` reports `account_service`, and Invitations stops offering an account it cannot create; the Overview and Activity log name records in plain words and say who changed them.
+- **Checks:** `tests/web-a11y.test.ts` runs axe over every screen for both roles; `tests/web-screens.test.ts` fails a screen that draws its header without `ownHeader`.
 
-Earlier: 0.38.x fixed the morning register at 27 advisers (migration 0023) and added `npm run smoke`.
+Earlier this session: 0.41.0 the Scores screen and migration 0024; 0.40.0 change your own password; 0.39.1 advisers read their calendar; 0.39.0 the privacy access log; the [runbooks](runbooks.md).
 
 ## Deployed state
 
@@ -24,7 +22,7 @@ Have a signed-in principal and one adviser walk the Scores, Privacy access log a
 
 ## Verification
 
-All 441 tests pass across 39 files, plus all three type checks and the production build. `npm run test:race` (10 of 10) and `npm run test:load` pass on a disposable PostgreSQL with 0024 applied: 27 advisers, no refused request, each morning wave about 1.3–1.4 s. The working tree is clean.
+All 480 tests pass across 40 files, plus all three type checks and the production build. `npm run test:race` (10 of 10) and `npm run test:load` pass on a disposable PostgreSQL with 0024 applied: 27 advisers, no refused request, each morning wave about 1.3–1.4 s. The working tree is clean.
 
 ## Still outstanding
 

@@ -224,6 +224,8 @@ rtk proxy npm.cmd run check
 rtk proxy npm.cmd run api:export
 ```
 
+`npm run demo` starts the real API and workspace over an in-memory database of synthetic records, with a choice of synthetic principal, officer or adviser in place of sign-in, at http://127.0.0.1:5173/demo.html. It needs no `.env`, listens on the loopback address only, forgets everything when stopped, and is never part of the production build. Use it to look at a screen, take a screenshot for a guide, or let staff practise.
+
 For an API connected to Supabase, copy `.env.example` to `.env` and complete the deployment setup below. Do not use a privileged database URL as `DATABASE_URL`.
 
 ```powershell

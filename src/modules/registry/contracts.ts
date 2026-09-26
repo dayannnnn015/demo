@@ -43,7 +43,7 @@ const event = z.object({ id: uuid, enrollment_id: uuid, enrollment_version: z.nu
 const paginated = (schema: z.ZodType) => z.object({ items: z.array(schema), pagination: z.object({ limit: z.number(), offset: z.number(), has_more: z.boolean() }) });
 export const registryResponses: Record<string, z.ZodType> = {
   learnerList: paginated(learner), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
-  enrollmentList: paginated(enrollment), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
+  enrollmentList: paginated(enrollment.extend({ learner: z.object({ id: uuid, last_name: z.string(), first_name: z.string(), middle_name: z.string().nullable(), name_extension: z.string().nullable(), lrn: z.string().nullable() }).nullable().describe('The learner this enrollment belongs to, or null when the caller may not read them') })), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
   enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean(), current_grade_level: z.number().int(), academic_year_id: uuid }),
   enrollmentCounts: z.object({ academic_year_id: uuid, scope: z.enum(['school', 'current_access']), record_state: z.literal('valid'), enrolled: z.number().int(), withdrawn: z.number().int(),
     grades: z.array(z.object({ grade_level: z.number().int(), enrolled: z.number().int(), withdrawn: z.number().int() })) }),

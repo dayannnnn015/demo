@@ -8,7 +8,7 @@ import { Sheet } from '../components/overlay';
 import { ScopePickers, useScope } from '../components/scope';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, StatusLine, Table, TableSkeleton,
-  idle, learnerName, localToday, type Status,
+  idle, byLearnerName, learnerName, localToday, type Status,
 } from '../components/primitives';
 import { MarkValue, type Mark } from './Attendance';
 import { Session } from './Calendar';
@@ -194,7 +194,7 @@ function Membership({ api, sectionId, monthOn, token }: { api: Api; sectionId: s
       <div className="card-head"><h2>Membership and marks</h2></div>
       <Table
         loading={rows === null}
-        rows={rows ?? []}
+        rows={[...(rows ?? [])].sort(byLearnerName)}
         rowKey={row => row.enrollment_id}
         empty={<EmptyState title="Nobody in this month" body="No valid enrolment covers any date in this month for this section." />}
         columns={[
@@ -355,7 +355,9 @@ export function Months({ api, setStatus, reload, token, route }: Props) {
               key={action}
               type="button"
               className={action === 'submit' || action === 'lock' ? 'btn' : 'btn secondary'}
-              disabled={!current}
+              // The readiness check below already says why; a button that can only
+              // lead to a refusal is not offered.
+              disabled={!current || (action === 'submit' && !current.can_submit)}
               onClick={() => setActing(action)}
             >{actionName[action]}</button>
           ))}

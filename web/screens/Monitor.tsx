@@ -6,7 +6,7 @@ import { clamp, shift, span, weekday } from '../dates';
 import { ScopePickers, useScope } from '../components/scope';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, Select, Table, TableSkeleton,
-  Unrecorded, learnerName, localToday, type Status,
+  Unrecorded, byLearnerName, learnerName, localToday, type Status,
 } from '../components/primitives';
 import { MarkValue, type Mark } from './Attendance';
 
@@ -154,7 +154,7 @@ export function Monitor({ api, setStatus, token, route }: Props) {
     );
   }
 
-  const items = [...(result?.items ?? []), ...extra];
+  const items = [...(result?.items ?? []), ...extra].sort(byLearnerName);
   const frozen = result?.days.find(day => day.month_status !== 'draft')?.month_status;
 
   return (

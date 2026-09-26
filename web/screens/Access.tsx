@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
-import { query } from '../api';
+import { message, query } from '../api';
 import type { Route } from '../routes';
-import { Callout, Cell, EmptyState, Finder, PageHeader, Table, Unrecorded, type Field } from '../components/primitives';
+import { Icon } from '../components/icons';
+import { Callout, Cell, EmptyState, Finder, PageHeader, Table, Unrecorded, type Field, type Status } from '../components/primitives';
 
-type Props = { api: Api; token: number; route: Route };
+type Props = { api: Api; token: number; route: Route; setStatus: (s: Status) => void };
 type Filter = { actor_user_id: string; record_id: string };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -49,12 +50,33 @@ export function recordFromHash(hash: string) {
 }
 
 /**
+ * One CSV cell. Quoted when it holds a separator, and defused when it starts
+ * like a spreadsheet formula: a display name is typed by a person, and a cell
+ * beginning `=` or `+` would run in Excel when the privacy owner opens the file.
+ */
+export const csvCell = (value: unknown) => {
+  let text = value === null || value === undefined ? '' : String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+/** The log as a spreadsheet: IDs, times and plain descriptions, never a learner's name. */
+export function accessCsv(rows: Row[], names: Map<string, string>) {
+  const header = ['occurred_at', 'staff_member', 'staff_user_id', 'what_was_read', 'operation', 'request_id', 'record_count', 'record_ids'];
+  const lines = rows.map(r => {
+    const ids = Array.isArray(r.record_ids) ? r.record_ids.map(String) : [];
+    return [r.occurred_at, names.get(String(r.actor_user_id)) ?? '', r.actor_user_id, describeResource(String(r.resource)), r.resource, r.request_id, ids.length, ids.join(' ')].map(csvCell).join(',');
+  });
+  return [header.join(','), ...lines].join('\r\n') + '\r\n';
+}
+
+/**
  * The privacy access log: every read that returned a learner or enrollment
  * record, who made it and which record IDs it returned. It shows IDs rather
  * than names on purpose — resolving a name would itself be a read of the
  * record, and a log that writes to itself on every page turn is noise.
  */
-export function Access({ api, token, route }: Props) {
+export function Access({ api, token, route, setStatus }: Props) {
   const [staff, setStaff] = useState<Row[]>([]);
   const [filter, setFilter] = useState<Filter>(() => ({ actor_user_id: '', record_id: recordFromHash(globalThis.location?.hash ?? '') }));
   const [before, setBefore] = useState('');
@@ -78,16 +100,53 @@ export function Access({ api, token, route }: Props) {
     { key: 'record_id', label: 'Record ID', optional: true, pattern: '[0-9a-fA-F-]{36}', hint: 'A learner or enrollment ID, exactly as shown in a row below.' },
   ];
   const narrowed = Boolean(filter.actor_user_id || filter.record_id);
+  const [exporting, setExporting] = useState(false);
+
+  // Every page under the current filter, up to a bound a browser can hold. The
+  // file is built here and never sent anywhere; reading the log writes nothing.
+  const download = async () => {
+    setExporting(true);
+    setStatus({ text: 'Collecting the log…', kind: 'busy' });
+    try {
+      const all: Row[] = [];
+      let cursor = '';
+      let truncated = false;
+      for (let page = 0; ; page++) {
+        if (page === 50) { truncated = true; break; }
+        const result = await api<Page>(`/record-access-events${query({ limit: 100, before_id: cursor, actor_user_id: filter.actor_user_id, record_id: filter.record_id })}`);
+        all.push(...result.items);
+        const next = result.pagination?.next_before_id;
+        if (!next) break;
+        cursor = String(next);
+      }
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([accessCsv(all, names)], { type: 'text/csv;charset=utf-8' }));
+      link.download = `edunexus-access-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      setStatus({ kind: 'done', text: truncated
+        ? `Downloaded the newest ${all.length} reads. The log holds more; narrow it by staff member or record to get the rest.`
+        : `Downloaded ${all.length} ${all.length === 1 ? 'read' : 'reads'}.` });
+    } catch (error) {
+      setStatus({ kind: 'error', text: message(error) });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <>
-      <PageHeader route={route} />
+      <PageHeader
+        route={route}
+        actions={<button type="button" className="btn secondary" disabled={exporting || !rows?.items.length} onClick={() => void download()}><Icon name="download" size={15} />{narrowed ? 'Download these reads' : 'Download the log'}</button>}
+      />
 
       <div className="card">
         <div className="card-head"><div>
           <h2>Reads of learner records</h2>
           <p className="card-note">Record IDs only. No name, search term or profile value is copied into this log.</p>
         </div></div>
+        <div className="card-tools">
         <Finder
           key={`${filter.actor_user_id}|${filter.record_id}`}
           fields={fields}
@@ -95,6 +154,7 @@ export function Access({ api, token, route }: Props) {
           onApply={values => apply({ actor_user_id: values.actor_user_id ?? '', record_id: (values.record_id ?? '').trim().toLowerCase() })}
           onClear={() => apply({ actor_user_id: '', record_id: '' })}
         />
+        </div>
         <Table
           loading={rows === null}
           rows={rows?.items ?? []}

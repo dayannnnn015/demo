@@ -112,6 +112,7 @@ npm run dev:web      # Vite dev server, proxying /api to 3001
 npm run test:race    # opt-in: real two-connection lock races on a disposable Docker PostgreSQL
 npm run test:load    # opt-in: 27 advisers submitting the register at once, on a disposable Docker PostgreSQL
 npm run smoke        # after a deploy: health, the workspace and its assets, the version, and 401 on every operation
+npm run demo         # local only: the real API and screens over synthetic records at http://127.0.0.1:5173/demo.html
 ```
 
 Tests use PGlite and need no Docker or cloud credentials. The one exception is `tests/concurrency.pg.test.ts`, which skips unless `EDUNEXUS_RACE_PG_URL` is set; `npm run test:race` runs it against a throwaway container, and it must never be pointed at a shared or hosted server. The full suite takes about 90 seconds; run it in the background rather than blocking on it. A Claude Code session may see these commands rewritten by a local `rtk` proxy; that is a harness detail and changes nothing about what runs.

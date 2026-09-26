@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import type { Api, Page } from '../api';
 import { ApiError, message, query } from '../api';
 import type { Route } from '../routes';
@@ -8,7 +8,7 @@ import { Sheet } from '../components/overlay';
 import { ScopePickers, useScope } from '../components/scope';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, StatusLine, Table, TableSkeleton,
-  Unrecorded, idle, learnerName, localToday, type Status,
+  Unrecorded, byLearnerName, idle, learnerName, localToday, type Status,
 } from '../components/primitives';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -319,8 +319,34 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
   const [draft, setDraft] = useState<Record<string, Pair>>({});
   const [reviewing, setReviewing] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [openedBack, setOpenedBack] = useState('');
+  const settled = useRef(false);
 
   const { year, sectionId } = scope;
+
+  // On a weekend or a holiday the register would open on a date nobody can
+  // mark. Once per visit, and only while the date is still today, step back to
+  // the most recent classroom date in the last two weeks and say so. The
+  // calendar is read only when today's own sheet already says it holds no
+  // class, because each calendar read is a line in the privacy access log.
+  useEffect(() => {
+    if (settled.current || !year || !sectionId || !sheet) return;
+    settled.current = true;
+    const today = localToday();
+    if (dayOn !== today || sheet.schedule.am === 'classroom' || sheet.schedule.pm === 'classroom') return;
+    const from = clamp(shift(today, -13), String(year.starts_on), today);
+    void api<{ days: { day_on: string; am: string | null; pm: string | null }[] }>(`/academic-years/${year.id}/calendar${query({ from, to: today, section_id: sectionId })}`)
+      .then(calendar => {
+        const classroom = (d: { am: string | null; pm: string | null }) => d.am === 'classroom' || d.pm === 'classroom';
+        const todays = calendar.days.find(d => d.day_on === today);
+        if (!todays || classroom(todays)) return;
+        const last = [...calendar.days].reverse().find(classroom);
+        if (!last) return;
+        setDayOn(current => (current === today ? last.day_on : current));
+        setOpenedBack(today);
+      })
+      .catch(() => undefined);
+  }, [api, year?.id, sectionId, sheet]);
 
   // Open on a date inside the chosen year, so the first read is never outside it.
   useEffect(() => {
@@ -375,7 +401,7 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
     );
   }
 
-  const items = [...(sheet?.items ?? []), ...extra];
+  const items = [...(sheet?.items ?? []), ...extra].sort(byLearnerName);
   const schedule = sheet?.schedule;
   const editable = sheet?.recording_available === true;
   const today = localToday();
@@ -445,6 +471,9 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
 
         {schedule ? (
           <div className="card-body">
+            {openedBack && openedBack !== dayOn ? (
+              <p className="card-note">Opened on the last classroom day, because today ({weekday(openedBack)}, <span className="mono">{openedBack}</span>) has no class.</p>
+            ) : null}
             <p className="card-note">
               Morning: <b>{sessionBlock(schedule, 'am') ?? 'Classroom'}</b> · Afternoon: <b>{sessionBlock(schedule, 'pm') ?? 'Classroom'}</b>
               {schedule.label ? <> · {schedule.label}</> : null}
@@ -457,6 +486,7 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
         {failed ? <div className="card-body"><Callout tone="stopped" title="This sheet could not be read">The section or date is outside what you can open, or the request failed. Check which school year the date belongs to.</Callout></div> : null}
 
         <Table
+          stack
           loading={sheet === null && !failed}
           rows={items}
           rowKey={row => row.enrollment_id}
