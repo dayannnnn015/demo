@@ -34,6 +34,14 @@ The whole batch is one transaction. If any entry is out of range, references a l
 
 One journal row is written per batch, holding before/after for each changed entry, rather than one row per learner — the same shape [daily attendance](daily-attendance.md) uses, so a class entry does not produce a hundred history rows.
 
+## Which components an adviser may use
+
+Adoptions and bindings are manager-only, so until migration `0024` an adviser creating an assessment could not see which component codes the bound revision holds. `GET /api/v1/section-subjects/:id/assessment-components` answers for any offering the caller may read: `bound: false` with no components when no standing binding exists, otherwise each component's `code` and `name` in code order. **Weights are never returned**; nothing an adviser does needs them and nothing in EDUNEXUS computes with them. `read_assessment_components` repeats the access checks of `assessment_entry_context` — a manager, or the section's adviser in a year that is not closed; anyone else gets `NOT_FOUND` — but takes the academic lock **shared**, as register reads have since `0023`, rather than exclusively, since it writes nothing. It names no learner and writes no access row.
+
+## The screen
+
+`web/screens/Scores.tsx` (0.41.0) is open to every role. It picks a school year, section, subject and reporting period; lists the assessments under the bound policy's components; adds one through a sheet whose component list comes from the read above; corrects a title or maximum or archives one; and shows one class sheet — learners down, one raw mark each. Marks are typed into the sheet and held until reviewed together, then recorded in one batch with a reason, like the daily register: only learners whose box changed are sent, each at the version it was read, and an emptied box against a recorded mark is an explicit null that the review labels *Cleared*. A mark outside zero to the maximum, or with a third decimal place, is refused beside its box and never rounded. A version conflict reloads the sheet with the typing kept and returns to the review, where the colleague's newer mark shows as *Recorded now*, so nothing is overwritten unseen. The screen draws no total, average, percentage or grade anywhere, and says so.
+
 ## Access
 
 Advisers read and record for their own currently assigned sections in open years. Managers read everything and may record historically. An unassigned teacher gets 404, because the offering is simply not theirs; a suspended account gets 403 at the door. Task and score history are manager-only.
@@ -72,6 +80,6 @@ Sixteen tests cover component sourcing from the bound revision, refusal without 
 
 ## What is still gated
 
-Everything arithmetic. Component totals, weighting by the adopted basis points, rounding, transmutation, MPS, GWA, subject and section averages, and reviewed finalization all wait on the **grading enclosure and ECR examples** gate. When the school supplies them, the scores recorded here are the input, and the adopted policy bound to each offering says which rules apply.
+Everything arithmetic. Raw entry itself was taken out of the grading gate on 26 September 2026, recorded in [constraints](constraints.md). Component totals, weighting by the adopted basis points, rounding, transmutation, MPS, GWA, subject and section averages, and reviewed finalization all wait on the **grading enclosure and ECR examples** gate. When the school supplies them, the scores recorded here are the input, and the adopted policy bound to each offering says which rules apply.
 
 Kindergarten remains excluded: the draft model covers Grades 1–6 only, and descriptive assessment needs its own design behind its own gate.

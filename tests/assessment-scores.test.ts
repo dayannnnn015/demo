@@ -188,6 +188,27 @@ describe('Section 4B.1 assessment tasks and raw score entry',()=>{
     expect((await record([entry(0,10,1)])).body.error.code).toBe('ASSESSMENT_UNCHANGED');
   });
 
+  it('tells an adviser the bound component codes and names, never the weights',async()=>{
+    const components=`/api/v1/section-subjects/${offering.id}/assessment-components`;
+    const logged=async()=>(await db.pg.query<{n:number}>('select count(*)::integer as n from edunexus.record_access_events')).rows[0]!.n;
+    const before=await logged();
+    const read=await get(components,ids.teacher);
+    expect(read.status,JSON.stringify(read.body)).toBe(200);
+    expect(read.body.data).toEqual({offering_id:offering.id,bound:true,components:[{code:'PT',name:'Synthetic performance'},{code:'WW',name:'Synthetic written'}]});
+    expect(responses.componentList!.safeParse(read.body.data).success).toBe(true);
+    expect(JSON.stringify(read.body)).not.toContain('weight');
+    expect(await logged(),'codes name no learner, so no access row').toBe(before);
+    expect((await get(components,ids.otherTeacher)).status).toBe(404);
+    expect((await get(components,ids.inactive)).status).toBe(403);
+    await expect(db.asUser(ids.otherTeacher,tx=>tx.query('select edunexus.read_assessment_components($1)',[offering.id]))).rejects.toMatchObject({code:'P0002'});
+    const binding=(await get(`/api/v1/assessment-policy-bindings?offering_id=${offering.id}`)).body.data.items[0];
+    expect((await post(`/api/v1/assessment-policy-bindings/${binding.id}/release`,{version:binding.version,reason})).status).toBe(201);
+    expect((await get(components,ids.teacher)).body.data).toEqual({offering_id:offering.id,bound:false,components:[]});
+    for(const status of ['active','closed'])await db.pg.query('update edunexus.academic_years set status=$2 where id=$1',[year,status]);
+    expect((await get(components,ids.teacher)).status,'a closed year is no longer the adviser’s').toBe(404);
+    expect((await get(components)).status).toBe(200);
+  });
+
   it('archives a task and closes the year to further entry',async()=>{
     const current=(await get(`/api/v1/assessment-tasks/${task.id}`)).body.data;
     expect((await patch(`/api/v1/assessment-tasks/${task.id}`,{version:current.version,title:current.title,max_score:20,status:'archived',reason})).status).toBe(200);

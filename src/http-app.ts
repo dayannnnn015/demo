@@ -109,7 +109,8 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.assessment_policy_adoption_events') is not null
           and to_regclass('edunexus.assessment_policy_binding_events') is not null
           and to_regclass('edunexus.staff_invitation_events') is not null
-          and to_regclass('edunexus.assessment_score_events') is not null as ready`);
+          and to_regclass('edunexus.assessment_score_events') is not null
+          and to_regprocedure('edunexus.read_assessment_components(uuid)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });

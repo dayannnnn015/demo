@@ -159,6 +159,8 @@ Read [assessment-policy binding](docs/assessment-policy-bindings.md). Binding is
 - Adviser entry for current sections, manager historical access, and manager-only task and score journals.
 - Marks of a learner who has left are kept for managers and closed to their former adviser, in SQL as well as over HTTP.
 - Only an explicit null clears a mark, and every score read names the learners it disclosed in the privacy audit.
+- An adviser reads the component codes and names of the policy bound to their subject, never its weights, so they can name an assessment (migration 0024).
+- A Scores screen: add an assessment, type a class's marks, review and record them in one batch; blank stays unrecorded, and nothing is totalled or averaged.
 
 Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, average, percentage, transmutation or grade is computed anywhere; those wait on the school grading enclosure.
 
@@ -181,7 +183,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 - **Subjects and section offerings**: managers maintain the subject catalog and choose each section's subjects, each offering pinned to the catalog revision it was chosen from; advisers read their own section's list.
 - **Roster import**: preview a class list from the EDUNEXUS CSV template, decide each possible duplicate explicitly, then import the identical reviewed file into one section in one step, all rows or none.
 - **Assessment policies**: record the school's policy as an unapproved draft of components and weights, record the school's adoption of one exact revision for a year, and bind it to a section's subjects. The weights are typed from the school's documents; nothing supplies a default and nothing computes from them.
-- **Every module still to come, listed honestly**: score entry appears in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
+- **Raw score entry**: add a named assessment under a component of the policy bound to a subject, then type a class's marks and record them in one reviewed batch. A blank stays unrecorded, and no total, average or grade appears anywhere.
 - **The privacy access log**: every read that returned a learner or enrollment record — who, when, what kind of read and which record IDs — narrowed to one staff member or one record. A learner's own panel links straight to the reads of that learner. It shows IDs, not names, because resolving a name would itself be a read.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.

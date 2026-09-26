@@ -1023,6 +1023,12 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 }
 .pager-nav { display: flex; align-items: center; gap: var(--s2); }
 
+/* One raw mark per learner, typed where the class record would have it. */
+.score-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.score-input { width: 7rem; text-align: right; }
+.score-cell.bad .score-input { border-color: var(--red-600); }
+.score-cell .field-error { flex-basis: 100%; }
+
 /* The record IDs one logged read returned, one per rule, each with its filter. */
 .id-list { list-style: none; margin: var(--s3) 0 0; padding: 0; }
 .id-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s2) 0; border-top: 1px solid var(--line); }

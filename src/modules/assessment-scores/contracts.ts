@@ -20,6 +20,7 @@ export const scoreSchemas={
   scoreHistory:z.strictObject({limit:z.coerce.number().int().min(1).max(10).default(5),before_id:z.string().regex(/^[1-9][0-9]{0,17}$/).optional()})
 };
 export const scoreOperations=([
+  {id:'componentList',method:'get',path:'/api/v1/section-subjects/:id/assessment-components',summary:'Read the component codes and names of the policy bound to an accessible offering; no weight is returned'},
   {id:'taskList',method:'get',path:'/api/v1/section-subjects/:id/assessment-tasks',summary:'List named assessments of an accessible offering',query:scoreSchemas.taskList},
   {id:'taskCreate',method:'post',path:'/api/v1/section-subjects/:id/assessment-tasks',summary:'Add a named assessment under a component of the bound policy revision',body:scoreSchemas.taskCreate},
   {id:'taskGet',method:'get',path:'/api/v1/assessment-tasks/:id',summary:'Read one named assessment'},
@@ -37,7 +38,8 @@ export const taskRecord=z.object({id:uuid,offering_id:uuid,binding_id:uuid,repor
   version:z.number().int().positive(),created_at:time,updated_at:time});
 const sheetRow=z.object({enrollment_id:uuid,learner_id:uuid,last_name:z.string(),first_name:z.string(),middle_name:z.string().nullable(),
   name_extension:z.string().nullable(),raw_score:score,version:z.number().int()});
-export const scoreResponses:Record<string,z.ZodType>={taskGet:taskRecord,taskCreate:taskRecord,taskUpdate:taskRecord,
+export const scoreResponses:Record<string,z.ZodType>={componentList:z.object({offering_id:uuid,bound:z.boolean(),components:z.array(z.object({code:z.string(),name:z.string()}))}),
+  taskGet:taskRecord,taskCreate:taskRecord,taskUpdate:taskRecord,
   taskList:z.object({items:z.array(taskRecord),pagination:z.object({limit:z.number().int(),next_after_id:uuid.nullable()})}),
   scoreSheet:z.object({task:taskRecord,recorded_scores_only:z.literal(true),items:z.array(sheetRow),
     pagination:z.object({limit:z.number().int(),next_after_id:uuid.nullable()})}),

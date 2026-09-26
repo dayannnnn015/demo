@@ -17,6 +17,7 @@ import { Imports } from './screens/Imports';
 import { Policies } from './screens/Policies';
 import { Overview } from './screens/Overview';
 import { Access } from './screens/Access';
+import { Scores } from './screens/Scores';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -156,15 +157,11 @@ export const routes: Route[] = [
     render: p => <Policies {...p} />,
   },
   {
-    id: 'scores', nav: 'Scores', icon: 'scores', group: 'Academics',
+    id: 'scores', nav: 'Scores', icon: 'scores', group: 'Academics', built: true, ownHeader: true,
     title: 'Assessment scores',
     lede: 'Raw marks for one assessment, for your section.',
     record: 'assessment_tasks, assessment_scores', feeds: 'SF9',
-    render: soon(
-      'Record raw marks against a named assessment.',
-      'Marks are stored exactly as given, and an unrecorded learner is left blank rather than scored zero.',
-      'No total, average, MPS, GWA or transmuted grade is computed anywhere until the school supplies its grading enclosure and sample class records.',
-    ),
+    render: p => <Scores {...p} />,
   },
 
   {

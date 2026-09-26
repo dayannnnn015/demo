@@ -38,7 +38,7 @@ Together these keep the chain draft → adoption → binding consistent from eit
 | `POST /api/v1/assessment-policy-bindings/:id/release` | Current binding version and reason. |
 | `GET /api/v1/assessment-policy-bindings/:id/events` | Newest-first history, `limit` default 5/max 10, `before_version`. |
 
-Every operation requires an active manager. Teachers have no access to bindings, adoptions or drafts: they read their own section offerings, but which policy governs an offering is not yet useful to them, because no score entry exists. Teacher visibility belongs with score entry, behind the grading gate in [constraints](constraints.md), and expanding it earlier would widen permissions for no working feature.
+Every operation requires an active manager. Teachers have no access to bindings, adoptions or drafts. Since migration `0024` an adviser can read one narrow thing instead: the component codes and names of the policy bound to an offering of their own section, without its weights, through `GET /section-subjects/:id/assessment-components` — see [assessment tasks and raw scores](assessment-scores.md).
 
 A duplicate standing binding returns `ALREADY_EXISTS` (409), a withdrawn adoption or already-released binding returns `BINDING_STATE` (409), and a year, grade or active-state mismatch returns `BINDING_SCOPE` (409). On a conflict, refresh and decide again; after a lost response, inspect history before binding a second time.
 

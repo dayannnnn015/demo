@@ -10,7 +10,7 @@ Ask in this order. Request 1 alone unblocks roughly ten increments and is the cr
 
 | # | Request | Unblocks | Status |
 |---|---|---|---|
-| 1 | Grading enclosure and ECR examples | Score entry, arithmetic, MPS, GWA, finalization, promotion, SF9, SF10 | Not sent. Partly answered unasked — see below |
+| 1 | Grading enclosure and ECR examples | Arithmetic, MPS, GWA, finalization, promotion, SF9, SF10 — and, in practice, score entry, which needs an adopted policy to name assessments under | Not sent. Partly answered unasked — see below |
 | 2 | AM/PM mark meanings and half-day rules | SF2, SF4, alternative-delivery conversion | Not sent. Two questions added 2026-09-19 |
 | 3 | Blank approved form templates and signatories | SF2, SF4, SF9, SF10 rendering and release | Not sent. SF2, SF4 and SF9 for Grades 4–6 received 2026-09-19 |
 | 4 | Kindergarten assessment policy | Kindergarten reporting | Not sent |

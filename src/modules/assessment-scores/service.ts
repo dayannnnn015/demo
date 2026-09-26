@@ -17,6 +17,8 @@ export async function executeScore(id:ScoreOperationId,ctx:Context,input:{id?:st
     if(!row)throw new AppError(404,'NOT_FOUND','The assessment task was not found.');
     return row;
   };
+  // Codes and names only, for choosing a component; it names no learner, so it writes no access row.
+  if(id==='componentList'){const [row]=await tx.query('select edunexus.read_assessment_components($1) as components',[input.id]);return row!.components;}
   if(id==='taskList'){
     const q=input.query as z.infer<typeof s.taskList>;
     const rows=await tx.query(`select ${columns} from edunexus.assessment_tasks where offering_id=$1 and ($2='all' or status=$2)

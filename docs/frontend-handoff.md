@@ -1,8 +1,8 @@
-Current direction (26 September 2026): every module has a screen except score entry, and the privacy access log has one since 0.39.0. Backend review findings are in [the review](backend-review-2026-09-20.md). **Do not enable score screens** on the current implementation or treat the score-entry gate conflict as resolved.
+Current direction (26 September 2026): every module has a screen, including raw score entry since 0.41.0 and the privacy access log since 0.39.0. Backend review findings are in [the review](backend-review-2026-09-20.md). **Nothing may total, average, weight or convert a raw mark** on any screen; that arithmetic is still behind the grading gate.
 
 # Frontend integration contract
 
-The workspace is a Vite + React + TypeScript application in `web/`, built into `public/` and served by the API at `/app`; `/app` and `/account/setup` are the same page. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Every section the API implements has a screen, apart from Section 4B.1 score entry; see the roadmap for what each section covers.
+The workspace is a Vite + React + TypeScript application in `web/`, built into `public/` and served by the API at `/app`; `/app` and `/account/setup` are the same page. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Every section the API implements has a screen; see the roadmap for what each section covers.
 
 ## How the app is put together
 
@@ -250,9 +250,19 @@ Sections [4A.3](assessment-policy-drafts.md), [4A.4](assessment-policy-adoptions
 
 **A binding scopes, it does not grade.** The bindings card lists the chosen section's active offerings with the adoption governing each, drawn as *No policy bound* where there is none. Binding offers only standing adoptions of that year that cover the section's grade; release is one-way and says to bind again for a different adoption.
 
-## Score entry screens to build
+## The score entry screen
 
-[Section 4B.1](assessment-scores.md) is the first module advisers use weekly, so it deserves real design attention. From a section's offering, list assessments by reporting period and component, and offer a class sheet: learners down, one assessment across, with the maximum shown beside the title.
+[Section 4B.1](assessment-scores.md) has a screen since 0.41.0: `web/screens/Scores.tsx`, for every role, at `/scores`. What it settled is worth keeping.
+
+**A raw mark and nothing else.** There is no total, average, percentage, weighting or grade on this screen. `tests/web-scores.test.ts` fails on a column or figure that looks like one. The one count it shows is of learners with no mark recorded, which is about completeness, not performance.
+
+**Blank is not zero.** An unrecorded learner's box is empty and carries `Unrecorded`. Emptying a box against a recorded mark is a clear, labelled *Will be cleared* on the sheet and *Cleared* in the review, and it is sent as an explicit JSON null — the only thing the API accepts as a clear.
+
+**Only what changed is sent.** `pendingEntries()` compares each box with what is stored and includes a learner only if they differ, each at the version it was read. A learner nobody touched can never be rewritten by a batch. `markProblem()` refuses a third decimal place instead of rounding it, and a mark above the task maximum, beside its box.
+
+**A conflict is shown, not retried.** `VERSION_CONFLICT` reloads the sheet, keeps the typing and leaves the review open, where the colleague's newer mark is now *Recorded now*. The sheet is not blanked during that reload, because blanking it unmounts the review and loses the explanation — a defect the DOM test caught.
+
+**Components come from the bound policy.** The add sheet lists `GET /section-subjects/:id/assessment-components`, which returns codes and names but never weights. With no binding, the screen says who binds one and offers nothing to type into.
 
 Component choices come from the bound adopted revision, so fetch them from the binding's adoption rather than hard-coding "WW" and "PT". An offering with no standing binding cannot hold assessments at all, so show that as "no assessment policy is bound to this subject yet" and link to the binding screen rather than presenting an empty form.
 
