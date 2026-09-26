@@ -106,7 +106,7 @@ export const routes: Route[] = [
   },
 
   {
-    id: 'calendar', nav: 'Instructional calendar', icon: 'calendar', group: 'Attendance', manager: true, built: true, ownHeader: true,
+    id: 'calendar', nav: 'Instructional calendar', icon: 'calendar', group: 'Attendance', built: true, ownHeader: true,
     title: 'Instructional calendar',
     lede: 'Which days hold classes, and how each session runs.',
     record: 'instructional_days', feeds: 'SF2',

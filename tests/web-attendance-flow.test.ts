@@ -98,6 +98,27 @@ describe('the attendance workflow through its screens', () => {
     expect(configured.rows.map(r => [r.day_on, r.am, r.pm])).toEqual([...days.map(d => [d, 'classroom', 'classroom']), ['2001-06-30', 'no_class', 'no_class']]);
   });
 
+  it('shows the adviser their own section’s calendar, read only', async () => {
+    const other = randomUUID();
+    await db.pg.query("insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,5,'Synthetic Molave',$3)", [other, year, ids.otherTeacher]);
+    try {
+      const { host } = await show('calendar', ids.teacher);
+      const scope = await waitFor(() => {
+        const select = byLabel<HTMLSelectElement>(host, 'Applies to');
+        return select?.value === narra && select;
+      }, 'the adviser’s own section chosen');
+      expect([...scope.options].map(o => o.textContent)).toEqual(['Whole school', 'Grade 2 · Synthetic Narra']);
+      await toJune(host);
+      await waitFor(() => byText(host, /2001-06-25/, 'tr')?.textContent?.includes('Classroom'), 'the configured Monday');
+      expect(byText(host, 'Set a schedule')).toBeUndefined();
+      expect(host.querySelector('input[type="checkbox"]')).toBeNull();
+      expect(host.textContent).not.toContain('Change history');
+      expect(host.textContent).toContain('Read only');
+    } finally {
+      await db.pg.query('delete from edunexus.sections where id=$1', [other]);
+    }
+  });
+
   it('lets the adviser mark a class, clearing nothing that was not touched', async () => {
     const { host } = await show('attendance', ids.teacher);
     await fill(await waitFor(() => byLabel(host, 'Date'), 'the date picker'), '2001-06-25');

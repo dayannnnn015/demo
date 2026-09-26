@@ -63,10 +63,10 @@ describe('instructional calendar', () => {
     expect(clamp('2026-09-21', '2026-06-01', '2027-03-31')).toBe('2026-09-21');
   });
 
-  it('is reachable, and only by a manager', () => {
+  it('is reachable by every role, since an adviser reads their own section', () => {
     const route = routes.find(r => r.id === 'calendar')!;
     expect(route.built, 'the calendar screen is built').toBe(true);
-    expect(route.manager, 'configuring a calendar is a manager action').toBe(true);
+    expect(route.manager, 'an adviser reads the calendar; only the API decides who configures it').toBeFalsy();
     expect(route.feeds).toBe('SF2');
   });
 });

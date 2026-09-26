@@ -262,7 +262,7 @@ Do not compute or display a total, average, percentage or grade anywhere on thes
 
 ## The instructional calendar screen
 
-[Section 3A](instructional-calendar.md) has a screen: `web/screens/Calendar.tsx`, manager-only, at `/calendar`. It reads a month, sets or clears dates through the preview-and-confirm workflow, and shows the all-scope change history. What it settled is worth keeping if it is ever rebuilt.
+[Section 3A](instructional-calendar.md) has a screen: `web/screens/Calendar.tsx`, at `/calendar`. Managers configure it; since 0.39.1 advisers read it. It reads a month, sets or clears dates through the preview-and-confirm workflow, and shows the all-scope change history. What it settled is worth keeping if it is ever rebuilt.
 
 **A month at a time, because the SF2 is a month.** The API reads at most 62 dates, and a manager configuring a calendar is working from one page of the school's own. The month arrows are bounded by the school year, and the window is clamped to `starts_on`/`ends_on`, so a read can never fall outside the year or over the limit.
 
@@ -276,4 +276,4 @@ Do not compute or display a total, average, percentage or grade anywhere on thes
 
 **Conflicts are explained, not printed.** `SECTION_OVERRIDES_PRESENT` and `BASE_DAY_UNCONFIGURED` are rendered as the sentence that says what to do next, with the affected sections named. A bare code tells a school head nothing.
 
-Two things this screen does not do. It has no field-level error mapping, because `Editor` cannot express a two-step review; a server rejection goes to the sheet's own status line, and the client enforces the length and required rules so most never reach it. And it is manager-only, so an adviser cannot yet see the schedule for their own section, which the API would allow — the daily attendance screen shows the effective schedule for the day it is marking, which is the case that matters.
+Two things this screen does not do. It has no field-level error mapping, because `Editor` cannot express a two-step review; a server rejection goes to the sheet's own status line, and the client enforces the length and required rules so most never reach it. An adviser reads it and changes nothing: the section list is narrowed to the sections they advise, the screen opens on the first of them, and the pick boxes, both schedule actions and the change history are not rendered. The API refuses a section they do not advise with 404 whatever the screen offers.

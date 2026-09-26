@@ -10,7 +10,7 @@ import {
   Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status,
 } from '../components/primitives';
 
-type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
+type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
 type Mode = 'classroom' | 'alternative_delivery' | 'no_class' | 'suspended';
 type Source = 'school' | 'section' | 'unconfigured';
@@ -348,7 +348,7 @@ function History({ api, yearId, sections }: { api: Api; yearId: string; sections
  * working from the same page of the school's own. It also keeps every read
  * inside the API's 62-date limit without arithmetic.
  */
-export function Calendar({ api, manager, setStatus, reload, token, route }: Props) {
+export function Calendar({ api, me, manager, setStatus, reload, token, route }: Props) {
   const [years, setYears] = useState<Row[] | null>(null);
   const [yearId, setYearId] = useState('');
   const [sections, setSections] = useState<Row[]>([]);
@@ -368,11 +368,18 @@ export function Calendar({ api, manager, setStatus, reload, token, route }: Prop
   useEffect(() => {
     if (!yearId) return;
     // A section belongs to one year, so changing the year always drops the scope.
+    // An adviser opens on their own section, which is the schedule they mark
+    // against, and is offered no other: the API refuses a section they do not
+    // advise, so listing one would only offer a refusal.
     setScope('');
     void api<Page>(`/sections${query({ academic_year_id: yearId, limit: 100 })}`)
-      .then(page => setSections(page.items))
+      .then(page => {
+        const own = manager ? page.items : page.items.filter(s => s.adviser_user_id === me.user_id);
+        setSections(own);
+        if (!manager && own[0]) setScope(String(own[0].id));
+      })
       .catch(() => setSections([]));
-  }, [api, yearId, token]);
+  }, [api, yearId, manager, me.user_id, token]);
 
   const year = years?.find(y => y.id === yearId);
 
@@ -518,7 +525,11 @@ export function Calendar({ api, manager, setStatus, reload, token, route }: Prop
         ) : null}
       </div>
 
-      {manager ? <History api={api} yearId={yearId} sections={sections} /> : null}
+      {manager ? <History api={api} yearId={yearId} sections={sections} /> : (
+        <Callout tone="info" title="Read only">
+          The principal or an administrative officer sets the calendar. Tell them if a date for your section is wrong; attendance can only be recorded on a configured classroom date.
+        </Callout>
+      )}
 
       <Callout tone="info" title="Nothing here is assumed">
         No official dates, holidays, weekends or suspensions are supplied by EDUNEXUS. A date nobody has configured stays unknown: it is not a school day, not a holiday and not an absence, and attendance cannot be recorded against it. The school's approved calendar is the only source for these dates.
