@@ -14,20 +14,13 @@ The user asked for everything buildable without the school, and delegated the de
 
 Earlier: 0.38.x fixed the morning register at 27 advisers (migration 0023) and added `npm run smoke`.
 
-## Deployed state — needs the user
+## Deployed state
 
-**Migration 0024 is applied to the hosted database. The 0.41.0 application is not deployed**, because the deploy command was refused by the session's permission check. The live site still serves 0.38.1. That is safe, since 0024 only adds a function, but none of 0.39.0–0.41.0 is visible until someone runs:
-
-```
-npx vercel --prod --scope joshs-projects-47d7b071
-npm run smoke
-```
-
-Until then `npm run smoke` reports exactly two failures, both expected: the version (0.38.1 against 0.41.0) and the new `assessment-components` route answering 404 instead of 401.
+**0.41.0 is live** at https://edunexus-balili.vercel.app, deployed 2026-09-26 as `edunexus-rle9u876c-joshs-projects-47d7b071.vercel.app`, after migration `0024` was applied to the hosted database. `npm run smoke` passes all 118 checks, and the served bundle was checked for the new screens' own strings. `master` is pushed to GitHub.
 
 ## Single next action
 
-**Deploy 0.41.0** (above), then have a signed-in principal and one adviser walk the Scores, Privacy access log and Calendar screens on a phone and a desktop. That is also the accessibility and phone-width check nobody has done: it needs a real session, which no session of this tool has.
+Have a signed-in principal and one adviser walk the Scores, Privacy access log and Calendar screens on a phone and a desktop. That is also the accessibility and phone-width check nobody has done: it needs a real session, which no session of this tool has.
 
 ## Verification
 
