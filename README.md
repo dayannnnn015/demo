@@ -214,6 +214,8 @@ Read [frontend integration](docs/frontend-handoff.md) before extending it.
 
 ## Development
 
+Operating the live system — removing someone's access, rolling back a release, restoring into an isolated project, rotating a leaked credential — is in [the runbooks](docs/runbooks.md), none of which has been drilled yet.
+
 Requirements: Node.js 24, npm, and a dedicated Supabase development project. The workspace is a Vite + React app in `web/`, built into `public/` and served by the API at `/app`. Automated database tests use PGlite and do not need Docker or cloud credentials.
 
 ```powershell
