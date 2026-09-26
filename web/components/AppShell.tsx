@@ -45,7 +45,7 @@ function useDismiss(open: boolean, close: () => void) {
   return wrap;
 }
 
-function ProfileMenu({ me, onSignOut }: { me: Row; onSignOut: () => void }) {
+function ProfileMenu({ me, onSignOut, onChangePassword }: { me: Row; onSignOut: () => void; onChangePassword?: (() => void) | undefined }) {
   const [open, setOpen] = useState(false);
   const wrap = useDismiss(open, () => setOpen(false));
   const name = String(me.display_name);
@@ -65,6 +65,11 @@ function ProfileMenu({ me, onSignOut }: { me: Row; onSignOut: () => void }) {
             <b>{name}</b>
             <span>{sentence(String(me.role))}</span>
           </div>
+          {onChangePassword ? (
+            <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onChangePassword(); }}>
+              <Icon name="user" size={16} />Change password
+            </button>
+          ) : null}
           <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onSignOut(); }}>
             <Icon name="signout" size={16} />Sign out
           </button>
@@ -118,7 +123,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
   );
 }
 
-export function AppShell({ me, school, current, context, contextTone, onNavigate, onSignOut, children }: {
+export function AppShell({ me, school, current, context, contextTone, onNavigate, onSignOut, onChangePassword, children }: {
   me: Row;
   /** The school profile record. The rail states what it reads, never a literal:
    *  this is the same name printed on every official form, and it is editable. */
@@ -130,6 +135,7 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
   contextTone?: 'active' | 'none' | undefined;
   onNavigate: (id: string) => void;
   onSignOut: () => void;
+  onChangePassword?: (() => void) | undefined;
   children: ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
@@ -247,7 +253,7 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
               <span>Go to a screen</span>
               <kbd className="kbd">Ctrl K</kbd>
             </button>
-            <ProfileMenu me={me} onSignOut={onSignOut} />
+            <ProfileMenu me={me} onSignOut={onSignOut} onChangePassword={onChangePassword} />
           </div>
         </header>
         <main className="view" id="main">{children}</main>

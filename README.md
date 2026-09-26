@@ -196,7 +196,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 
 **The workspace prints.** A section list is carried to a classroom on paper, so printing drops the navigation and the chrome, keeps the register, and repeats table headings across pages.
 
-Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion and password recovery all run against Supabase from the browser.
+Sessions are held in `sessionStorage`, so a refresh keeps you signed in and closing the tab ends the session. Sign-in, invitation completion, password recovery and changing your own password from the profile menu all run against Supabase from the browser; a change asks for the current password first.
 
 Role-aware navigation hides what a staff member cannot use, but the API remains the authority. Teachers receive only their currently assigned learners. Reviewed learner corrections — an LRN, a timeline, a duplicate identity, a voided record, a grade placement — are manager-only and each goes through a review before it is confirmed. Advisers read the subjects offered to their own sections; only managers change the catalog or an offering. Attendance does not: an adviser marks and monitors their own sections and reads their own section's calendar, while consolidation, calendar changes and every change history are manager-only.
 

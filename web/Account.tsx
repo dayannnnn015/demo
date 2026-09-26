@@ -197,3 +197,71 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
     </div>
   );
 }
+
+/** The three Supabase calls a password change needs, so a test can stand in for the service. */
+export type PasswordAuth = Pick<SupabaseClient['auth'], 'getUser' | 'signInWithPassword' | 'updateUser'>;
+
+/** What the sign-in service's refusal means, in the words of this form. */
+export function passwordProblem(error: { code?: string | undefined; message?: string | undefined } | null | undefined) {
+  if (!error) return '';
+  if (error.code === 'same_password') return 'The new password must be different from the one you use now.';
+  if (error.code === 'weak_password') return 'The sign-in service found that password too easy to guess. Choose a longer one, or one that is not a common word or phrase.';
+  if (error.code === 'over_request_rate_limit' || error.code === 'over_email_send_rate_limit') return 'Too many attempts in a short time. Wait a minute and try again.';
+  return error.message || 'The sign-in service did not accept the change.';
+}
+
+/**
+ * Changing the password of the account already signed in.
+ *
+ * The project does not make Supabase ask for the current password — secure
+ * password change is off — so anyone who finds a staffroom machine left signed
+ * in could otherwise replace it and lock its owner out. The form therefore
+ * signs in again with the current password before it changes anything. That
+ * is a check in the browser, not a control: the operator should also switch on
+ * secure password change, which is recorded in the status.
+ */
+export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (text: string) => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<Status>(idle);
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (next.length < 12) { setStatus({ kind: 'error', text: 'The new password needs at least 12 characters.' }); return; }
+    if (next !== confirmation) { setStatus({ kind: 'error', text: 'The two new passwords do not match.' }); return; }
+    if (next === current) { setStatus({ kind: 'error', text: 'The new password must be different from the one you use now.' }); return; }
+    setBusy(true);
+    setStatus({ kind: 'busy', text: 'Checking your current password…' });
+    try {
+      const { data, error } = await auth.getUser();
+      const email = data.user?.email;
+      if (error || !email) throw new Error('Your session could not be read. Sign out, sign in again, then retry.');
+      const check = await auth.signInWithPassword({ email, password: current });
+      setCurrent('');
+      if (check.error) { setStatus({ kind: 'error', text: check.error.code === 'invalid_credentials' ? 'That is not your current password.' : passwordProblem(check.error) }); return; }
+      const changed = await auth.updateUser({ password: next });
+      if (changed.error) { setStatus({ kind: 'error', text: passwordProblem(changed.error) }); return; }
+      setNext(''); setConfirmation('');
+      onDone('Password changed. Use the new one the next time you sign in.');
+    } catch (error) {
+      setStatus({ kind: 'error', text: message(error) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={save}>
+      <StatusLine status={status} />
+      <Password id="current-password" label="Current password" autoComplete="current-password" value={current} onChange={setCurrent} />
+      <Password id="changed-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={next} onChange={setNext} />
+      <Password id="changed-confirmation" label="Confirm new password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
+      <div className="form-actions">
+        <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : 'Change password'}</button>
+      </div>
+      <p className="muted">Your password is held by the sign-in service, never by EDUNEXUS. Other devices stay signed in until their session ends.</p>
+    </form>
+  );
+}

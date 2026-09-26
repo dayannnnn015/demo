@@ -7,6 +7,7 @@ database changes are listed by their immutable migration number.
 
 | Version | Scope | Migration |
 |---|---|---|
+| 0.40.0 | Change your own password from the profile menu, after the current one is checked | — |
 | 0.39.1 | Advisers read their own section's instructional calendar | — |
 | 0.39.0 | The privacy access log screen: who was shown which learner record, narrowed by staff member or record | — |
 | 0.38.1 | Reads retried when the database is busy; libraries cached across releases; `npm run smoke` | — |

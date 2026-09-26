@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createApi, message, type Page, type Row } from './api';
-import { Account } from './Account';
+import { Account, PasswordChange } from './Account';
 import { AppShell } from './components/AppShell';
 import { BrandMark } from './components/brand';
+import { Sheet } from './components/overlay';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
 import { routeFor } from './routes';
 
@@ -20,6 +21,7 @@ export function App() {
   const [token, setToken] = useState(0);
   const [year, setYear] = useState<Row | null>(null);
   const [school, setSchool] = useState<Row | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -116,10 +118,16 @@ export function App() {
       contextTone={year ? 'active' : 'none'}
       onNavigate={navigate}
       onSignOut={() => void client.auth.signOut()}
+      onChangePassword={() => setChangingPassword(true)}
     >
       {route.ownHeader ? null : <PageHeader route={route} />}
       <StatusLine status={status} />
       {route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token, route })}
+      {changingPassword ? (
+        <Sheet title="Change your password" note="You will be asked for the one you use now." onClose={() => setChangingPassword(false)}>
+          <PasswordChange auth={client.auth} onDone={text => { setChangingPassword(false); setStatus({ text, kind: 'done' }); }} />
+        </Sheet>
+      ) : null}
     </AppShell>
   );
 }

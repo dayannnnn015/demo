@@ -8,6 +8,7 @@
     "web/**/*.tsx",
     "tests/helpers/dom.ts",
     "tests/web-access.test.ts",
+    "tests/web-password.test.ts",
     "tests/web-attendance-flow.test.ts",
     "tests/web-editor.test.ts",
     "tests/web-followups.test.ts",
