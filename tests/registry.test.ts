@@ -145,6 +145,21 @@ describe('Section 2A learner registry and enrollment boundaries', () => {
     const changeAudit = (await db.pg.query('select changed_fields from edunexus.audit_events where entity_id=$1', [learnerId])).rows;
     expect(JSON.stringify(changeAudit)).not.toContain('Corrected');
   });
+  it('narrows the read log to one staff member or one record without widening it', async () => {
+    const read = await request(app).get(`/api/v1/learners/${learnerId}`).set(header(ids.officer));
+    const byOfficer = (await request(app).get(`/api/v1/record-access-events?actor_user_id=${ids.officer}`).set(header())).body.data.items;
+    expect(byOfficer[0].request_id).toBe(read.body.requestId);
+    expect(byOfficer.every((e: { actor_user_id: string }) => e.actor_user_id === ids.officer)).toBe(true);
+    const byRecord = (await request(app).get(`/api/v1/record-access-events?record_id=${learnerId}&limit=100`).set(header())).body.data.items;
+    expect(byRecord.length).toBeGreaterThan(1);
+    expect(byRecord.every((e: { record_ids: string[] }) => e.record_ids.includes(learnerId))).toBe(true);
+    const both = (await request(app).get(`/api/v1/record-access-events?record_id=${learnerId}&actor_user_id=${ids.officer}`).set(header())).body.data.items;
+    expect(both.map((e: { request_id: string }) => e.request_id)).toContain(read.body.requestId);
+    expect(both.every((e: { actor_user_id: string }) => e.actor_user_id === ids.officer)).toBe(true);
+    expect((await request(app).get('/api/v1/record-access-events?record_id=00000000-0000-4000-8000-00000000ffff').set(header())).body.data.items).toEqual([]);
+    expect((await request(app).get('/api/v1/record-access-events?record_id=not-a-uuid').set(header())).status).toBe(422);
+    expect((await request(app).get(`/api/v1/record-access-events?actor_user_id=${ids.teacher}`).set(header(ids.teacher))).status).toBe(403);
+  });
   it('denies closed-year mutations and removes teacher access while preserving managerial history', async () => {
     await db.pg.query("insert into edunexus.reporting_periods(academic_year_id,ordinal,name,starts_on,ends_on) values($1,1,'Synthetic term','2025-06-01','2026-03-31')", [yearId]);
     await db.pg.query("update edunexus.academic_years set status='active' where id=$1", [yearId]);

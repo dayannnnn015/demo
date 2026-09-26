@@ -197,7 +197,7 @@ code, .mono {
 .rail-open:hover { background: var(--hover); color: var(--ink-900); }
 
 .nav-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s3) var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s1); }
-/* A thin rail-coloured scrollbar, so nineteen items do not put a bright
+/* A thin rail-coloured scrollbar, so twenty items do not put a bright
    Windows scrollbar down the middle of the dark rail. */
 .nav-scroll { scrollbar-width: thin; scrollbar-color: var(--rail-700) transparent; }
 .nav-scroll::-webkit-scrollbar { width: 8px; }
@@ -362,7 +362,7 @@ code, .mono {
 .scope.none { background: var(--amber-100); border-color: var(--amber-200); color: var(--amber-700); }
 .scope.none .ico { color: var(--amber-700); }
 
-/* The keyboard route to all nineteen screens. It is a button styled as a
+/* The keyboard route to all twenty screens. It is a button styled as a
    field because that is what it opens, and it states its own shortcut. */
 .search-trigger {
   display: inline-flex;
@@ -1022,6 +1022,11 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
   color: var(--ink-500);
 }
 .pager-nav { display: flex; align-items: center; gap: var(--s2); }
+
+/* The record IDs one logged read returned, one per rule, each with its filter. */
+.id-list { list-style: none; margin: var(--s3) 0 0; padding: 0; }
+.id-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); padding: var(--s2) 0; border-top: 1px solid var(--line); }
+.id-list .mono { overflow-wrap: anywhere; }
 
 /* ---------- Command palette ---------- */
 

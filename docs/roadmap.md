@@ -30,7 +30,7 @@ Acceptance: manager/teacher boundaries hold in SQL and HTTP; stale edits fail; s
 
 **Section 2B.5 is implemented:** reviewed whole-year grade-placement correction with explicit full-timeline section mapping, immutable grade/timeline evidence, teacher access updates, and reviewed reversal. See [grade placement](grade-placement.md).
 
-**Since 0.34.0 the reviewed corrections of 2B.1–2B.5 have screens** on the Learner registry and Enrollment screens; roster import (2B.1) followed in 0.35.0, so every Section 2 workflow now has an interface.
+**Since 0.34.0 the reviewed corrections of 2B.1–2B.5 have screens** on the Learner registry and Enrollment screens; roster import (2B.1) followed in 0.35.0, so every Section 2 workflow now has an interface. Since 0.39.0 managers also review the read-access log on its own screen, by staff member or by record, and a learner's panel links to the reads of that learner.
 
 School-reviewed sample mappings, additional learner fields, and class-capacity decisions remain for registry acceptance/refinement. Section 3A now supplies the instructional-calendar foundation. No automatic duplicate merge or arbitrary XLSX/LIS importer is available.
 

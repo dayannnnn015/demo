@@ -159,6 +159,9 @@ export function Learners({ api, manager, setStatus, reload, token, route }: {
                       </ReviewActions>
                       <IdentityHistory api={api} learnerId={id} />
                     </Task>
+                    <p className="card-note">
+                      <a href={`#/access?record=${id}`}>Who has opened this record</a> — the privacy access log, narrowed to this learner. Their enrollments are logged under their own IDs.
+                    </p>
                   </>
                 ) : null}
 

@@ -1,8 +1,8 @@
-Current direction (21 September 2026): frontend work resumed after the corrective migration shipped. The whole of Section 3 now has screens — the instructional calendar, the daily attendance register, monthly consolidation and the classroom absence monitor — so the attendance workflow is walkable end to end. Attendance follow-up (3B.4) is the one module in that section still without a screen. Backend review findings are in [the review](backend-review-2026-09-20.md). **Do not enable score screens** on the current implementation or treat the score-entry gate conflict as resolved.
+Current direction (26 September 2026): every module has a screen except score entry, and the privacy access log has one since 0.39.0. Backend review findings are in [the review](backend-review-2026-09-20.md). **Do not enable score screens** on the current implementation or treat the score-entry gate conflict as resolved.
 
 # Frontend integration contract
 
-The workspace is a Vite + React + TypeScript application in `web/`, built into `public/` and served by the API at `/app`; `/app` and `/account/setup` are the same page. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Sections 1, 2A, 2B.1, 2B.2, 2B.3, 2B.4 and 2B.5 are implemented in the API. The workspace now also reads the Section 2A learner registry; import and correction screens are not yet built.
+The workspace is a Vite + React + TypeScript application in `web/`, built into `public/` and served by the API at `/app`; `/app` and `/account/setup` are the same page. Keep calculation, permission, finalization, and record-transition rules in the backend. Read `docs/openapi.json` or `GET /openapi.json` for the current contract. Every section the API implements has a screen, apart from Section 4B.1 score entry; see the roadmap for what each section covers.
 
 ## How the app is put together
 
@@ -140,6 +140,12 @@ Dates are exact `YYYY-MM-DD` calendar dates in the school's Asia/Manila context.
 
 Show draft school-year setup before activation. Allow period corrections only in draft years. Explain that closed years are immutable. [Section 2A](learner-registry.md) supports learner profiles, annual enrollment, current rosters, and movement history. Managers edit; teachers only view current assigned open-year rosters. Keep LRNs as strings, display pending for null, and never generate identifiers or silently merge matching names. Movement requests use the enrollment version and first date of the new state. [Section 2B.2](enrollment-timeline.md) supports reviewed historical corrections; classroom attendance is now available through the Section 3B.1 API, while grades, report exports, and in-app invitations remain unavailable.
 
+## The privacy access log screen
+
+`web/screens/Access.tsx`, manager-only, at `/access` (0.39.0). It reads `GET /record-access-events` 25 at a time with the `before_id` cursor, and narrows by `actor_user_id` and `record_id`. A staff member is named from `GET /staff`; one no longer on that list is drawn as unrecorded rather than as a raw UUID. Each operation code is named in words by `describeResource`, with the code beneath it so an unfamiliar one still reads.
+
+**It shows record IDs, never names.** Turning an ID into a name would be a read of that learner, which would write its own row into the log being reviewed. A row's panel lists the IDs it returned, each with a button that narrows the log to it. The route accepts `?record=<uuid>` after the hash, and `web/App.tsx` strips everything after `?` before choosing a route, so other screens can link into it. `tests/web-access.test.ts` asserts that reading the log writes nothing to it.
+
 ## Staff invitation screens to build
 
 [Staff invitations](staff-invitations.md) are manager-only. The workspace still authorizes a bare UUID through `POST /staff`; the tracked flow is API-only so far. A screen should show outstanding requests with their intended permission level, let a manager record a new request, and let them paste the operator's returned identifier into a provision action that carries the current invitation version.
@@ -156,9 +162,9 @@ Registration, profile correction, LRN assignment, enrollment and movements are b
 
 ## Learner registry screens
 
-The workspace has a read-only **Learners** tab for every role, built on [Section 2A](learner-registry.md). It searches `GET /learners` with the documented `search`, `lrn` and `birth_date` filters, pages 25 rows at a time by `offset`, and loads a learner's `GET /enrollments?learner_id=` records only when a staff member opens that row, because every successful read appends a record-access event.
+The workspace has a **Learners** tab for every role, built on [Section 2A](learner-registry.md). It searches `GET /learners` with the documented `search`, `lrn` and `birth_date` filters, pages 25 rows at a time by `offset`, and loads a learner's `GET /enrollments?learner_id=` records only when a staff member opens that row, because every successful read appends a record-access event.
 
-The tab is deliberately read-only. Registration, LRN assignment, enrollment, movements and every reviewed correction stay API-only until their review screens exist; do not add a mutation button that skips the version and reason a workflow requires. A teacher who opens the tab receives only their currently assigned learners from the API, and the page says so rather than implying the registry is empty. Render pending LRNs as `Pending` instead of a blank cell, show Kindergarten by name rather than grade `0`, and keep `record_state=voided` rows labeled as unusable for reporting. Managers request `record_state=all` to see voided evidence; teachers must not.
+Teachers get it read-only. Managers register learners, correct details, fill a pending LRN and reach the reviewed corrections from a learner's panel; each goes through its version, reason and review, and no button skips them. A manager's panel also links to `#/access?record=<id>`, the privacy access log narrowed to that learner. A teacher who opens the tab receives only their currently assigned learners from the API, and the page says so rather than implying the registry is empty. Render pending LRNs as `Pending` instead of a blank cell, show Kindergarten by name rather than grade `0`, and keep `record_state=voided` rows labeled as unusable for reporting. Managers request `record_state=all` to see voided evidence; teachers must not.
 
 Section and school-year names are resolved from `/sections` and `/academic-years` for display only. A missing entry means the row is outside the reader's scope, so it shows as unavailable rather than as a database identifier. Learner names, LRNs and birth dates are rendered as text and cleared on sign-out with the rest of the workspace.
 

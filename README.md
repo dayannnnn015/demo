@@ -24,7 +24,7 @@ The [20 September backend review](docs/backend-review-2026-09-20.md) records the
 - Scoped learner search and annual enrollment, with one enrollment per learner per school year.
 - Dated same-grade section reassignment, withdrawal, and reentry with immutable event history.
 - Manager-only changes and teacher visibility limited to current assigned open-year rosters.
-- Read-access auditing, atomic rollback, protected history, and current-version checks on movements.
+- Read-access auditing, atomic rollback, protected history, and current-version checks on movements. Managers review the read log by staff member or by record ID on the Privacy access log screen.
 
 ## What works in Section 2B.1
 
@@ -182,6 +182,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 - **Roster import**: preview a class list from the EDUNEXUS CSV template, decide each possible duplicate explicitly, then import the identical reviewed file into one section in one step, all rows or none.
 - **Assessment policies**: record the school's policy as an unapproved draft of components and weights, record the school's adoption of one exact revision for a year, and bind it to a section's subjects. The weights are typed from the school's documents; nothing supplies a default and nothing computes from them.
 - **Every module still to come, listed honestly**: score entry appears in the navigation with what they will do and what they wait on, so a walkthrough shows the whole shape of the system.
+- **The privacy access log**: every read that returned a learner or enrollment record — who, when, what kind of read and which record IDs — narrowed to one staff member or one record. A learner's own panel links straight to the reads of that learner. It shows IDs, not names, because resolving a name would itself be a read.
 - **Staff invitations**: request an invitation, record the operator-provisioned identity, or cancel, with the state of every outstanding request.
 - **Section 2A learner registry**: scoped search by name, exact LRN or birth date; managers register learners, correct details, fill a pending LRN, and read each learner's annual enrollment records.
 - **Enrollment and movements**: enrol a learner into a section, then record dated reassignment, withdrawal with a recorded reason, and re-entry, with immutable movement history.
@@ -189,7 +190,7 @@ The workspace at `/app` is a keyboard-navigable administrative interface: a deep
 
 **A record that does not exist is drawn, not left blank.** An unmarked attendance session and an unentered score are null, never zero and never "present", so a missing value carries a ruled diagonal mark and says what is missing — "LRN not issued", "No adviser". The same mark, at panel size, is what the Overview uses to name the general average, attendance rate, academic standing and class ranking this system may not state, and what each of them waits on. An em dash would read as a value somebody typed.
 
-**Ctrl+K opens a command palette** onto all nineteen screens. It searches their names, sections and descriptions and nothing else: every learner and enrollment list writes an access-log row naming the exact records returned, so a palette that searched the registry would write one per keystroke.
+**Ctrl+K opens a command palette** onto all twenty screens. It searches their names, sections and descriptions and nothing else: every learner and enrollment list writes an access-log row naming the exact records returned, so a palette that searched the registry would write one per keystroke.
 
 **Errors sit beside the field that caused them.** A rejected save marks each field, prints the server's own message under it, and focuses a summary that lists every problem and jumps to each one. Creating a record opens a side panel rather than a second form parked under the list, and anything irreversible is confirmed in a dialog that states the consequence rather than asking "are you sure".
 
@@ -201,7 +202,7 @@ Role-aware navigation hides what a staff member cannot use, but the API remains 
 
 A screen states what it is in one line and names the DepEd form its records end up on, because staff navigate by form name rather than by module. Identifiers are set in a monospaced face throughout, so a twelve-digit LRN can be checked against paper a digit at a time.
 
-The rail groups the nineteen screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The top bar carries the page title, the active school year — the scope every record is filed under — the palette and the signed-in identity. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
+The rail groups the twenty screens and each group folds away; the rail itself collapses to an icon strip, and both preferences end with the tab rather than following a person around a shared staffroom machine. The top bar carries the page title, the active school year — the scope every record is filed under — the palette and the signed-in identity. There is no notification bell: nothing in this system may raise an alert yet, so a badge would imitate a signal that does not exist.
 
 Read [frontend integration](docs/frontend-handoff.md) before extending it.
 

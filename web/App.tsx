@@ -7,7 +7,8 @@ import { BrandMark } from './components/brand';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
 import { routeFor } from './routes';
 
-const currentHash = () => location.hash.replace(/^#\/?/, '') || 'overview';
+// A screen may carry its own filter after `?`, as the access log does; the route is what precedes it.
+const currentHash = () => location.hash.replace(/^#\/?/, '').replace(/\?.*$/, '') || 'overview';
 
 export function App() {
   const [client, setClient] = useState<SupabaseClient | null>(null);

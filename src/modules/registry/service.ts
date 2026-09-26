@@ -75,7 +75,7 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
     }
     case 'recordAccessList': {
       const q = input.query as z.infer<typeof s.accessQuery>;
-      const rows = await tx.query('select id::text,occurred_at,actor_user_id,request_id,resource,record_ids from edunexus.record_access_events where ($1::bigint is null or id<$1) order by edunexus.record_access_events.id desc limit $2', [q.before_id ?? null, q.limit + 1]);
+      const rows = await tx.query('select id::text,occurred_at,actor_user_id,request_id,resource,record_ids from edunexus.record_access_events where ($1::bigint is null or id<$1) and ($3::uuid is null or actor_user_id=$3) and ($4::uuid is null or $4=any(record_ids)) order by edunexus.record_access_events.id desc limit $2', [q.before_id ?? null, q.limit + 1, q.actor_user_id ?? null, q.record_id ?? null]);
       return { items: rows.slice(0, q.limit), pagination: { limit: q.limit, next_before_id: rows.length > q.limit ? rows[q.limit - 1]!.id : null } };
     }
   }

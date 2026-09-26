@@ -16,6 +16,7 @@ import { Subjects } from './screens/Subjects';
 import { Imports } from './screens/Imports';
 import { Policies } from './screens/Policies';
 import { Overview } from './screens/Overview';
+import { Access } from './screens/Access';
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -186,6 +187,13 @@ export const routes: Route[] = [
     lede: 'Every change this system has recorded. Append-only.',
     record: 'audit_events',
     render: p => <Activity {...p} />,
+  },
+  {
+    id: 'access', nav: 'Privacy access log', icon: 'eye', group: 'People', manager: true, built: true,
+    title: 'Privacy access log',
+    lede: 'Who was shown which learner records, and when.',
+    record: 'record_access_events',
+    render: p => <Access {...p} />,
   },
 ];
 

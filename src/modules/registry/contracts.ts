@@ -17,7 +17,7 @@ export const registrySchemas = {
   movement: z.strictObject({ version, action: z.enum(['reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid.nullable().default(null), exit_reason: z.enum(['transfer_out', 'withdrawal', 'dropout', 'death']).nullable().default(null) }).refine(v => v.action === 'withdrawn' ? v.section_id === null && v.exit_reason !== null : v.section_id !== null && v.exit_reason === null, 'Withdrawals require exit_reason and no section; reassignment/reentry require section_id and no exit_reason.'),
   historyQuery: z.strictObject(page),
   countQuery: z.strictObject({ academic_year_id: uuid }),
-  accessQuery: z.strictObject({ limit: page.limit, before_id: z.string().regex(/^[1-9][0-9]{0,17}$/).optional() }),
+  accessQuery: z.strictObject({ limit: page.limit, before_id: z.string().regex(/^[1-9][0-9]{0,17}$/).optional(), actor_user_id: uuid.optional(), record_id: uuid.optional() }),
 };
 export const registryOperations = ([
   { id: 'learnerList', method: 'get', path: '/api/v1/learners', summary: 'Search learners visible to the current staff member', query: registrySchemas.learnerQuery },
@@ -31,7 +31,7 @@ export const registryOperations = ([
   { id: 'enrollmentMove', method: 'post', path: '/api/v1/enrollments/:id/movements', summary: 'Append a dated section change, withdrawal, or reentry; supply the current enrollment version', body: registrySchemas.movement, manager: true },
   { id: 'enrollmentHistory', method: 'get', path: '/api/v1/enrollments/:id/history', summary: 'Read original movement records, which may be superseded by corrections; use /timeline for effective history', query: registrySchemas.historyQuery, manager: true },
   { id: 'enrollmentCounts', method: 'get', path: '/api/v1/enrollment-counts', summary: 'Count valid annual enrollments by grade and status within what the caller may read; names no learner or enrollment and writes no access record', query: registrySchemas.countQuery },
-  { id: 'recordAccessList', method: 'get', path: '/api/v1/record-access-events', summary: 'Review access to learner and enrollment records without raw search terms or profile values', query: registrySchemas.accessQuery, manager: true },
+  { id: 'recordAccessList', method: 'get', path: '/api/v1/record-access-events', summary: 'Review access to learner and enrollment records without raw search terms or profile values, optionally narrowed to one staff member or one record ID', query: registrySchemas.accessQuery, manager: true },
 ] as const).map(operation => ({ ...operation, module: 'registry' as const }));
 export type RegistryOperationId = typeof registryOperations[number]['id'];
 
