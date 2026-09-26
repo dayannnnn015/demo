@@ -14,7 +14,7 @@ Earlier this session: 0.41.0 the Scores screen and migration 0024; 0.40.0 change
 
 ## Deployed state
 
-**0.41.0 is live** at https://edunexus-balili.vercel.app, deployed 2026-09-26 as `edunexus-rle9u876c-joshs-projects-47d7b071.vercel.app`, after migration `0024` was applied to the hosted database. `npm run smoke` passes all 118 checks, and the served bundle was checked for the new screens' own strings. `master` is pushed to GitHub.
+**0.42.0 is live** at https://edunexus-balili.vercel.app, deployed 2026-09-26 as `edunexus-mbg6mrm29-joshs-projects-47d7b071.vercel.app`; it carries no migration, and `0024` from 0.41.0 is applied. The demo page is confirmed absent from the served bundle. `npm run smoke` passes all 118 checks, and the served bundle was checked for the new screens' own strings. `master` is pushed to GitHub.
 
 ## Single next action
 
