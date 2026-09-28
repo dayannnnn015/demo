@@ -1,5 +1,7 @@
 # Diagram figures
 
+**For the capstone's Figures 7, 8 and 9, use [the paper-ready redraws](paper/README.md), verified on 28 September 2026 against migrations through 0024.** These provide readable portrait layouts, corrected optionality/history cardinalities, 600-dpi PNGs, editable SVGs and a captioned PDF. The older process renders below are retained as legacy artwork and should not be inserted into the paper. Their filenames `06`, `07` and `08` are asset numbers, not the manuscript's figure numbers.
+
 Rendered from the Mermaid sources in [../erd.md](../erd.md), which are generated from the live `edunexus` schema. Regenerate these whenever a migration changes the schema, so a figure in the paper never disagrees with the database.
 
 Each diagram exists twice. Use the **SVG** in anything that accepts it — it stays sharp at any size and prints cleanly. Use the **PNG** where SVG is awkward, such as some Word and Google Docs workflows; they are rendered at double resolution so they hold up in print.

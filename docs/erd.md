@@ -1,6 +1,6 @@
 # Entity relationship diagram
 
-Generated from the live `edunexus` schema: 44 tables across 21 migrations. A single diagram at that size is unreadable, so this is a general view in two parts, followed by an overview and one diagram per domain, then three process views cut the same schema a second way, along the school processes the manuscript names.
+Originally generated from the live `edunexus` schema through 21 migrations. On 28 September 2026, a clean local rebuild through migration 0024 still contained 44 tables. The [paper-ready Figures 7-9](diagrams/paper/README.md) are the current, schema-verified process views, with corrected optionality and historical cardinalities. The Mermaid diagrams below and their older renders are retained as earlier reference material; use the paper guide's constraint notes where they differ. A single diagram at this size is unreadable, so this document provides a general view in two parts, followed by domain and process views.
 
 For a document rather than a screen, use the rendered figures in [diagrams/](diagrams/): each diagram as SVG and as a double-resolution PNG, with suggested captions.
 

@@ -1,8 +1,10 @@
 # Where things stand
 
-**Updated:** 2026-09-26 · **Version:** 0.42.0 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-28 · **Version:** 0.42.0 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
+
+**28 September: documentation increment.** [Capstone Figures 7-9](diagrams/paper/README.md) redrawn for portrait A4 with readable type, exact schema keys/nullability and corrected cardinalities. Includes SVG, 600-dpi PNG, captioned PDF, reproducible generators and schema metadata rebuilt from all 24 migrations (44 tables). [System/ERD review](system-and-erd-review-2026-09-28.md) records scope and remaining school gates. `npm run check` passes: 480 tests, three typechecks and build; 10 opt-in concurrency tests skipped. No runtime change, migration or redeployment; no work in flight. Manuscript unchanged. Prior deployed release follows.
 
 **0.42.0 is a polish release**, made by walking every screen in the new `npm run demo` — the real API and workspace over synthetic records — as a principal and as an adviser, at desktop and phone width. What it fixed and added:
 
@@ -22,7 +24,7 @@ Have a signed-in principal and one adviser walk the Scores, Privacy access log a
 
 ## Verification
 
-All 480 tests pass across 40 files, plus all three type checks and the production build. `npm run test:race` (10 of 10) and `npm run test:load` pass on a disposable PostgreSQL with 0024 applied: 27 advisers, no refused request, each morning wave about 1.3–1.4 s. The working tree is clean.
+On 28 September, all 480 tests pass across 40 files, plus all three typechecks and the production build; the 10 opt-in concurrency tests skip in the ordinary suite. On 26 September, `npm run test:race` (10 of 10) and `npm run test:load` passed on a disposable PostgreSQL with 0024 applied: 27 advisers, no refused request, each morning wave about 1.3–1.4 s. Those two checks were not repeated for the documentation increment. The working tree is clean after the handoff commit.
 
 ## Still outstanding
 
