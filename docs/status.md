@@ -1,8 +1,10 @@
 # Where things stand
 
-**Updated:** 2026-09-28 · **Version:** 0.42.0 · **Last commit:** see `git log -1` · **Branch:** `master`
+**Updated:** 2026-09-29 · **Version:** 0.42.0 · **Last commit:** see `git log -1` · **Branch:** `master`
 
 ## Just shipped
+
+**29 September: figure presentation revision.** Figures 7-9 now preserve underscores in wrapped names, use a spaced two-column legend, put keys first, attach connectors to FK rows and place multiplicities beside their own entity. Compact dashed context boxes and the learner self-loop follow the user's specific requests. Schema/geometry checks enforce both multiplicities, minimum print sizes and connector/label spacing; SVG, exact-width 600-dpi PNG, PDF and ZIP regenerated. No runtime or school-policy change. `npm run check` passes (480 tests; 10 opt-in tests skipped); focused diagram checks pass. No work in flight. Pre-existing extracted ZIP files remain untracked and untouched: `output/START-HERE.txt`, `output/docs/`, `output/output/`, `output/scripts/`; they are not part of this commit.
 
 **28 September: documentation increment.** [Capstone Figures 7-9](diagrams/paper/README.md) redrawn for portrait A4 with readable type, exact schema keys/nullability and corrected cardinalities. Includes SVG, 600-dpi PNG, captioned PDF, reproducible generators and schema metadata rebuilt from all 24 migrations (44 tables). [System/ERD review](system-and-erd-review-2026-09-28.md) records scope and remaining school gates. `npm run check` passes: 480 tests, three typechecks and build; 10 opt-in concurrency tests skipped. No runtime change, migration or redeployment; no work in flight. Manuscript unchanged. Prior deployed release follows.
 

@@ -18,3 +18,4 @@ coverage/
 !.env.example
 supabase/.temp/
 .playwright-cli/
+/scripts/__pycache__/
