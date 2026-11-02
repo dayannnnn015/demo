@@ -28,23 +28,55 @@ async function record(tx: Query, resource: string, ids: string[]) {
   for (let i = 0; i < unique.length; i += 100) await tx.query('select edunexus.record_access($1,$2::uuid[])', [resource, unique.slice(i, i + 100)]);
 }
 
-function readCsv(csv: string): { profiles: (Profile | null)[]; issues: Issue[] } {
+/** Sex as a school's own list writes it: the LIS and the SF forms use M and F, a spreadsheet often Male or FEMALE. */
+const sexes: Record<string, 'male' | 'female'> = { m: 'male', male: 'male', f: 'female', female: 'female' };
+
+/**
+ * A class list as schools actually keep it (testing finding F32). The header may come back from Excel in other
+ * capitals, with spaces after the commas or a trailing comma; sex may be M or F; an LRN may have lost digits to
+ * Excel's number format. What can be read without guessing is read; what cannot is said in words a registrar
+ * can act on, for that row. A date is never reordered: 03/04/2017 could be either month.
+ */
+export function readCsv(csv: string): { profiles: (Profile | null)[]; issues: Issue[] } {
   if (Buffer.byteLength(csv, 'utf8') > 24000) throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'CSV content must be at most 24,000 UTF-8 bytes.');
+  const firstLine = csv.replace(/^\ufeff/, '').split(/\r?\n/, 1)[0] ?? '';
+  if (!firstLine.includes(',') && firstLine.split(';').length >= columns.length) {
+    throw new AppError(422, 'INVALID_CSV_HEADER', 'This file uses semicolons between its columns, as Excel saves a CSV in some regional settings. Save it again as "CSV (Comma delimited)", or start from the template.');
+  }
   let records: string[][];
-  try { records = parse(csv, { bom: true, skip_empty_lines: true, max_record_size: 2048, cast: false, relax_column_count: false }) as string[][]; }
+  try { records = parse(csv, { bom: true, skip_empty_lines: true, max_record_size: 2048, cast: false, relax_column_count: true }) as string[][]; }
   catch { throw new AppError(422, 'INVALID_CSV', 'Use a comma-separated UTF-8 file with the template header and correctly quoted fields.'); }
-  if (JSON.stringify(records.shift()) !== JSON.stringify(columns)) throw new AppError(422, 'INVALID_CSV_HEADER', 'Use the exact EDUNEXUS roster template header and column order.');
+  // Empty cells past the template's seven columns are a spreadsheet's trailing commas, not data.
+  records = records.map(r => { let n = r.length; while (n > columns.length && !(r[n - 1] ?? '').trim()) n--; return r.slice(0, n); });
+  const head = (records.shift() ?? []).map(c => c.trim().toLowerCase());
+  if (JSON.stringify(head) !== JSON.stringify(columns)) throw new AppError(422, 'INVALID_CSV_HEADER', `The first row must be the template's header, ${columns.join(',')}, in that order.`);
   if (records.length < 1 || records.length > 50) throw new AppError(422, 'INVALID_ROW_COUNT', 'Each import must contain 1 to 50 learner rows.');
   const issues: Issue[] = [];
   const profiles = records.map((values, index) => {
     const row = index + 1;
+    if (values.length !== columns.length) {
+      issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: `This row has ${values.length} columns; the template has ${columns.length}. A name holding a comma needs quotes around it.` }); return null;
+    }
     if (values.some(value => /[\u0000-\u001f\u007f\ufffd]/u.test(value))) {
       issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: 'Fields must contain valid single-line text.' }); return null;
     }
-    const fields = Object.fromEntries(columns.map((key, i) => [key, values[i]!.trim() || (['lrn', 'middle_name', 'name_extension'].includes(key) ? null : '')]));
+    const fields: Record<string, string | null> = Object.fromEntries(columns.map((key, i) => [key, values[i]!.trim() || (['lrn', 'middle_name', 'name_extension'].includes(key) ? null : '')]));
+    fields.sex = sexes[(fields.sex ?? '').toLowerCase()] ?? fields.sex ?? '';
     const result = registrySchemas.learnerCreate.safeParse(fields);
     if (!result.success) {
-      for (const issue of result.error.issues) issues.push({ row, field: issue.path.join('.'), code: 'INVALID_FIELD', message: issue.message });
+      const said = new Set<string>();
+      for (const issue of result.error.issues) {
+        const field = issue.path.join('.');
+        if (said.has(field)) continue;
+        said.add(field);
+        const lrn = String(fields.lrn ?? '');
+        const message = field === 'lrn' && (/^\d{11}$/.test(lrn) || /e\+/i.test(lrn))
+          ? 'Excel has turned this LRN into a number and lost digits. Format the LRN column as Text, then type all twelve digits.'
+          : field === 'birth_date' ? 'Write the birth date as YYYY-MM-DD, for example 2017-03-14, a past date.'
+          : field === 'sex' ? 'Write male or female; M and F are read too.'
+          : issue.message;
+        issues.push({ row, field, code: 'INVALID_FIELD', message });
+      }
       return null;
     }
     return result.data;
@@ -102,7 +134,9 @@ async function planImport(tx: Query, b: ImportInput) {
       result.action = 'use_existing'; result.learner_id = resolution.learner_id;
       if (!existing || existing.version !== resolution.version) issue(row, 'resolutions', 'VERSION_CONFLICT', 'The selected learner is unavailable or changed. Refresh the resolution.');
       else {
-        if (columns.some(key => key === 'lrn' && profile.lrn === null ? false : profile[key as keyof Profile] !== existing[key as keyof Candidate])) issue(row, 'csv', 'PROFILE_MISMATCH', 'CSV fields must match the selected learner. Imports cannot overwrite existing profiles or assign LRNs.');
+        // A learner on file from before the LRN was required may have none; an import never assigns one, so it is recorded on the registry first.
+        if (existing.lrn === null) issue(row, 'lrn', 'LRN_MISSING_ON_FILE', 'The learner on file has no LRN yet. Record it on the Learner registry first, then preview again.');
+        else if (columns.some(key => profile[key as keyof Profile] !== existing[key as keyof Candidate])) issue(row, 'csv', 'PROFILE_MISMATCH', 'CSV fields must match the selected learner. Imports cannot overwrite existing profiles or assign LRNs.');
         if (enrolled.has(existing.id)) issue(row, 'resolutions', 'ALREADY_ENROLLED', 'The learner already has enrollment history in this year. Use the existing enrollment workflow.');
         if (seenId.has(existing.id)) issue(row, 'resolutions', 'DUPLICATE_INPUT', 'The same learner cannot appear twice in a batch.');
         seenId.add(existing.id);
@@ -121,7 +155,7 @@ export async function executeReview(id: ReviewOperationId, ctx: Context, input: 
   const { tx } = ctx;
   switch (id) {
     case 'importTemplate': return { format: 'edunexus-roster-v1', csv: header, max_rows: 50, max_csv_bytes: 24000, max_request_bytes: 32768, preview_minutes: 30,
-      instructions: ['Use UTF-8 comma-separated CSV with this exact header. This is an EDUNEXUS template, not a DepEd LIS import format.', 'Preserve LRN as text with all 12 digits; leave it blank only when pending. Dates use YYYY-MM-DD and sex is male or female.', 'One batch enrolls up to 50 learners in one section. Blank middle_name and name_extension are allowed.', 'Preview first. Resolve duplicates explicitly and preview again. Existing profiles are never overwritten.', 'Commit the same CSV, section, date, entry kind, and resolutions with confirmed=true within 30 minutes, using the same manager account.', 'Row numbers identify data records starting at 1, excluding the header. Do not put real learner data in source control or application logs.'] };
+      instructions: ['Use UTF-8 comma-separated CSV with this exact header. This is an EDUNEXUS template, not a DepEd LIS import format.', 'Preserve LRN as text with all 12 digits; every learner needs one. Dates use YYYY-MM-DD and sex is male or female.', 'One batch enrolls up to 50 learners in one section. Blank middle_name and name_extension are allowed.', 'Preview first. Resolve duplicates explicitly and preview again. Existing profiles are never overwritten.', 'Commit the same CSV, section, date, entry kind, and resolutions with confirmed=true within 30 minutes, using the same manager account.', 'Row numbers identify data records starting at 1, excluding the header. Do not put real learner data in source control or application logs.'] };
     case 'importPreview': {
       const b = input.body as ImportInput, plan = await planImport(tx, b);
       await record(tx, id, plan.candidateIds);

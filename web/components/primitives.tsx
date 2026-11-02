@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, message } from '../api';
+import { ApiError, GENERIC_REFUSAL, codeFor, message, plainFieldMessage } from '../api';
+import { useHelp } from '../help/context';
 import { Icon } from './icons';
 import { Confirm, Sheet } from './overlay';
 import type { Route } from '../routes';
@@ -22,6 +23,9 @@ export type Field = {
   /** Takes the full width of the form grid. A reason is 10–500 characters and
    *  must not be typed into a box the width of a two-digit ordinal. */
   wide?: boolean;
+  /** An option field that starts on *Choose…* rather than its first option, for a fact that must never be
+   *  recorded because nobody changed the default: a learner's sex is printed on every form. */
+  choose?: boolean;
 };
 
 export type Status = { text: string; kind: 'idle' | 'busy' | 'error' | 'done' };
@@ -30,10 +34,15 @@ export const idle: Status = { text: '', kind: 'idle' };
 const statusIcon = { error: 'alert', busy: 'info', done: 'check', idle: 'info' } as const;
 
 export function StatusLine({ status }: { status: Status }) {
+  // A refusal the FAQ explains carries a way to its answer, opened over the page so nothing typed is lost.
+  const help = useHelp();
+  const code = status.kind === 'error' ? codeFor(status.text) : undefined;
+  const answer = code ? help.explain?.(code) : undefined;
   return (
     <p className={`status ${status.kind}`} role="status" aria-live="polite">
       {status.kind === 'idle' ? null : <Icon name={statusIcon[status.kind]} size={16} />}
       {status.text}
+      {answer && help.open ? <button type="button" className="status-help" onClick={() => help.open!({ faq: answer.id })}>What does this mean?</button> : null}
     </p>
   );
 }
@@ -178,6 +187,7 @@ function Control({ field, id, value, error, onChange, compact }: {
       </label>
       {field.options
         ? <Select {...shared} value={value} onChange={e => onChange(e.target.value)}>
+            {field.choose && !value ? <option value="" disabled>Choose…</option> : null}
             {field.options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
           </Select>
         : field.type === 'textarea'
@@ -211,8 +221,10 @@ function Control({ field, id, value, error, onChange, compact }: {
 const fieldKey = (path: string) => path.split('.').filter(part => part && !/^\d+$/.test(part)).pop() ?? path;
 
 /** A versioned save form. Values stay strings until submit, where numbers coerce. */
-export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit, setStatus, onSaved, note }: {
+export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit, setStatus, onSaved, note, warning }: {
   fields: Field[];
+  /** What else a save changes, said before the save rather than discovered after it. */
+  warning?: ReactNode;
   initial?: Record<string, unknown> | undefined;
   submitLabel?: string | undefined;
   onSubmit: (values: Record<string, unknown>) => Promise<unknown>;
@@ -224,7 +236,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   const controlId = (key: string) => `${scope}-${key}`;
   const start = useCallback(() => Object.fromEntries(fields.map(f => {
     const raw = initial?.[f.key];
-    return [f.key, raw === null || raw === undefined ? (f.options && f.type !== 'checkboxes' ? (f.options[0]?.[0] ?? '') : '') : String(raw)];
+    return [f.key, raw === null || raw === undefined ? (f.options && f.type !== 'checkboxes' && !f.choose ? (f.options[0]?.[0] ?? '') : '') : String(raw)];
   })), [fields, initial]);
   const [values, setValues] = useState<Record<string, string>>(start);
   const [busy, setBusy] = useState(false);
@@ -262,7 +274,8 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
       const payload: Record<string, unknown> = {};
       for (const field of fields) {
         const text = values[field.key] ?? '';
-        payload[field.key] = field.type === 'number' ? Number(text)
+        // A blank number is no number: Number('') is 0, which for a grade is Kindergarten.
+        payload[field.key] = field.type === 'number' ? (text.trim() === '' ? null : Number(text))
           : field.type === 'checkboxes' ? (text ? text.split(',') : [])
           : (text.trim() || null);
       }
@@ -277,11 +290,11 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
         const named = error instanceof ApiError
           ? error.fields
               .map(f => ({ key: fieldKey(f.path), message: f.message }))
-              .flatMap(f => { const field = fields.find(x => x.key === f.key); return field ? [{ ...f, label: field.label }] : []; })
+              .flatMap(f => { const field = fields.find(x => x.key === f.key); return field ? [{ ...f, message: plainFieldMessage(f.message, field.hint), label: field.label }] : []; })
           : [];
         if (named.length) {
           setBad(named);
-          setLede(error instanceof ApiError ? error.message : '');
+          setLede(error instanceof ApiError && error.message !== GENERIC_REFUSAL ? error.message : '');
           setRejected(n => n + 1);
           setStatus(idle);
         } else {
@@ -289,6 +302,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
         }
       } finally { setBusy(false); }
     }}>
+      {warning}
       {bad.length ? (
         <div className="error-summary" role="alert" tabIndex={-1} ref={summary}>
           <h3><Icon name="alert" size={16} />{bad.length === 1 ? 'One field needs attention' : `${bad.length} fields need attention`}</h3>
@@ -339,8 +353,9 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
  * and the page's line is behind the panel: the version conflict that stopped
  * the save would otherwise be announced to an empty room.
  */
-export function FormSheet({ title, note, wide, submitLabel, fields, initial, onSubmit, onSaved, onClose }: {
+export function FormSheet({ title, note, wide, submitLabel, fields, initial, onSubmit, onSaved, onClose, warning }: {
   title: string;
+  warning?: ReactNode;
   note?: string | undefined;
   wide?: boolean | undefined;
   submitLabel: string;
@@ -362,6 +377,7 @@ export function FormSheet({ title, note, wide, submitLabel, fields, initial, onS
         setStatus={setStatus}
         onSubmit={onSubmit}
         onSaved={onSaved}
+        warning={warning}
       />
     </Sheet>
   );
@@ -425,6 +441,28 @@ const cellClass = <T,>(column: Column<T>) => [column.numeric ? 'numeric' : '', c
  * screen and leave the other eight hundred where they are, which looks like an
  * answer and is not one. Narrowing a list is the filter row's job.
  */
+/**
+ * A box that scrolls sideways when what it holds is wider than the screen.
+ * Only then does it join the tab order, named, so a keyboard can reach the
+ * hidden columns; a table that fits adds no stop.
+ */
+export function ScrollArea({ className = 'table-wrap', label = 'Table, scrolls sideways', children }: { className?: string; label?: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const element = box.current;
+    if (!element) return;
+    const measure = () => setWide(element.scrollWidth > element.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(measure);
+    watch.observe(element);
+    if (element.firstElementChild) watch.observe(element.firstElementChild);
+    return () => watch.disconnect();
+  }, []);
+  return <div ref={box} className={className} {...(wide ? { tabIndex: 0, role: 'region', 'aria-label': label } : {})}>{children}</div>;
+}
+
 export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', actionsLabel = 'Actions', rowKey, loading, stack }: {
   rows: T[];
   columns: Column<T>[];
@@ -445,7 +483,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
   if (!rows.length) return <>{empty ?? <EmptyState title="Nothing here yet" body="Records you add will appear in this list." />}</>;
   const span = columns.length + (detail ? 1 : 0);
   return (
-    <div className={stack ? 'table-wrap stack' : 'table-wrap'}>
+    <ScrollArea className={stack ? 'table-wrap stack' : 'table-wrap'}>
       <table>
         <thead>
           <tr>
@@ -484,7 +522,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollArea>
   );
 }
 

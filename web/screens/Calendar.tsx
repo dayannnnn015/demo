@@ -2,13 +2,16 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { Api, Page, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import type { Route } from '../routes';
-import { clamp, firstOf, lastOf, monthName, monthOf, step, weekday, type Month } from '../dates';
+import { clamp, firstOf, lastOf, monthName, monthOf, shift, span, step, weekday, type Month } from '../dates';
+import { chunks, fillChanges, parseListed, type FillRules, type Listed, type SetChange } from '../calendar-fill';
+import { depedCalendar } from '../deped';
 import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, Select, StatusLine, Table, TableSkeleton,
   Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status,
 } from '../components/primitives';
+import { Affects } from '../components/affects';
 
 type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -73,6 +76,7 @@ const rules: Record<string, string> = {
 };
 
 const conflictText: Record<string, string> = {
+  RECORDED_MARKS: 'Marks are already recorded in a session this change would stop. Clear those marks through the section’s register first, then make the change; the marks stay until then.',
   SECTION_OVERRIDES_PRESENT: 'Sections hold their own schedule for this date. Clear those section exceptions first, change the school baseline, then set any exception still needed.',
   BASE_DAY_UNCONFIGURED: 'The school has no schedule for this date. Set the school baseline before adding a section exception.',
 };
@@ -168,6 +172,7 @@ function ReviewSheet({ api, yearId, version, scope, dates, mode, sections, onClo
   return (
     <Sheet title={mode === 'clear' ? 'Clear these dates' : 'Set a schedule'} note={note} wide onClose={onClose}>
       <StatusLine status={status} />
+      <Affects what="calendar" />
 
       {plan ? (
         <>
@@ -256,6 +261,200 @@ function ReviewSheet({ api, yearId, version, scope, dates, mode, sections, onClo
           </div>
           <div className="form-actions">
             <button type="submit" className="btn" disabled={busy}>{busy ? 'Reviewing…' : `Review ${count}`}</button>
+          </div>
+        </form>
+      )}
+    </Sheet>
+  );
+}
+
+/**
+ * Sets the school calendar for a whole stretch of dates in one review: weekdays
+ * one way, weekends another, and the holidays and breaks typed from the
+ * school's approved calendar. It writes through the same preview and
+ * confirmation as a month at a time, in batches of up to 60 dates, each its own
+ * recorded change with the reason given here. A batch the review blocks stops
+ * the run, and the batches already confirmed stay as they are.
+ */
+function FillRange({ api, year, onClose, onDone }: { api: Api; year: Row; onClose: () => void; onDone: (text: string) => void }) {
+  const [status, setStatus] = useState<Status>(idle);
+  const [from, setFrom] = useState(clamp(localToday(), String(year.starts_on), String(year.ends_on)));
+  const [to, setTo] = useState(String(year.ends_on));
+  const [am, setAm] = useState<Mode>('classroom');
+  const [pm, setPm] = useState<Mode>('classroom');
+  const [classLabel, setClassLabel] = useState('Class day');
+  const [weekendLabel, setWeekendLabel] = useState('Weekend');
+  const [holidays, setHolidays] = useState('');
+  const [breaks, setBreaks] = useState('');
+  const [keep, setKeep] = useState(true);
+  const [reason, setReason] = useState('');
+  const [leaveOut, setLeaveOut] = useState<Listed[]>([]);
+  const deped = depedCalendar(Number(year.start_year));
+  const lines = (items: Listed[]) => items.map(i => (i.from === i.to ? `${i.from} ${i.label}` : `${i.from} to ${i.to} ${i.label}`)).join('\n');
+  const useDeped = () => {
+    if (!deped) return;
+    setFrom(clamp(deped.starts_on, String(year.starts_on), String(year.ends_on)));
+    setTo(clamp(deped.ends_on, String(year.starts_on), String(year.ends_on)));
+    setAm('classroom'); setPm('classroom'); setClassLabel('Class day'); setWeekendLabel('Weekend');
+    setHolidays(lines(deped.holidays)); setBreaks(lines(deped.breaks)); setLeaveOut(deped.asynchronous);
+    setReason(`School calendar from ${deped.source}, checked against the school’s own calendar.`);
+  };
+  const [plan, setPlan] = useState<{ changes: SetChange[]; counts: Record<string, number>; listed: { day: string; label: string; kind: string }[] } | null>(null);
+  const [problems, setProblems] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [applied, setApplied] = useState(0);
+
+  const inYear = from >= String(year.starts_on) && to <= String(year.ends_on) && from <= to;
+
+  const review = async (event: FormEvent) => {
+    event.preventDefault();
+    const h = parseListed(holidays), b = parseListed(breaks);
+    const issues = [...h.problems.map(p => `Holidays, ${p}`), ...b.problems.map(p => `Breaks, ${p}`)];
+    if (!inYear) issues.unshift(`Choose dates inside ${yearName(year)}, from ${String(year.starts_on)} to ${String(year.ends_on)}, with the first before the last.`);
+    if (!classLabel.trim() || !weekendLabel.trim()) issues.push('Give both labels; each date carries one.');
+    if (reason.trim().length < 10) issues.push('Give a reason of at least 10 characters. Say which approved calendar the dates come from.');
+    setProblems(issues);
+    if (issues.length) return;
+    setBusy(true);
+    setStatus({ text: 'Reading which dates are already set…', kind: 'busy' });
+    try {
+      const configured = new Set<string>();
+      for (let i = 0; i < span(from, to); i += 62) {
+        const last = clamp(shift(from, i + 61), from, to);
+        const page = await api<Calendar>(`/academic-years/${String(year.id)}/calendar${query({ from: shift(from, i), to: last })}`);
+        for (const day of page.days) if (day.source !== 'unconfigured') configured.add(day.day_on);
+      }
+      const rulesGiven: FillRules = { from, to, weekday: { am, pm, label: classLabel.trim() }, weekendLabel: weekendLabel.trim(), holidays: h.items, breaks: b.items, keepConfigured: keep, leaveOut };
+      const result = fillChanges(rulesGiven, configured);
+      const listed = result.changes.filter(c => c.day_type === 'holiday' || c.day_type === 'school_break').map(c => ({ day: c.day_on, label: c.label, kind: c.day_type }));
+      setPlan({ ...result, listed });
+      setStatus(idle);
+    } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
+    finally { setBusy(false); }
+  };
+
+  const apply = async () => {
+    if (!plan) return;
+    setBusy(true);
+    const batches = chunks(plan.changes);
+    let done = 0;
+    try {
+      for (const [index, batch] of batches.entries()) {
+        setStatus({ text: `Recording batch ${index + 1} of ${batches.length}…`, kind: 'busy' });
+        const head = await api<Calendar>(`/academic-years/${String(year.id)}/calendar${query({ from: batch[0]!.day_on, to: batch[0]!.day_on })}`);
+        const proposal = { version: head.calendar_version, section_id: null, changes: batch, reason: reason.trim() };
+        const result = await api<Plan>(`/academic-years/${String(year.id)}/calendar/preview`, 'POST', proposal);
+        if (!result.can_commit || !result.review_hash) {
+          const first = result.conflicts[0];
+          throw new Error(`Batch ${index + 1} is blocked${first ? ` at ${first.day_on}: ${conflictText[first.code] ?? sentence(first.code)}` : '.'}${result.issues.length ? ` ${result.issues.join(' ')}` : ''}`);
+        }
+        await api(`/academic-years/${String(year.id)}/calendar/corrections`, 'POST', { ...proposal, review_hash: result.review_hash, reviewed: true });
+        done += batch.length;
+        setApplied(done);
+      }
+      onDone(`${done} dates set on the school calendar.`);
+    } catch (error) {
+      const text = error instanceof ApiError ? message(error) : error instanceof Error ? error.message : 'The request failed.';
+      setStatus({ text: `${done ? `${done} dates were set before this stopped. ` : ''}${text}`, kind: 'error' });
+    } finally { setBusy(false); }
+  };
+
+  const batchCount = plan ? chunks(plan.changes).length : 0;
+  const sessionModes = modes.filter(([key]) => key !== 'suspended');
+
+  return (
+    <Sheet title="Fill a date range" note={`The whole-school calendar of ${yearName(year)}. Nothing is written until you confirm the review.`} wide onClose={() => { if (!busy) onClose(); }}>
+      <StatusLine status={status} />
+      <Affects what="calendar" />
+      {problems.length ? (
+        <div className="error-summary" role="alert">
+          <h3><Icon name="alert" size={16} />{problems.length === 1 ? 'One thing needs attention' : `${problems.length} things need attention`}</h3>
+          <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>
+        </div>
+      ) : null}
+      {plan ? (
+        <>
+          <Callout tone="info" title={`${plan.changes.length} dates will be set`}>
+            {plan.counts.classDays} class days, {plan.counts.weekends} weekend days, {plan.counts.holidays} holidays and {plan.counts.breaks} break days.
+            {keep ? ` ${plan.counts.kept} dates already set are left as they are.` : ' Dates already set are replaced.'}
+            {plan.counts.leftOut ? ` ${plan.counts.leftOut} dates are left unset for the school to decide.` : ''}
+            {plan.changes.length ? ` They go in as ${batchCount} recorded ${batchCount === 1 ? 'change' : 'changes'}, each with your reason.` : ''}
+          </Callout>
+          {plan.listed.length ? (
+            <Table
+              rows={plan.listed}
+              rowKey={row => row.day}
+              columns={[
+                { header: 'Date', cell: row => <Cell title={<span className="mono">{row.day}</span>} meta={weekday(row.day)} /> },
+                { header: 'Kind of day', cell: row => (row.kind === 'holiday' ? 'Holiday' : 'School break') },
+                { header: 'Label', cell: row => row.label },
+              ]}
+            />
+          ) : <p className="muted">No holiday or break falls on a date being set.</p>}
+          {applied ? <p className="card-note">{applied} of {plan.changes.length} dates recorded.</p> : null}
+          <div className="form-actions">
+            <button type="button" className="btn" disabled={busy || !plan.changes.length} onClick={() => void apply()}>{busy ? 'Recording…' : plan.changes.length ? `Set ${plan.changes.length} dates` : 'Nothing to set'}</button>
+            <button type="button" className="btn ghost small" disabled={busy || applied > 0} onClick={() => { setPlan(null); setStatus(idle); }}>Change something</button>
+          </div>
+        </>
+      ) : (
+        <form noValidate onSubmit={event => void review(event)}>
+          {deped ? (
+            <Callout tone="info" title={`DepEd’s calendar for ${yearName(year)}`}>
+              {deped.source} sets this school year from {deped.starts_on} to {deped.ends_on}, with its holidays and the year-end break.{' '}
+              <button type="button" className="btn small secondary" onClick={useDeped}>Fill the form from it</button>
+              {leaveOut.length ? <> The learners’ wellness-break days ({leaveOut.map(l => `${l.from} to ${l.to}`).join(', ')}) count as class days in the order but are guided asynchronous learning, so they are left unset: set them yourself once the school says how they are marked. Add the school’s own holidays, such as a town fiesta, before reviewing.</> : null}
+            </Callout>
+          ) : null}
+          <div className="form-grid">
+            <div className="field">
+              <label className="label" htmlFor="fill-from">First date</label>
+              <input id="fill-from" type="date" value={from} min={String(year.starts_on)} max={String(year.ends_on)} onChange={event => setFrom(event.target.value)} />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="fill-to">Last date</label>
+              <input id="fill-to" type="date" value={to} min={String(year.starts_on)} max={String(year.ends_on)} onChange={event => setTo(event.target.value)} />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="fill-am">Mondays to Fridays: morning</label>
+              <Select id="fill-am" value={am} onChange={event => setAm(event.target.value as Mode)}>{sessionModes.map(([key, text]) => <option key={key} value={key}>{text}</option>)}</Select>
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="fill-pm">Mondays to Fridays: afternoon</label>
+              <Select id="fill-pm" value={pm} onChange={event => setPm(event.target.value as Mode)}>{sessionModes.map(([key, text]) => <option key={key} value={key}>{text}</option>)}</Select>
+              <span className="hint">{rules.regular}</span>
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="fill-class">Label for a class day</label>
+              <input id="fill-class" maxLength={120} value={classLabel} onChange={event => setClassLabel(event.target.value)} />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="fill-weekend">Saturdays and Sundays: label</label>
+              <input id="fill-weekend" maxLength={120} value={weekendLabel} onChange={event => setWeekendLabel(event.target.value)} />
+              <span className="hint">Recorded as a weekend, with no class in either session.</span>
+            </div>
+            <div className="field wide">
+              <label className="label" htmlFor="fill-holidays">Holidays</label>
+              <textarea id="fill-holidays" value={holidays} onChange={event => setHolidays(event.target.value)} placeholder={'2026-08-21 Ninoy Aquino Day\n2026-08-31 National Heroes Day'} />
+              <span className="hint">One per line: a date, then its name, from the school's approved calendar. No class in either session.</span>
+            </div>
+            <div className="field wide">
+              <label className="label" htmlFor="fill-breaks">School breaks</label>
+              <textarea id="fill-breaks" value={breaks} onChange={event => setBreaks(event.target.value)} placeholder="2026-12-19 to 2027-01-03 Christmas break" />
+              <span className="hint">One per line: a date or a range, then its name.</span>
+            </div>
+            <label className="check-line wide">
+              <input type="checkbox" checked={keep} onChange={event => setKeep(event.target.checked)} />
+              <span>Leave dates that are already set exactly as they are</span>
+            </label>
+            <div className="field wide">
+              <label className="label" htmlFor="fill-reason">Reason</label>
+              <textarea id="fill-reason" minLength={10} maxLength={500} value={reason} onChange={event => setReason(event.target.value)} />
+              <span className="hint">10–500 characters on one line, kept with every batch. Say which approved calendar the dates come from.</span>
+            </div>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="btn" disabled={busy}>{busy ? 'Reading…' : 'Review the range'}</button>
           </div>
         </form>
       )}
@@ -357,6 +556,7 @@ export function Calendar({ api, me, manager, setStatus, reload, token, route }: 
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [sheet, setSheet] = useState<'set' | 'clear' | null>(null);
+  const [filling, setFilling] = useState(false);
 
   useEffect(() => {
     void api<Page>('/academic-years').then(page => {
@@ -443,6 +643,7 @@ export function Calendar({ api, me, manager, setStatus, reload, token, route }: 
           {days.length ? <PrintButton label="Print this month" /> : null}
           {editable ? (
             <>
+              {!scope ? <button type="button" className="btn secondary" onClick={() => setFilling(true)} data-tour="calendar-fill">Fill a date range</button> : null}
               <button type="button" className="btn secondary" disabled={!canClear} onClick={() => setSheet('clear')}>Clear dates</button>
               <button type="button" className="btn" disabled={!picked.length} onClick={() => setSheet('set')}><Icon name="plus" size={15} />Set a schedule</button>
             </>
@@ -534,6 +735,10 @@ export function Calendar({ api, me, manager, setStatus, reload, token, route }: 
       <Callout tone="info" title="Nothing here is assumed">
         No official dates, holidays, weekends or suspensions are supplied by EDUNEXUS. A date nobody has configured stays unknown: it is not a school day, not a holiday and not an absence, and attendance cannot be recorded against it. The school's approved calendar is the only source for these dates.
       </Callout>
+
+      {filling && year ? (
+        <FillRange api={api} year={year} onClose={() => setFilling(false)} onDone={text => { setFilling(false); setStatus({ text, kind: 'done' }); reload(); }} />
+      ) : null}
 
       {sheet && range ? (
         <ReviewSheet

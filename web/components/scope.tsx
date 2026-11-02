@@ -62,7 +62,8 @@ export function useScope(api: Api, token: number): Scope {
   };
 }
 
-export function ScopePickers({ scope }: { scope: Scope }) {
+/** The year and section pickers; `yearOnly` for a school-wide screen such as the SF4. */
+export function ScopePickers({ scope, yearOnly }: { scope: Scope; yearOnly?: boolean }) {
   const id = useId();
   return (
     <>
@@ -74,14 +75,14 @@ export function ScopePickers({ scope }: { scope: Scope }) {
           ))}
         </Select>
       </div>
-      <div className="field inline">
+      {yearOnly ? null : <div className="field inline">
         <label className="label" htmlFor={`${id}-section`}>Section</label>
         <Select id={`${id}-section`} value={scope.sectionId} onChange={event => scope.setSectionId(event.target.value)} disabled={!scope.sections?.length}>
           {(scope.sections ?? []).map(s => (
             <option key={String(s.id)} value={String(s.id)}>{sectionName(s)}</option>
           ))}
         </Select>
-      </div>
+      </div>}
     </>
   );
 }

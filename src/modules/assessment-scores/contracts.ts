@@ -1,13 +1,14 @@
 import {z} from 'zod';
 import {uuid} from '../foundation/contracts.js';
 import {subjectReason} from '../subjects/contracts.js';
+import {shortCode,shortCodeMessage} from '../../core/text.js';
 const version=z.number().int().min(1).max(2147483646);
-const code=z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_-]{0,23}$/);
+const code=z.string().trim().regex(shortCode,shortCodeMessage);
 const title=z.string().trim().min(1).max(120).regex(/^[^\u0000-\u001f\u007f]*$/);
 // Two decimals, mirroring the numeric(7,2) column, which migration 0022 widened
 // so the documented maximum of 10000 actually fits. This is a storage bound, not
 // a grading rule: no rounding, weighting or transmutation is applied anywhere.
-const mark=z.number().min(0).max(10000).refine(v=>/^\d+(?:\.\d{1,2})?$/.test(String(v)),'Use at most two decimal places');
+const mark=z.number().min(0).max(10000).refine(v=>/^-?\d+(?:\.\d{1,2})?$/.test(String(v)),'Use at most two decimal places');
 export const scoreSchemas={
   taskList:z.strictObject({reporting_period_id:uuid.optional(),component_code:code.optional(),status:z.enum(['open','archived','all']).default('open'),
     limit:z.coerce.number().int().min(1).max(100).default(50),after_id:uuid.optional()}),

@@ -1,17 +1,19 @@
 import { z } from 'zod';
+import { lrnDigits, plainName, plainNameMessage, singleSpaced } from '../../core/text.js';
 import { uuid } from '../foundation/contracts.js';
-const text = (max: number) => z.string().trim().min(1).max(max);
+const text = (max: number) => z.string().trim().overwrite(singleSpaced).min(1).max(max).regex(plainName, plainNameMessage);
 const version = z.number().int().min(1).max(2147483646);
 const date = z.iso.date();
-const lrn = z.string().regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.');
+const lrn = z.string().overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.');
 const birthDate = date.refine(value => value >= '1900-01-01' && value <= new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), 'Birth date must be a past or current date from 1900 onward.');
 const page = { limit: z.coerce.number().int().min(1).max(100).default(50), offset: z.coerce.number().int().min(0).max(100000).default(0) };
 const profile = { first_name: text(100), middle_name: text(100).nullable(), last_name: text(100), name_extension: text(20).nullable(), birth_date: birthDate, sex: z.enum(['male', 'female']) };
 export const registrySchemas = {
-  learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), lrn: lrn.nullable().default(null) }),
+  // Every new learner carries an LRN (the user's decision of 14 October). A record from before, without one, is still read and completed through learnerLrn.
+  learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), lrn: z.string({ error: 'The LRN is required: all twelve digits.' }).overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.') }),
   learnerUpdate: z.strictObject({ ...profile, version }),
   learnerLrn: z.strictObject({ version, lrn }),
-  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), include_linked: z.enum(['true','false']).default('false') }),
+  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), include_linked: z.enum(['true','false']).default('false') }),
   enrollmentCreate: z.strictObject({ learner_id: uuid, section_id: uuid, enrolled_on: date, entry_kind: z.enum(['regular', 'transfer_in']).default('regular') }),
   enrollmentQuery: z.strictObject({ ...page, academic_year_id: uuid.optional(), section_id: uuid.optional(), learner_id: uuid.optional(), status: z.enum(['enrolled', 'withdrawn']).optional(), record_state: z.enum(['valid', 'voided', 'all']).default('valid') }),
   movement: z.strictObject({ version, action: z.enum(['reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid.nullable().default(null), exit_reason: z.enum(['transfer_out', 'withdrawal', 'dropout', 'death']).nullable().default(null) }).refine(v => v.action === 'withdrawn' ? v.section_id === null && v.exit_reason !== null : v.section_id !== null && v.exit_reason === null, 'Withdrawals require exit_reason and no section; reassignment/reentry require section_id and no exit_reason.'),
@@ -21,7 +23,7 @@ export const registrySchemas = {
 };
 export const registryOperations = ([
   { id: 'learnerList', method: 'get', path: '/api/v1/learners', summary: 'Search learners visible to the current staff member', query: registrySchemas.learnerQuery },
-  { id: 'learnerCreate', method: 'post', path: '/api/v1/learners', summary: 'Create a learner; leave LRN null while awaiting its official assignment', body: registrySchemas.learnerCreate, manager: true },
+  { id: 'learnerCreate', method: 'post', path: '/api/v1/learners', summary: 'Create a learner with their twelve-digit LRN, which every new learner must carry', body: registrySchemas.learnerCreate, manager: true },
   { id: 'learnerGet', method: 'get', path: '/api/v1/learners/:id', summary: 'Read a visible learner profile' },
   { id: 'learnerUpdate', method: 'patch', path: '/api/v1/learners/:id', summary: 'Correct learner profile fields without changing an assigned LRN', body: registrySchemas.learnerUpdate, manager: true },
   { id: 'learnerLrn', method: 'patch', path: '/api/v1/learners/:id/lrn', summary: 'Assign the official LRN to a learner whose LRN is pending', body: registrySchemas.learnerLrn, manager: true },

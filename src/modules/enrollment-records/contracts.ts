@@ -56,7 +56,7 @@ const event = z.object({
   review_snapshot: snapshot, review_hash: reviewHash, actor_user_id: uuid, request_id: uuid, recorded_at: z.iso.datetime(),
 });
 export const enrollmentRecordResponses: Record<string, z.ZodType> = {
-  enrollmentRecordPreview: snapshot.extend({ review_hash: reviewHash.nullable() }),
+  enrollmentRecordPreview: snapshot.extend({ review_hash: reviewHash.nullable(), blocked: z.object({ code: z.string(), message: z.string() }).optional().describe('What Confirm would refuse, found by running the commit and rolling it back') }),
   enrollmentRecordReview: event,
   enrollmentRecordHistory: z.object({ items: z.array(event), pagination: z.object({ limit: z.number().int(), next_before_version: z.number().int().nullable() }) }),
 };

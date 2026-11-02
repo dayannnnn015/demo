@@ -1,11 +1,12 @@
+import { csvCell, downloadCsv } from '../csv';
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { message, query } from '../api';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
-import { Callout, Cell, EmptyState, Finder, PageHeader, Table, Unrecorded, type Field, type Status } from '../components/primitives';
+import { Callout, Cell, EmptyState, Finder, PageHeader, Table, Unrecorded, localToday, type Field, type Status } from '../components/primitives';
 
-type Props = { api: Api; token: number; route: Route; setStatus: (s: Status) => void };
+type Props = { api: Api; me: Row; token: number; route: Route; setStatus: (s: Status) => void };
 type Filter = { actor_user_id: string; record_id: string };
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -49,16 +50,7 @@ export function recordFromHash(hash: string) {
   return found && uuid.test(found) ? found.toLowerCase() : '';
 }
 
-/**
- * One CSV cell. Quoted when it holds a separator, and defused when it starts
- * like a spreadsheet formula: a display name is typed by a person, and a cell
- * beginning `=` or `+` would run in Excel when the privacy owner opens the file.
- */
-export const csvCell = (value: unknown) => {
-  let text = value === null || value === undefined ? '' : String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
+export { csvCell } from '../csv';
 
 /** The log as a spreadsheet: IDs, times and plain descriptions, never a learner's name. */
 export function accessCsv(rows: Row[], names: Map<string, string>) {
@@ -76,7 +68,7 @@ export function accessCsv(rows: Row[], names: Map<string, string>) {
  * than names on purpose — resolving a name would itself be a read of the
  * record, and a log that writes to itself on every page turn is noise.
  */
-export function Access({ api, token, route, setStatus }: Props) {
+export function Access({ api, me, token, route, setStatus }: Props) {
   const [staff, setStaff] = useState<Row[]>([]);
   const [filter, setFilter] = useState<Filter>(() => ({ actor_user_id: '', record_id: recordFromHash(globalThis.location?.hash ?? '') }));
   const [before, setBefore] = useState('');
@@ -119,11 +111,9 @@ export function Access({ api, token, route, setStatus }: Props) {
         if (!next) break;
         cursor = String(next);
       }
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(new Blob([accessCsv(all, names)], { type: 'text/csv;charset=utf-8' }));
-      link.download = `edunexus-access-log-${new Date().toISOString().slice(0, 10)}.csv`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      // Through downloadCsv for its byte-order mark: without one, Excel garbles a staff name with ñ.
+      // Dated by the school's own day, not UTC's, which is still yesterday before 8 in the morning in the Philippines.
+      downloadCsv(`${me.seeded_data ? 'SEEDED-' : ''}edunexus-access-log-${localToday()}.csv`, accessCsv(all, names));
       setStatus({ kind: 'done', text: truncated
         ? `Downloaded the newest ${all.length} reads. The log holds more; narrow it by staff member or record to get the rest.`
         : `Downloaded ${all.length} ${all.length === 1 ? 'read' : 'reads'}.` });

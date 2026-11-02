@@ -1,16 +1,21 @@
 import { z } from 'zod';
+import { plainName, plainNameMessage, singleSpaced } from '../../core/text.js';
 
 export const uuid = z.uuid();
-const name = (max: number) => z.string().trim().min(1).max(max);
+const name = (max: number) => z.string().trim().overwrite(singleSpaced).min(1).max(max).regex(plainName, plainNameMessage);
 const date = z.iso.date();
 const version = z.number().int().positive().max(2147483646);
 export const staffRole = z.enum(['principal', 'administrative_officer', 'teacher']);
 const pagination = { limit: z.coerce.number().int().min(1).max(100).default(50), offset: z.coerce.number().int().min(0).max(100000).default(0) };
 
 export const schemas = {
-  schoolUpdate: z.strictObject({ version, name: name(150), school_code: z.string().regex(/^[0-9]{6}$/).nullable(), address: name(300) }),
+  // The heading and signature fields every form prints; each is optional so an older client's update leaves them as they are.
+  schoolUpdate: z.strictObject({ version, name: name(150), school_code: z.string().regex(/^[0-9]{6}$/).nullable(), address: name(300),
+    region: name(150).nullable().optional(), division: name(150).nullable().optional(), district: name(150).nullable().optional(),
+    school_head_name: name(150).nullable().optional(), school_head_position: name(150).nullable().optional() }),
   staffCreate: z.strictObject({ user_id: uuid, display_name: name(150), role: staffRole }),
-  staffUpdate: z.strictObject({ version, display_name: name(150).optional(), role: staffRole.optional(), active: z.boolean().optional() }).refine(v => Object.keys(v).length > 1, 'Provide a change'),
+  staffUpdate: z.strictObject({ version, display_name: name(150).optional(), role: staffRole.optional(), active: z.boolean().optional(),
+    position: name(120).nullable().optional(), specialization: name(120).nullable().optional() }).refine(v => Object.keys(v).length > 1, 'Provide a change'),
   staffQuery: z.strictObject({ ...pagination, role: staffRole.optional() }),
   yearCreate: z.strictObject({ start_year: z.number().int().min(2000).max(2199), starts_on: date, ends_on: date }).refine(v => v.ends_on > v.starts_on, 'Year end must follow its start'),
   yearTransition: z.strictObject({ version, status: z.enum(['active', 'closed']) }),

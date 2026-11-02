@@ -1,6 +1,6 @@
 {
   "name": "edunexus",
-  "version": "0.42.0",
+  "version": "0.86.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -16,6 +16,10 @@
     "test:load": "tsx scripts/load-test.ts",
     "smoke": "tsx scripts/smoke.ts",
     "demo": "tsx scripts/demo.ts",
+    "seed:test-data": "tsx --env-file-if-exists=.env scripts/seed-test-data.ts",
+    "reset:seeded-data": "tsx --env-file-if-exists=.env scripts/reset-seeded-data.ts",
+    "drill:restore": "tsx --env-file-if-exists=.env scripts/restore-drill.ts",
+    "drill:revocation": "tsx --env-file-if-exists=.env scripts/drill-revocation.ts",
     "check": "npm run typecheck && npm test && npm run build",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
     "db:bootstrap": "tsx --env-file-if-exists=.env scripts/bootstrap.ts",
@@ -28,12 +32,14 @@
     "@vercel/functions": "3.9.6",
     "cors": "2.8.6",
     "csv-parse": "7.0.2",
+    "exceljs": "4.4.0",
     "express": "5.2.1",
     "helmet": "8.3.0",
     "jose": "6.2.12",
     "pg": "8.23.0",
     "pino": "10.3.1",
     "postgres": "3.4.9",
+    "qrcode-generator": "2.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "zod": "4.5.4"

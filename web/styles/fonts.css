@@ -19,3 +19,15 @@
   font-display: swap;
   src: url('../fonts/jetbrains-mono-variable.woff2') format('woff2');
 }
+
+/* The reading-friendly typeface on My profile → Accessibility: the Braille
+   Institute's Atkinson Hyperlegible Next, drawn so that letters easily mistaken
+   for one another (I l 1, O 0, rn m) are told apart. SIL Open Font License 1.1,
+   in OFL-atkinson-hyperlegible-next.txt beside the file. */
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('../fonts/atkinson-hyperlegible-next-variable.woff2') format('woff2');
+}

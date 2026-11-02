@@ -1,0 +1,398 @@
+import type { Faq, FaqGroup } from '../types';
+
+export const faqGroups: FaqGroup[] = [
+  { id: 'account', title: 'Signing in and your account' },
+  { id: 'register', title: 'The daily register' },
+  { id: 'forms', title: 'Months, the SF2 and the SF4' },
+  { id: 'cards', title: 'Report cards, the SF9 and the SF10' },
+  { id: 'learners', title: 'Learners, enrolment and class lists' },
+  { id: 'refused', title: 'Why won’t it let me?' },
+  { id: 'privacy', title: 'Privacy and the logs' },
+  { id: 'seeded', title: 'The seeded test data' },
+];
+
+/**
+ * The questions staff ask, answered in the screens' own words. An answer names
+ * the error codes it explains, so a refusal can link straight to it, and the
+ * screens it concerns, so each screen's help can list them.
+ */
+export const faq: Faq[] = [
+  // Signing in and your account
+  {
+    id: 'forgot-password', group: 'account',
+    question: 'I forgot my password. What do I do?',
+    answer: ['On the sign-in page, type your school email and choose **Email a recovery link**. The link lets you set a new password. If no email arrives, ask the principal or the administrative officer to check your invitation on {invitations}.'],
+  },
+  {
+    id: 'change-password', group: 'account',
+    question: 'How do I change my password?',
+    answer: ['Open your name at the top right and choose **Change password**. You will be asked for the one you use now. A new password needs at least 12 characters.'],
+  },
+  {
+    id: 'save-password', group: 'account',
+    question: 'Can my browser remember my password?',
+    answer: [
+      'Yes. After you sign in, your browser offers to save your email and password; choose to save, and next time it fills them in for you. EDUNEXUS itself never keeps your password.',
+      'You are still signed out when you close the tab, so on a computer other staff use, close the tab when you are done, and do not let the browser save your password there.',
+    ],
+  },
+  {
+    id: 'easier-to-read', group: 'account', routes: ['profile'],
+    question: 'The screens are hard for me to read. What can I change?',
+    answer: [
+      'Open {profile} from your name at the top right. Under *Preferences*, choose a larger text size or the dark theme. Under *Accessibility*, choose higher contrast, underlined links, a thicker focus outline, larger buttons, more line spacing or the Atkinson Hyperlegible typeface. Each takes effect at once and follows you to any computer you sign in on. Printed forms are not changed.',
+    ],
+  },
+  {
+    id: 'two-step', group: 'account', routes: ['profile'],
+    question: 'How do I make my account safer with a code from my phone?',
+    answer: [
+      'Open {profile} from your name at the top right and choose **Turn on two-step sign-in**. Scan the code with an authenticator app such as Google Authenticator or Microsoft Authenticator, then type the six digits it shows. From then on, signing in asks for a fresh code after your password, so a password someone else learns is not enough.',
+      'If you lose your phone or delete the app, the system operator can reset it so you can sign in with your password and set it up again. EDUNEXUS cannot do this itself.',
+    ],
+    codes: ['TWO_STEP_REQUIRED'],
+  },
+  {
+    id: 'left-signed-in', group: 'account', routes: ['profile'],
+    question: 'I left myself signed in on a school computer. What do I do?',
+    answer: ['Sign in anywhere, open {profile}, and choose **Sign out everywhere else**. Every other computer and phone signed in as you must sign in again; the one you are using stays signed in. Under *Where you are signed in* you can see which browsers have been used lately.'],
+    codes: ['SESSION_UNKNOWN'],
+  },
+  {
+    id: 'photo', group: 'account', routes: ['profile', 'staff'],
+    question: 'Who can see my photo, and why was it refused or taken down?',
+    answer: [
+      'You, the principal and the administrative officer. Other teachers never see it. Only the square you framed is kept, without where or on what phone it was taken.',
+      'A photo must be a picture at least 128 pixels on each side; a document, a very small image or a damaged file is refused before it is sent. The principal or administrative officer may take down a photo that is not a suitable picture of you, with a reason. Upload another at any time.',
+    ],
+    codes: ['PHOTO_INVALID', 'PHOTO_MISSING'],
+  },
+  {
+    id: 'name-wrong', group: 'account', routes: ['profile', 'staff'],
+    question: 'My name or position is wrong on the forms. How do I fix it?',
+    answer: ['Open {profile} and choose **Ask for a correction**. Type it as it should print and say why, for example what your PRC ID shows. The principal or the administrative officer approves it, and every form printed afterwards shows the correction; a form already issued keeps what it said. You cannot change it yourself, because it prints on official forms.'],
+    codes: ['NAME_REQUEST_DECIDED', 'OWN_NAME_REQUEST'],
+  },
+  {
+    id: 'signed-out', group: 'account',
+    question: 'Why was I signed out when I closed the tab?',
+    answer: ['Your session lives only as long as the browser tab, so a shared staffroom computer does not keep you signed in after you leave. Sign in again; nothing you saved is lost. Anything not yet confirmed or recorded is.'],
+    codes: ['STAFF_ACCESS_REQUIRED'],
+  },
+  {
+    id: 'missing-screen', group: 'account',
+    question: 'A colleague has a screen I do not see. Why?',
+    answer: [
+      'Each role sees its own work. The principal and the administrative officer see the setup, learner and form screens; an adviser sees the sections they advise and the screens for that work.',
+      'If you think you have the wrong role, ask the principal: it is set on {staff}.',
+    ],
+    codes: ['FORBIDDEN', 'PRINCIPAL_ONLY'],
+  },
+  {
+    id: 'updated', group: 'account',
+    question: 'A banner says EDUNEXUS has been updated. What should I do?',
+    answer: ['Finish what you are typing, record or confirm it, then choose **Reload now**. The page you have open is older than the one the school now runs, and a form printed from it could be out of date.'],
+  },
+  {
+    id: 'new-staff', group: 'account', roles: ['principal', 'administrative_officer'],
+    question: 'How do I give a new teacher an account?',
+    answer: [
+      'On {invitations}, **Request an invitation** with their name, school email and role. Then open the request and choose **Create the account**, which sends them their email.',
+      'Once they have set a password, open their row on {staff} and tick the section they advise.',
+    ],
+    routes: ['invitations', 'staff'],
+    codes: ['INVITATION_STATE'],
+  },
+  {
+    id: 'leaving-staff', group: 'account', roles: ['principal', 'administrative_officer'],
+    question: 'A teacher has left. How do I stop their access?',
+    answer: ['On {staff}, open them and set their access to *Suspended*. It takes effect at once and deletes nothing they recorded, so their marks and grades stay on file with their name.'],
+    routes: ['staff'],
+  },
+
+  // The daily register
+  {
+    id: 'not-marked', group: 'register',
+    question: 'What is the difference between *Not marked* and present?',
+    answer: [
+      '*Not marked* means nobody has recorded that session. It is never counted as present and never as absent: the SF2 shows it as **?** and keeps its totals empty until it is marked.',
+      'So a day you forgot does not quietly become a day of perfect attendance.',
+    ],
+    routes: ['attendance', 'sf2'],
+  },
+  {
+    id: 'saved', group: 'register', roles: ['teacher'],
+    question: 'I marked the whole class but nothing was saved. Why?',
+    answer: ['Marks are held on screen until you press **Review these marks** and then **Confirm this review**. Saving the class together means two people can never overwrite each other half-way through a register.'],
+    routes: ['attendance'],
+    codes: ['ATTENDANCE_UNCHANGED'],
+  },
+  {
+    id: 'cannot-mark-date', group: 'register',
+    question: 'Why can’t I take attendance on this date?',
+    answer: [
+      'Attendance can be taken only on a date the school has configured as a class day, in an active school year, and not in the future.',
+      'If a class day is missing, the principal or the administrative officer sets it on the {calendar}.',
+    ],
+    routes: ['attendance', 'calendar'],
+    codes: ['ATTENDANCE_SESSION', 'ATTENDANCE_YEAR', 'ATTENDANCE_DATE'],
+  },
+  {
+    id: 'learner-not-listed', group: 'register',
+    question: 'A learner is missing from my register, or one is there who left.',
+    answer: [
+      'The register lists who was enrolled in your section on that date. A learner who joined late, transferred or withdrew is listed only for the days they were enrolled.',
+      'If the dates are wrong, the administrative officer corrects the enrolment on {enrollment}. An adviser cannot, because only managers change learner records.',
+    ],
+    routes: ['attendance', 'enrollment'],
+    codes: ['ATTENDANCE_ENROLLMENT', 'NOT_IN_SECTION'],
+  },
+  {
+    id: 'record-changed', group: 'register',
+    question: 'It says the record changed. Did I lose my work?',
+    answer: [
+      'No. Someone else saved the same record after you opened it, so EDUNEXUS refused to write over their change. Read the record again, look at what they did, and redo yours if it is still needed.',
+      'Nothing in EDUNEXUS is ever silently overwritten.',
+    ],
+    codes: ['VERSION_CONFLICT', 'ATTENDANCE_REVIEW_CHANGED', 'RETRY_REQUIRED'],
+  },
+  {
+    id: 'correct-past', group: 'register', roles: ['teacher'],
+    question: 'How do I correct a mark from last week?',
+    answer: [
+      'Go to that date on the register, change the mark, and review and confirm it with a reason saying why. The change is kept beside the original.',
+      'If the month has been submitted or locked, ask the principal or the administrative officer to return it first.',
+    ],
+    routes: ['attendance'],
+  },
+
+  // Months, the SF2 and the SF4
+  {
+    id: 'sf2-empty', group: 'forms',
+    question: 'Why does the SF2 show the marks but no totals?',
+    answer: [
+      'Either the school’s attendance rule is not recorded yet, or a session in the month is still unmarked.',
+      'The rule says how a learner present for one session and absent for the other is counted, and the principal records it on {school}. EDUNEXUS does not guess it. An unmarked session shows **?**: mark it and the totals appear.',
+    ],
+    routes: ['sf2', 'school'],
+  },
+  {
+    id: 'sf2-to-date', group: 'forms',
+    question: 'Why does this month’s SF2 say *to date*?',
+    answer: ['While a month still has class days to come, the SF2 counts the days held so far and says to which date. It is issued only once the month is over and every day is marked.'],
+    routes: ['sf2'],
+  },
+  {
+    id: 'reissue', group: 'forms',
+    question: 'I issued a form and then found a mistake.',
+    answer: ['Correct the record, then issue the form again. EDUNEXUS keeps a fingerprint of every issued form, so a reissue that says something different asks for the reason it is being corrected, and both issues stay on file.'],
+    routes: ['sf2', 'sf4'],
+    codes: ['REISSUE_REASON'],
+  },
+  {
+    id: 'month-submit', group: 'forms', roles: ['principal', 'administrative_officer'],
+    question: 'Why can’t I submit this month?',
+    answer: ['A month can be submitted once it has ended and every class day in it is marked, in every session. Open the month on {months}: its review names each date or learner still missing.'],
+    routes: ['months'],
+    codes: ['MONTH_INCOMPLETE', 'MONTH_TRANSITION', 'MONTH_YEAR'],
+  },
+  {
+    id: 'month-locked', group: 'forms',
+    question: 'A month is locked, and a mark in it is wrong.',
+    answer: ['A locked month cannot change, so that the SF4 built from it stays true. The principal or the administrative officer chooses **Reopen this month** on {months} with a reason; the adviser corrects the register; the month is submitted and locked again.'],
+    routes: ['months'],
+    codes: ['MONTH_FROZEN', 'MONTH_DEPENDENCY'],
+  },
+  {
+    id: 'sf4-percent', group: 'forms', roles: ['principal', 'administrative_officer'],
+    question: 'Why are the SF4’s averages and percentages empty?',
+    answer: ['They are counted only by the attendance rule the principal records on {school}, and only from months with every session marked. Until both hold, EDUNEXUS leaves them empty rather than estimating them.'],
+    routes: ['sf4', 'school'],
+  },
+  {
+    id: 'excel', group: 'forms',
+    question: 'Can I get the SF2 or SF4 as an Excel file?',
+    answer: ['Yes. On the form, **Excel file** saves it in the workbook’s layout. An adviser also has **SF2 (Excel)** on the register.'],
+    routes: ['sf2', 'sf4', 'attendance'],
+  },
+
+  // Report cards, the SF9 and the SF10
+  {
+    id: 'no-grade-math', group: 'cards',
+    question: 'Why doesn’t EDUNEXUS compute the grades?',
+    answer: [
+      'The rules that turn scores into a grade (the weights, the transmutation and the rounding) are DepEd’s and the school’s, and the school’s class record (ECR) already applies them. A second calculation here could disagree with the ECR without anyone noticing, and the wrong one would be printed on a real report card.',
+      'So EDUNEXUS records the grades exactly as the ECR shows them and checks only that each is a number from 0 to 100.',
+    ],
+    routes: ['report-cards'],
+  },
+  {
+    id: 'grade-refused', group: 'cards', roles: ['teacher'],
+    question: 'Why was my grade refused?',
+    answer: ['A grade is a number from 0 to 100 with at most two decimal places, as the ECR displays it. Copy it as the ECR shows it rather than its full unrounded value.'],
+    routes: ['report-cards'],
+    codes: ['GRADE_RANGE'],
+  },
+  {
+    id: 'observed-values', group: 'cards', roles: ['teacher'],
+    question: 'What can I type for the observed values?',
+    answer: ['Each behaviour statement takes one of the card’s four marks: AO, SO, RO or NO.'],
+    routes: ['report-cards'],
+    codes: ['VALUE_MARK'],
+  },
+  {
+    id: 'grade-1', group: 'cards', roles: ['teacher'],
+    question: 'Why does my Grade 1 section have no grades tab?',
+    answer: ['Grade 1 is graded descriptively in 2026–2027 (DepEd Order No. 15, s. 2026). A Grade 1 section records each term’s **Narratives** instead.'],
+    routes: ['report-cards'],
+  },
+  {
+    id: 'kinder-card', group: 'cards',
+    question: 'Where is the Kindergarten report card?',
+    answer: ['Not in EDUNEXUS yet. The school has not supplied its Kindergarten card or assessment policy, and EDUNEXUS does not grade Kindergarten numerically without one.'],
+    routes: ['report-cards'],
+    codes: ['NO_KINDERGARTEN_CARD'],
+  },
+  {
+    id: 'sf9-attendance', group: 'cards',
+    question: 'Can I type the attendance on the SF9?',
+    answer: ['No. The SF9’s days present and absent are counted from the register by the school’s attendance rule, so the card cannot disagree with the SF2 and SF4. Correct the register, and the card follows.'],
+    routes: ['report-cards', 'learners'],
+  },
+  {
+    id: 'outcome-change', group: 'cards',
+    question: 'An outcome was approved, and it is wrong.',
+    answer: ['An approved outcome cannot change while it is approved. The principal or the administrative officer returns it to the adviser on **Promotion**; the adviser endorses the right outcome, and it is approved again.'],
+    routes: ['report-cards'],
+    codes: ['PROMOTION_APPROVED', 'PROMOTION_MISSING'],
+  },
+  {
+    id: 'outcome-decided', group: 'cards',
+    question: 'Does EDUNEXUS decide who is promoted?',
+    answer: ['No. The adviser endorses the outcome the school decided, and the principal or the administrative officer approves it. The general average and failed learning areas are shown beside each learner only to check against.'],
+    routes: ['report-cards'],
+  },
+  {
+    id: 'find-sf9', group: 'cards',
+    question: 'Where do I find a learner’s SF9 or SF10?',
+    answer: ['On the learner’s row in the {learners}: **SF9** and **Permanent record (SF10)**. A whole section’s cards print together with **Print the section’s SF9s** on {report-cards}.'],
+    routes: ['learners', 'report-cards'],
+  },
+
+  // Learners, enrolment and class lists
+  {
+    id: 'teacher-edit-learner', group: 'learners', roles: ['teacher'],
+    question: 'A learner’s name or birth date is wrong. Can I fix it?',
+    answer: ['No: only the principal and the administrative officer change learner records. Tell the administrative officer, who corrects it with a reason. You can see the change once it is made.'],
+    routes: ['learners'],
+  },
+  {
+    id: 'lrn', group: 'learners',
+    question: 'Why is an LRN required?',
+    answer: [
+      'The LRN is how DepEd identifies a learner from school to school, and every form prints it. Every new learner needs the twelve digits, and EDUNEXUS never invents one.',
+      'An older record without one reads *LRN missing* until a manager completes it with **Assign LRN**.',
+    ],
+    routes: ['learners', 'imports'],
+    codes: ['LRN_MISSING_ON_FILE'],
+  },
+  {
+    id: 'late-learner', group: 'learners',
+    question: 'A learner arrived after the class list went in.',
+    answer: [
+      'An adviser adds them with **Add one late learner** on {imports}, as one more row on their list.',
+      'The administrative officer uses **Enlist one late learner** on the same screen, which finds a record already on file or creates one, and enrols them in one step.',
+    ],
+    routes: ['imports'],
+  },
+  {
+    id: 'list-waiting', group: 'learners', roles: ['teacher'],
+    question: 'I submitted my class list. What happens now?',
+    answer: ['It waits for the principal or the administrative officer, who previews and imports it. While it waits you may **Withdraw** it and submit a corrected one, but only one list per section can wait at a time.'],
+    routes: ['imports'],
+    codes: ['SUBMISSION_WAITING', 'SUBMISSION_CLOSED', 'NOT_SECTION_ADVISER'],
+  },
+  {
+    id: 'import-refused', group: 'learners', roles: ['administrative_officer'],
+    question: 'Why was the whole import refused?',
+    answer: ['A class list goes in whole or not at all, so a section is never left half imported. Fix the rows the preview marks and preview again. A preview also expires, and an import that differs from the preview you reviewed is refused.'],
+    routes: ['imports'],
+    codes: ['PREVIEW_CHANGED', 'PREVIEW_EXPIRED', 'PREVIEW_LIMIT'],
+  },
+  {
+    id: 'same-child', group: 'learners', roles: ['principal', 'administrative_officer'],
+    question: 'The same child is in the registry twice.',
+    answer: ['Open one record in the {learners} and choose **This is the same child as another record**. The review shows both records and what is kept; nothing is merged automatically, and the link can be reversed.'],
+    routes: ['learners'],
+    codes: ['IDENTITY_CONFLICT', 'LINKED_LEARNER_READ_ONLY'],
+  },
+  {
+    id: 'movement-dates', group: 'learners', roles: ['principal', 'administrative_officer'],
+    question: 'Why was a transfer or withdrawal date refused?',
+    answer: ['Movements must follow one another in order, inside the school year and not in the future. A movement before attendance that was already marked also needs those marks reviewed first.'],
+    routes: ['enrollment'],
+    codes: ['TIMELINE_DATES', 'TIMELINE_TRANSITION', 'ATTENDANCE_DEPENDENCY'],
+  },
+
+  // Why won't it let me?
+  {
+    id: 'closed-year', group: 'refused',
+    question: 'Why can’t I change anything in last year?',
+    answer: ['A closed school year’s records are read only, so the forms issued from it stay true.'],
+    codes: ['RECORD_YEAR_CLOSED', 'YEAR_CLOSED', 'OFFERING_YEAR_CLOSED'],
+  },
+  {
+    id: 'reason', group: 'refused',
+    question: 'Why does every change ask for a reason?',
+    answer: ['The reason is kept with the change in the activity log, so anyone reading the record later can see why it changed, not only that it did. Write one line of 10 to 500 characters that a colleague would understand next year.'],
+  },
+  {
+    id: 'nothing-changed', group: 'refused',
+    question: 'It says nothing has changed.',
+    answer: ['What you are saving is already recorded that way, so there is nothing to keep. Check you changed the box you meant to.'],
+    codes: ['NO_CHANGES', 'CALENDAR_UNCHANGED', 'TIMELINE_UNCHANGED', 'SUBJECT_UNCHANGED', 'RULE_UNCHANGED'],
+  },
+  {
+    id: 'review-again', group: 'refused',
+    question: 'It says the review changed. Preview and review again?',
+    answer: ['Something the review showed you changed before you confirmed it, usually because a colleague saved meanwhile. Open the review again: it shows the records as they are now.'],
+    codes: ['CALENDAR_REVIEW_CHANGED', 'MONTH_REVIEW_CHANGED', 'TIMELINE_REVIEW_CHANGED', 'FOLLOWUP_REVIEW_CHANGED', 'ENROLLMENT_RECORD_REVIEW_CHANGED', 'IDENTITY_REVIEW_CHANGED'],
+  },
+  {
+    id: 'no-alerts', group: 'refused',
+    question: 'Why doesn’t EDUNEXUS warn me when a learner is often absent?',
+    answer: ['The school has no approved rule for when absences need action, so EDUNEXUS raises no alert of its own. The {monitor} shows recorded absences and gaps over the dates you choose, and a manager can open a case by hand on {followups}.'],
+    routes: ['monitor', 'followups'],
+  },
+
+  // Privacy and the logs
+  {
+    id: 'who-saw', group: 'privacy',
+    question: 'Who can see a learner’s records?',
+    answer: ['The principal and the administrative officer see every learner. An adviser sees only the learners currently in the sections they advise. Every list that shows a learner is recorded in the privacy access log.'],
+  },
+  {
+    id: 'access-log', group: 'privacy', roles: ['principal', 'administrative_officer'],
+    question: 'How do I see who opened a learner’s record?',
+    answer: ['From the learner in the {learners}, **Who has opened this record**, or on the {access} by record. It lists record IDs, never names, because looking a name up would itself be a read.'],
+    routes: ['access', 'learners'],
+  },
+  {
+    id: 'history', group: 'privacy', roles: ['principal', 'administrative_officer'],
+    question: 'Can a change be deleted from the history?',
+    answer: ['No. The {activity} is append-only: every change is kept with what the record was before and after, who made it, when and why. A mistake is corrected by a new change, never by erasing the old one.'],
+    routes: ['activity'],
+  },
+
+  // The seeded test data
+  {
+    id: 'seeded-real', group: 'seeded',
+    question: 'Are these real learners?',
+    answer: ['Not while the amber *Seeded test data* banner shows. Every record is invented for practice, and all of them are wiped before the school uses EDUNEXUS for real.'],
+  },
+  {
+    id: 'seeded-safe', group: 'seeded',
+    question: 'Can I change anything while I am practising?',
+    answer: ['Yes. Mark, record, issue and approve freely while the banner shows. Nothing you do reaches a real learner, and the go-live wipe clears it.'],
+  },
+];

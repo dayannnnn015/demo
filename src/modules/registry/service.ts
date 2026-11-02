@@ -8,6 +8,11 @@ function found(rows: Row[], update = false) {
   if (!rows[0]) throw new AppError(update ? 409 : 404, update ? 'VERSION_CONFLICT' : 'NOT_FOUND', update ? 'The record changed or is unavailable. Refresh before saving.' : 'The record was not found.');
   return rows[0];
 }
+/** The words of a search as the query folds a name: lower case, accents dropped, punctuation read as a space. */
+export function searchWords(search: string) {
+  const words = search.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+  return words.length ? words : [search.toLowerCase()];
+}
 function page(rows: Row[], limit: number, offset: number) { return { items: rows.slice(0, limit), pagination: { limit, offset, has_more: rows.length > limit } }; }
 export async function executeRegistry(id: RegistryOperationId, ctx: Context, input: { body: unknown; query: unknown; id?: string }) {
   const { tx } = ctx;
@@ -37,10 +42,16 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
     }
     case 'learnerList': {
       const q = input.query as z.infer<typeof s.learnerQuery>;
+      // A registrar types "Juan Dela Cruz", "dela cruz, juan" or "Pena" for Peña,
+      // and a search that finds nobody ends in the child being registered twice.
+      // So each word must appear somewhere in the name, in any order, with case,
+      // accents and punctuation set aside on both sides; an LRN may carry spaces.
+      const words = q.search === undefined ? null : searchWords(q.search);
+      const lrnSearch = q.search === undefined ? null : q.search.replace(/[\s-]/g, '');
       const rows = await tx.query(`select * from edunexus.learners where
-        ($1::text is null or position(lower($1) in lower(concat_ws(' ',last_name,first_name,middle_name)))>0 or lrn=$1)
-        and ($2::date is null or birth_date=$2) and ($3::text is null or lrn=$3) and ($6::boolean or merged_into is null)
-        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [q.search ?? null, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true']);
+        ($1::text[] is null or not exists (select 1 from unnest($1::text[]) w where position(w in regexp_replace(translate(lower(concat_ws(' ',last_name,first_name,middle_name,name_extension)),'ñáàâäãéèêëíìîïóòôöõúùûüç','naaaaaeeeeiiiiooooouuuuc'),'[^a-z0-9]+',' ','g'))=0) or lrn=$8)
+        and ($2::date is null or birth_date=$2) and ($3::text is null or lrn=$3) and ($6::boolean or merged_into is null) and ($7::text is null or sex=$7)
+        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [words, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true',q.sex ?? null, lrnSearch]);
       const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
     }
     case 'enrollmentCreate': {
@@ -87,7 +98,11 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
     }
     case 'recordAccessList': {
       const q = input.query as z.infer<typeof s.accessQuery>;
-      const rows = await tx.query('select id::text,occurred_at,actor_user_id,request_id,resource,record_ids from edunexus.record_access_events where ($1::bigint is null or id<$1) and ($3::uuid is null or actor_user_id=$3) and ($4::uuid is null or $4=any(record_ids)) order by edunexus.record_access_events.id desc limit $2', [q.before_id ?? null, q.limit + 1, q.actor_user_id ?? null, q.record_id ?? null]);
+      // Reads are logged under the IDs they returned, so a form, a register or a
+      // score sheet names a learner only by enrollment. Narrowed to a learner,
+      // the log therefore also matches that learner's enrollments, including any
+      // recorded under a duplicate identity merged into them.
+      const rows = await tx.query('select id::text,occurred_at,actor_user_id,request_id,resource,record_ids from edunexus.record_access_events where ($1::bigint is null or id<$1) and ($3::uuid is null or actor_user_id=$3) and ($4::uuid is null or record_ids && (array[$4::uuid] || array(select e.id from edunexus.enrollments e join edunexus.learners l on l.id=e.learner_id where l.id=$4 or l.merged_into=$4))) order by edunexus.record_access_events.id desc limit $2', [q.before_id ?? null, q.limit + 1, q.actor_user_id ?? null, q.record_id ?? null]);
       return { items: rows.slice(0, q.limit), pagination: { limit: q.limit, next_before_id: rows.length > q.limit ? rows[q.limit - 1]!.id : null } };
     }
   }

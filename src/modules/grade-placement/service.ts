@@ -1,3 +1,4 @@
+import { blockedPreview, wouldRefuse } from '../../core/dry-run.js';
 import type { z } from 'zod';
 import type { Context } from '../foundation/service.js';
 import { AppError } from '../../core/errors.js';
@@ -19,7 +20,9 @@ export async function executePlacement(id: PlacementOperationId, ctx: Context, i
   const params = [input.id, b.version, b.grade_level, JSON.stringify(b.entries), b.reason];
   if (id === 'placementPreview') {
     const [row] = await tx.query('select edunexus.preview_enrollment_placement($1,$2,$3,$4::jsonb,$5) as preview', params);
-    await record(); return row!.preview;
+    const preview = row!.preview as Record<string, unknown>;
+    const refusal = await wouldRefuse(tx, () => tx.query(`select ${correctionColumns} from edunexus.correct_enrollment_placement($1,$2,$3,$4::jsonb,$5,$6)`, [...params, preview.review_hash]));
+    await record(); return blockedPreview(preview, refusal);
   }
   const [row] = await tx.query(`select ${correctionColumns} from edunexus.correct_enrollment_placement($1,$2,$3,$4::jsonb,$5,$6)`, [...params, b.review_hash]);
   await record(); return row;

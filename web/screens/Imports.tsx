@@ -5,6 +5,7 @@ import type { Route } from '../routes';
 import { clamp } from '../dates';
 import { Icon } from '../components/icons';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
+import { AdviserLists, type Submission } from './RosterSubmissions';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded,
   gradeName, idle, learnerName, localToday, sentence, type Status,
@@ -22,30 +23,9 @@ type Template = { csv: string; max_rows: number; max_csv_bytes: number; instruct
 
 export type Resolution = { row: number; action: 'use_existing'; learner_id: string; version: number } | { row: number; action: 'create_distinct'; reason: string };
 
-export const MAX_BYTES = 24000;
-export const MAX_ROWS = 50;
-
-/**
- * The size of a CSV the way the API measures it: UTF-8 bytes, and data records
- * after the header with empty lines skipped. A quoted field holding a line
- * break would make this count high, which is the safe direction — the server
- * still parses the file properly and decides.
- */
-export function csvStats(text: string) {
-  const bytes = new TextEncoder().encode(text).length;
-  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(line => line.trim() !== '');
-  return { bytes, rows: Math.max(0, lines.length - 1) };
-}
-
-/** What stops a file being sent at all, or null. */
-export function csvProblem(text: string): string | null {
-  if (!text.trim()) return null;
-  const { bytes, rows } = csvStats(text);
-  if (bytes > MAX_BYTES) return `This file is ${bytes.toLocaleString()} bytes. One import holds at most ${MAX_BYTES.toLocaleString()}; split the class into smaller files.`;
-  if (rows > MAX_ROWS) return `This file has ${rows} learners. One import holds at most ${MAX_ROWS}; split it into smaller files.`;
-  if (rows === 0) return 'This file has a header and no learners.';
-  return null;
-}
+export { MAX_BYTES, MAX_ROWS, csvProblem, csvStats } from '../csv';
+import { EnlistSheet } from './LateLearner';
+import { csvProblem, csvStats, MAX_BYTES, MAX_ROWS, rosterFileText } from '../csv';
 
 /** The resolutions a preview is sent with, one per row, in row order. */
 export const resolutionList = (chosen: Record<number, Resolution>) => Object.values(chosen).sort((a, b) => a.row - b.row);
@@ -113,6 +93,10 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [status, setLocal] = useState<Status>(idle);
   const [busy, setBusy] = useState(false);
+  // An adviser's list being imported, and one waiting to fill the form once its section is on screen.
+  const [fromList, setFromList] = useState<Submission | null>(null);
+  const [pendingFill, setPendingFill] = useState<Submission | null>(null);
+  const [enlisting, setEnlisting] = useState(false);
   const id = useId();
 
   useEffect(() => { void api<Template>('/roster-imports/template').then(setTemplate).catch(() => setTemplate(null)); }, [api]);
@@ -129,6 +113,25 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   // marked stale until it is run again.
   useEffect(() => { setPreview(null); setSent(null); }, [csv, scope.sectionId, enrolledOn, kind]);
   useEffect(() => { setChosen({}); setReceipt(null); }, [csv, scope.sectionId]);
+
+  // The year and section switch first; the list goes in once they are the ones on screen,
+  // so the date reset that follows a change of year cannot overwrite it.
+  useEffect(() => {
+    if (!pendingFill || scope.yearId !== pendingFill.academic_year_id || scope.sectionId !== pendingFill.section_id) return;
+    setEnrolledOn(pendingFill.enrolled_on);
+    setKind(pendingFill.entry_kind);
+    setFileName('');
+    setCsv(pendingFill.csv ?? '');
+    setPendingFill(null);
+  }, [pendingFill, scope.yearId, scope.sectionId]);
+
+  const openList = (list: Submission) => {
+    setFromList(list);
+    setPendingFill(list);
+    scope.setYearId(list.academic_year_id);
+    scope.setSectionId(list.section_id);
+    setLocal({ text: `Opened the class list for ${gradeName(list.grade_level)} · ${list.section_name}. Preview it below.`, kind: 'done' });
+  };
 
   const problem = csvProblem(csv);
   const stats = csvStats(csv);
@@ -161,7 +164,16 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
       setReceipt(result);
       setPreview(null);
       setLocal(idle);
-      setStatus({ text: `${result.items.length} ${result.items.length === 1 ? 'learner' : 'learners'} imported and enrolled.`, kind: 'done' });
+      let note = '';
+      // Only the very list the adviser sent, imported into their section, accepts it; the database checks the same.
+      if (fromList && sent.section_id === fromList.section_id && sent.csv === fromList.csv) {
+        try {
+          await api(`/roster-submissions/${fromList.id}/decision`, 'POST', { version: fromList.version, decision: 'accepted', import_id: preview.preview_id, reason: `Imported through the reviewed roster import, receipt ${preview.preview_id}.` });
+          note = ' The adviser\'s list is marked imported.';
+        } catch (error) { note = ` The import succeeded, but the adviser's list could not be marked imported: ${message(error)}`; }
+        setFromList(null);
+      }
+      setStatus({ text: `${result.items.length} ${result.items.length === 1 ? 'learner' : 'learners'} imported and enrolled.${note}`, kind: 'done' });
       reload();
     } catch (error) {
       if (error instanceof ApiError && (error.code === 'PREVIEW_CHANGED' || error.code === 'PREVIEW_EXPIRED' || error.code === 'NOT_FOUND')) { setPreview(null); setSent(null); }
@@ -198,10 +210,27 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
     <>
       <PageHeader
         route={route}
-        actions={<button type="button" className="btn secondary" disabled={!template} onClick={download}><Icon name="imports" size={15} />Download the template</button>}
+        actions={<>
+          <button type="button" className="btn secondary" disabled={!template} onClick={download}><Icon name="imports" size={15} />Download the template</button>
+          <button type="button" className="btn" disabled={!scope.year || !scope.sections?.length} onClick={() => setEnlisting(true)}><Icon name="plus" size={15} />Enlist one late learner</button>
+        </>}
       />
+      {enlisting && scope.year && scope.sections?.length ? (
+        <EnlistSheet api={api} year={scope.year} sections={scope.sections} onClose={() => setEnlisting(false)}
+          onDone={text => { setEnlisting(false); reload(); setStatus({ text, kind: 'done' }); }} />
+      ) : null}
+
+      <AdviserLists api={api} token={token} onOpen={openList} setStatus={setStatus} />
 
       <div className="card">
+        {fromList ? (
+          <div className="card-body">
+            <Callout tone="info" title={`Importing the list ${fromList.submitted_by_name ?? 'an adviser'} submitted`}>
+              For {gradeName(fromList.grade_level)} · {fromList.section_name}, {fromList.row_count} {fromList.row_count === 1 ? 'learner' : 'learners'}. Preview it as any import, resolve any learner already on file, and confirm. Confirming marks the adviser's list imported, as long as the section and the list are unchanged.
+              {' '}<button type="button" className="btn ghost small" onClick={() => setFromList(null)}>Stop using this list</button>
+            </Callout>
+          </div>
+        ) : null}
         <div className="card-head">
           <div>
             <h2>1. Where the class goes</h2>
@@ -231,18 +260,18 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
         <div className="card-head">
           <div>
             <h2>2. The class list</h2>
-            <p className="card-note">A CSV file in the EDUNEXUS template, up to {MAX_ROWS} learners. It stays in this page until you preview it.</p>
+            <p className="card-note">The EDUNEXUS class-list template, as an Excel or CSV file, up to {MAX_ROWS} learners. It stays in this page until you preview it.</p>
           </div>
         </div>
         <div className="card-body">
           <div className="form-grid">
             <div className="field wide">
-              <label className="label" htmlFor={`${id}-file`}>CSV file</label>
-              <input id={`${id}-file`} type="file" accept=".csv,text/csv" onChange={async event => {
+              <label className="label" htmlFor={`${id}-file`}>Excel or CSV file</label>
+              <input id={`${id}-file`} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={async event => {
                 const file = event.target.files?.[0];
                 if (!file) return;
                 setFileName(file.name);
-                setCsv(await file.text());
+                try { setCsv(await rosterFileText(file)); } catch (error) { setFileName(''); setStatus({ text: message(error), kind: 'error' }); }
               }} />
               <span className="hint">
                 The header must be exactly <span className="mono">{template?.csv.trim() ?? 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex'}</span>.
@@ -291,7 +320,7 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
             empty={<p className="muted">The file had no learners.</p>}
             columns={[
               { header: 'Row', cell: r => <span className="mono">{r.row}</span>, numeric: true },
-              { header: 'Learner', cell: r => (r.profile ? <Cell title={learnerName(r.profile)} meta={r.profile.lrn ? <span className="mono">LRN {r.profile.lrn}</span> : <Unrecorded label="LRN not issued" />} /> : <Unrecorded label="Unreadable row" />) },
+              { header: 'Learner', cell: r => (r.profile ? <Cell title={learnerName(r.profile)} meta={r.profile.lrn ? <span className="mono">LRN {r.profile.lrn}</span> : <Unrecorded label="LRN missing" />} /> : <Unrecorded label="Unreadable row" />) },
               { header: 'Born', cell: r => (r.profile ? <span className="mono">{r.profile.birth_date}</span> : null) },
               { header: 'Sex', cell: r => (r.profile ? sentence(r.profile.sex) : null) },
               {

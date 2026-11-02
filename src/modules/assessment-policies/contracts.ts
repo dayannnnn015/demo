@@ -1,8 +1,9 @@
 import {z} from 'zod';
+import {plainName,plainNameMessage,shortCode,shortCodeMessage} from '../../core/text.js';
 import {uuid} from '../foundation/contracts.js';
 import {subjectReason} from '../subjects/contracts.js';
-const code=z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_-]{0,23}$/);
-const name=z.string().trim().min(1).max(120).regex(/^[^\u0000-\u001f\u007f]*$/);
+const code=z.string().trim().regex(shortCode,shortCodeMessage);
+const name=z.string().trim().min(1).max(120).regex(plainName,plainNameMessage);
 const component=z.strictObject({code,name,weight_basis_points:z.number().int().min(1).max(10000)});
 const components=z.array(component).min(1).max(10).refine(c=>new Set(c.map(v=>v.code.toUpperCase())).size===c.length,'Component codes must be distinct')
   .refine(c=>c.reduce((sum,v)=>sum+v.weight_basis_points,0)===10000,'Weights must total 10000 basis points (100%)')

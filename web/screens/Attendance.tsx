@@ -1,17 +1,22 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import type { Api, Page } from '../api';
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import type { Api, Page, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import type { Route } from '../routes';
-import { clamp, shift, weekday } from '../dates';
+import { clamp, dayAndMonth, firstOf, lastOf, monthName, monthOf, shift, weekday } from '../dates';
+import { classListWorkbook, fileSlug, registerWorkbook, type ClassRow, type RegisterDay } from '../csv';
+import { downloadXlsx } from '../xlsx';
+import { sf2Workbook } from '../forms/sf2';
+import { levelName, type Sf2Form } from '../forms/types';
 import { Icon } from '../components/icons';
-import { Sheet } from '../components/overlay';
+import { Confirm, Sheet } from '../components/overlay';
 import { ScopePickers, useScope } from '../components/scope';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, StatusLine, Table, TableSkeleton,
-  Unrecorded, byLearnerName, idle, learnerName, localToday, type Status,
+  Unrecorded, byLearnerName, gradeName, idle, learnerName, localToday, yearName, type Status,
 } from '../components/primitives';
+import { Affects } from '../components/affects';
 
-type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
+type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
 type Mode = 'classroom' | 'alternative_delivery' | 'no_class' | 'suspended';
 export type Mark = 'present' | 'absent' | null;
@@ -86,7 +91,7 @@ function MarkChoice({ name, legend, value, onChange }: {
 }) {
   return (
     <>
-      <fieldset className="marks">
+      <fieldset className="marks" data-tour="att-mark">
         <legend className="sr-only">{legend}</legend>
         {marks.map(([key, text]) => (
           <label key={key ?? 'none'} className="mark">
@@ -117,6 +122,24 @@ function MarkChoice({ name, legend, value, onChange }: {
  * put back exactly as they were is not a change at all, and is dropped here
  * rather than being sent for the API to refuse as a no-op.
  */
+/**
+ * A draft carried over a fresh read of the sheet. A session the adviser
+ * changed keeps their mark; a session they left as it was takes what is on
+ * file now, so a mark someone else recorded meanwhile is never sent back
+ * over with the old value.
+ */
+export function rebase(draft: Record<string, Pair>, before: (Pair & { enrollment_id: string })[], after: (Pair & { enrollment_id: string })[]): Record<string, Pair> {
+  const was = new Map(before.map(row => [row.enrollment_id, row]));
+  const out: Record<string, Pair> = {};
+  for (const row of after) {
+    const mine = draft[row.enrollment_id];
+    if (!mine) continue;
+    const old = was.get(row.enrollment_id) ?? row;
+    out[row.enrollment_id] = { am: mine.am !== old.am ? mine.am : row.am, pm: mine.pm !== old.pm ? mine.pm : row.pm };
+  }
+  return out;
+}
+
 export function pending(items: (Pair & { enrollment_id: string })[], draft: Record<string, Pair>): Change[] {
   const out: Change[] = [];
   for (const row of items) {
@@ -133,18 +156,21 @@ export function pending(items: (Pair & { enrollment_id: string })[], draft: Reco
  * the adviser back to the sheet: it is never replayed against whatever is
  * there now, because the version it was built on has moved.
  */
-function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, onDone }: {
+const stale = 'Someone recorded this date while you were marking. The register has been read again with their marks, and yours are kept: review again before recording.';
+
+export function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, onDone, onStale }: {
   api: Api; sectionId: string; dayOn: string; version: number; changes: Change[];
-  onClose: () => void; onDone: (text: string) => void;
+  onClose: () => void; onDone: (text: string) => void; onStale: () => Promise<void>;
 }) {
   const [status, setStatus] = useState<Status>(idle);
-  const [reason, setReason] = useState('');
+  // Today's own register taken in class is the everyday case, so its reason is offered and can be changed; a past date is a correction and starts blank, because only the person correcting it knows why.
+  const [reason, setReason] = useState(dayOn === localToday() ? `Register taken in class on ${dayAndMonth(dayOn)}.` : '');
   const [sent, setSent] = useState<Proposal | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const review = async (event: FormEvent) => {
-    event.preventDefault();
+  const review = async (event?: FormEvent) => {
+    event?.preventDefault();
     // The API's reason is a single line; a textarea can hold newlines, and a
     // pasted one would be refused for a formatting rule nobody was shown.
     const body: Proposal = { day_on: dayOn, version, changes, reason: reason.trim().replace(/\s+/g, ' ') };
@@ -155,9 +181,24 @@ function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, onDone 
       setSent(body);
       setPlan(result);
       setStatus(idle);
-    } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
+    } catch (error) {
+      if (error instanceof ApiError && error.isConflict) {
+        await onStale().catch(() => undefined);
+        setStatus({ text: stale, kind: 'error' });
+      } else setStatus({ text: message(error), kind: 'error' });
+    }
     finally { setBusy(false); }
   };
+
+  // Today's register taken in class already has its reason, so the sheet opens on the review itself: pressing
+  // Review on the register and again in here was the redundant step the group noted (28 October). A correction
+  // to another date still starts at its reason, because only the person making it knows why.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    if (reason.trim().length >= 10) void review();
+  }, []);
 
   const confirm = async () => {
     if (!sent || !plan) return;
@@ -167,7 +208,14 @@ function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, onDone 
       await api(`/sections/${sectionId}/attendance/corrections`, 'POST', { ...sent, review_hash: plan.review_hash, reviewed: true });
       onDone(`${plan.changed_count} ${plan.changed_count === 1 ? 'learner' : 'learners'} updated.`);
     } catch (error) {
-      if (error instanceof ApiError && error.isConflict) { setPlan(null); setSent(null); }
+      if (error instanceof ApiError && error.isConflict) {
+        // Someone else recorded this date first, often the adviser's own phone. The sheet is read again,
+        // the adviser's marks are kept over what is on file now, and they review the result.
+        setPlan(null); setSent(null);
+        await onStale().catch(() => undefined);
+        setStatus({ text: stale, kind: 'error' });
+        return;
+      }
       setStatus({ text: message(error), kind: 'error' });
     } finally { setBusy(false); }
   };
@@ -177,20 +225,21 @@ function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, onDone 
   return (
     <Sheet
       title="Review these marks"
-      note={`${count} on ${dayOn}. Nothing is recorded until you confirm what the review shows.`}
+      note={`${count} on ${weekday(dayOn)}, ${dayAndMonth(dayOn)}. Nothing is recorded until you confirm what the review shows.`}
       wide
       onClose={onClose}
     >
       <StatusLine status={status} />
+      <Affects what="register" />
 
       {plan ? (
         <>
           <p className="card-note">
-            {plan.changed_count} of {plan.changes.length} learners change. A session already holding exactly what you marked is left alone.
+            {plan.changed_count} of {plan.changes.length} {plan.changes.length === 1 ? 'learner changes' : 'learners change'}. A session already holding exactly what you marked is left alone.
           </p>
 
           <Table
-            rows={plan.changes}
+            rows={[...plan.changes].sort(byLearnerName)}
             rowKey={row => row.enrollment_id}
             columns={[
               { header: 'Learner', cell: row => learnerName(row) },
@@ -310,16 +359,25 @@ function History({ api, sectionId, dayOn }: { api: Api; sectionId: string; dayOn
  * writes, thirty version bumps and thirty chances for two staff members to
  * overwrite each other's half of the same class.
  */
-export function Attendance({ api, manager, setStatus, reload, token, route }: Props) {
+export function Attendance({ api, me, manager, setStatus, reload, token, route, views, startOn }: Props & { views?: ReactNode; startOn?: string | undefined }) {
   const group = useId();
   const scope = useScope(api, token);
-  const [dayOn, setDayOn] = useState(localToday());
+  const [dayOn, setDayOn] = useState(startOn ?? localToday());
   const [sheet, setSheet] = useState<SheetData | null>(null);
   const [extra, setExtra] = useState<Learner[]>([]);
   const [draft, setDraft] = useState<Record<string, Pair>>({});
+  const [leaving, setLeaving] = useState<(() => void) | null>(null);
+  const unsaved = useRef(0);
+  // Closing the tab, reloading or pulling to refresh on a phone would drop every mark not yet recorded.
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (unsaved.current) { event.preventDefault(); event.returnValue = ''; } };
+    globalThis.addEventListener?.('beforeunload', warn);
+    return () => globalThis.removeEventListener?.('beforeunload', warn);
+  }, []);
   const [reviewing, setReviewing] = useState(false);
   const [failed, setFailed] = useState(false);
   const [openedBack, setOpenedBack] = useState('');
+  const [exporting, setExporting] = useState(false);
   const settled = useRef(false);
 
   const { year, sectionId } = scope;
@@ -365,6 +423,79 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
       .catch(() => { setSheet(null); setFailed(true); });
   }, [api, sectionId, dayOn, token]);
 
+  // While the database holds seeded records, a saved file says so in its name: a spreadsheet carries no banner.
+  const fileName = (what: string) => `${me.seeded_data ? 'SEEDED-' : ''}edunexus-${what}.xlsx`;
+  const sectionTitle = () => (scope.section ? `${gradeName(scope.section.grade_level)} ${String(scope.section.name)}` : 'section');
+  const sectionSlug = () => fileSlug(sectionTitle());
+
+  /** Every enrollment in the section, as the Enrollment screen lists them: one access row per page, naming them. */
+  const downloadClassList = async () => {
+    if (!sectionId) return;
+    setExporting(true);
+    setStatus({ text: 'Collecting the class list…', kind: 'busy' });
+    try {
+      const rows: ClassRow[] = [];
+      for (let offset = 0; ; offset += 100) {
+        const page = await api<Page<ClassRow>>(`/enrollments${query({ section_id: sectionId, limit: 100, offset })}`);
+        rows.push(...page.items);
+        if (!page.pagination?.has_more) break;
+      }
+      await downloadXlsx(fileName(`class-list-${sectionSlug()}`), classListWorkbook(rows, `Class list: ${sectionTitle()}`));
+      setStatus({ text: `Downloaded the class list: ${rows.length} ${rows.length === 1 ? 'learner' : 'learners'}.`, kind: 'done' });
+    } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
+    finally { setExporting(false); }
+  };
+
+  /**
+   * The month of the date on screen, a sheet per class date up to today, read
+   * the way the register itself reads them. Dates with no classroom session are
+   * left out rather than drawn as empty columns.
+   */
+  const downloadMonth = async () => {
+    if (!sectionId || !year) return;
+    setExporting(true);
+    const month = monthOf(dayOn);
+    const from = clamp(firstOf(month), String(year.starts_on), String(year.ends_on));
+    const to = clamp(lastOf(month), String(year.starts_on), clamp(localToday(), String(year.starts_on), String(year.ends_on)));
+    try {
+      if (to < from) throw new Error(`${monthName(month)} has not started yet.`);
+      setStatus({ text: `Reading the calendar for ${monthName(month)}…`, kind: 'busy' });
+      const calendar = await api<{ days: { day_on: string; am: Mode | null; pm: Mode | null }[] }>(`/academic-years/${year.id}/calendar${query({ from, to, section_id: sectionId })}`);
+      const classDays = calendar.days.filter(d => d.am === 'classroom' || d.pm === 'classroom');
+      const days: RegisterDay[] = [];
+      for (const [index, day] of classDays.entries()) {
+        setStatus({ text: `Reading ${day.day_on} (${index + 1} of ${classDays.length})…`, kind: 'busy' });
+        const items: RegisterDay['items'] = [];
+        let after: string | undefined;
+        for (;;) {
+          const page = await api<SheetData>(`/sections/${sectionId}/attendance${query({ day_on: day.day_on, limit: 100, after_id: after })}`);
+          items.push(...page.items);
+          if (!page.pagination.next_after_id) break;
+          after = page.pagination.next_after_id;
+        }
+        days.push({ day_on: day.day_on, schedule: { am: day.am, pm: day.pm }, items });
+      }
+      await downloadXlsx(fileName(`register-${sectionSlug()}-${firstOf(month).slice(0, 7)}`), registerWorkbook(days, `Register: ${sectionTitle()}, ${monthName(month)}`));
+      setStatus({ text: `Downloaded ${monthName(month)}: ${days.length} class ${days.length === 1 ? 'date' : 'dates'}.`, kind: 'done' });
+    } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
+    finally { setExporting(false); }
+  };
+
+  /** The month's SF2 in the school template's layout, the same file the School Form 2 screen saves. */
+  const downloadSf2 = async () => {
+    if (!sectionId) return;
+    setExporting(true);
+    const month = monthOf(dayOn);
+    try {
+      setStatus({ text: `Preparing the SF2 for ${monthName(month)}…`, kind: 'busy' });
+      const form = await api<Sf2Form>(`/sections/${sectionId}/forms/sf2${query({ month_on: firstOf(month) })}`);
+      await downloadXlsx(`${me.seeded_data ? 'SEEDED-' : ''}SF2 ${levelName(form.section.grade_level)} ${form.section.name} ${form.month_on.slice(0, 7)}.xlsx`,
+        sf2Workbook(form, `Printed ${localToday()} from EDUNEXUS. Not issued: issue it on School Form 2 to record it.`));
+      setStatus({ text: form.completeness.complete ? `Saved the SF2 for ${monthName(month)}.` : `Saved the SF2 for ${monthName(month)}. Some figures are still empty: ${form.completeness.rule_recorded ? 'not every day of the month is marked yet' : 'the school’s attendance rule is not recorded yet'}.`, kind: 'done' });
+    } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
+    finally { setExporting(false); }
+  };
+
   const more = async () => {
     const cursor = sheet?.pagination.next_after_id;
     if (!cursor) return;
@@ -393,7 +524,7 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
           <EmptyState
             title={manager ? 'No sections in this year' : 'No section assigned to you'}
             body={manager
-              ? 'Create a section on the Sections and advisers screen before recording attendance.'
+              ? 'Create a section on School years & sections before recording attendance.'
               : 'You are not the current adviser of any section in this school year. A principal or administrative officer assigns advisers.'}
           />
         </div>
@@ -411,6 +542,32 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
     setDraft(current => ({ ...current, [row.enrollment_id]: { ...(current[row.enrollment_id] ?? { am: row.am, pm: row.pm }), [part]: mark } }));
 
   const changes = pending(items, draft);
+  unsaved.current = changes.length;
+  /** Moving to another date or section with marks not yet recorded asks first; nothing is dropped silently. */
+  const guard = (then: () => void) => (changes.length ? setLeaving(() => then) : then());
+  const guardedScope = { ...scope, setYearId: (id: string) => guard(() => scope.setYearId(id)), setSectionId: (id: string) => guard(() => scope.setSectionId(id)) };
+  /** Reads the sheet again without dropping the draft, rebased on what is on file now. */
+  const refresh = async () => {
+    if (!sectionId) return;
+    const before = items;
+    const next = await api<SheetData>(`/sections/${sectionId}/attendance${query({ day_on: dayOn, limit: 100 })}`);
+    setDraft(current => rebase(current, before, next.items));
+    setExtra([]);
+    setSheet(next);
+  };
+  const sessionOpen = (part: Part) => !!schedule && !sessionBlock(schedule, part);
+  const unmarkedIn = (part: Part) => items.filter(row => pairOf(row)[part] === null).length;
+  // Only a learner nobody has marked is filled in, and only in a session that holds a class; the adviser
+  // still marks each absence, and nothing is recorded until the review. A blank is never taken as present.
+  const fillPresent = (parts: Part[]) => setDraft(current => {
+    const next = { ...current };
+    for (const row of items) {
+      let pair = next[row.enrollment_id] ?? { am: row.am, pm: row.pm };
+      for (const part of parts) if (sessionOpen(part) && pair[part] === null) pair = { ...pair, [part]: 'present' };
+      next[row.enrollment_id] = pair;
+    }
+    return next;
+  });
 
   const overBatch = changes.length > 100;
 
@@ -433,22 +590,31 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
         route={route}
         actions={<>
           {items.length ? <PrintButton label="Print this register" /> : null}
+          {sectionId ? <button type="button" className="btn secondary" disabled={exporting} onClick={() => void downloadClassList()} data-tour="att-files"><Icon name="download" size={15} />Class list</button> : null}
+          {sectionId && year ? <button type="button" className="btn secondary" disabled={exporting} onClick={() => void downloadSf2()}><Icon name="download" size={15} />SF2 (Excel)</button> : null}
+          {sectionId && year ? <button type="button" className="btn ghost" disabled={exporting} onClick={() => void downloadMonth()}><Icon name="download" size={15} />Raw marks (Excel)</button> : null}
           {editable ? (
-            <button type="button" className="btn" disabled={!changes.length || overBatch} onClick={() => setReviewing(true)}>
-              <Icon name="check" size={15} />Review {changes.length ? `${changes.length} ` : ''}marks
+            <button type="button" className="btn" disabled={!changes.length || overBatch} onClick={() => setReviewing(true)} data-tour="att-review">
+              <Icon name="check" size={15} />Review {changes.length === 1 ? '1 mark' : `${changes.length || ''} marks`.trim()}
             </button>
           ) : null}
         </>}
       />
+      {views}
 
-      <div className="card">
+      <div className="card register-card">
+        {/* On paper the register says what it is: on screen the top bar and the pickers say it. */}
+        <div className="print-only register-title">
+          <h2>Daily attendance register</h2>
+          <p>{sectionTitle()} · {weekday(dayOn)}, {dayAndMonth(dayOn)} {dayOn.slice(0, 4)}{year ? ` · School year ${yearName(year)}` : ''}</p>
+        </div>
         <div className="card-head">
-          <div className="toolbar">
-            <ScopePickers scope={scope} />
+          <div className="toolbar" data-tour="att-pick">
+            <ScopePickers scope={guardedScope} />
             <div className="field inline">
               <label className="label" htmlFor="att-day">Date</label>
               <span className="month-nav">
-                <button type="button" className="btn ghost small" disabled={!backOn} aria-label="Previous day" onClick={() => backOn && setDayOn(backOn)}><Icon name="back" size={14} /></button>
+                <button type="button" className="btn ghost small" disabled={!backOn} aria-label="Previous day" onClick={() => backOn && guard(() => setDayOn(backOn))}><Icon name="back" size={14} /></button>
                 <input
                   id="att-day"
                   type="date"
@@ -456,9 +622,9 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
                   value={dayOn}
                   min={year ? String(year.starts_on) : undefined}
                   max={year ? String(year.ends_on) : undefined}
-                  onChange={event => event.target.value && year && setDayOn(clamp(event.target.value, String(year.starts_on), String(year.ends_on)))}
+                  onChange={event => { const picked = event.target.value; if (picked && year) guard(() => setDayOn(clamp(picked, String(year.starts_on), String(year.ends_on)))); }}
                 />
-                <button type="button" className="btn ghost small" disabled={!nextOn} aria-label="Next day" onClick={() => nextOn && setDayOn(nextOn)}><Icon name="forward" size={14} /></button>
+                <button type="button" className="btn ghost small" disabled={!nextOn} aria-label="Next day" onClick={() => nextOn && guard(() => setDayOn(nextOn))}><Icon name="forward" size={14} /></button>
               </span>
             </div>
           </div>
@@ -474,10 +640,18 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
             {openedBack && openedBack !== dayOn ? (
               <p className="card-note">Opened on the last classroom day, because today ({weekday(openedBack)}, <span className="mono">{openedBack}</span>) has no class.</p>
             ) : null}
-            <p className="card-note">
+            <p className="card-note register-schedule">
               Morning: <b>{sessionBlock(schedule, 'am') ?? 'Classroom'}</b> · Afternoon: <b>{sessionBlock(schedule, 'pm') ?? 'Classroom'}</b>
               {schedule.label ? <> · {schedule.label}</> : null}
             </p>
+            {editable && items.length && (sessionOpen('am') || sessionOpen('pm')) ? (
+              <div className="form-actions fill-present" data-tour="att-fill">
+                <span className="muted">Mark every learner not yet marked present:</span>
+                {sessionOpen('am') ? <button type="button" className="btn small secondary" disabled={!unmarkedIn('am')} onClick={() => fillPresent(['am'])}>Morning</button> : null}
+                {sessionOpen('pm') ? <button type="button" className="btn small secondary" disabled={!unmarkedIn('pm')} onClick={() => fillPresent(['pm'])}>Afternoon</button> : null}
+                {sessionOpen('am') && sessionOpen('pm') ? <button type="button" className="btn small secondary" disabled={!unmarkedIn('am') && !unmarkedIn('pm')} onClick={() => fillPresent(['am', 'pm'])}>Both sessions</button> : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -518,11 +692,19 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
         />
 
         {sheet ? (
-          <div className="card-body">
+          <div className="print-only register-foot">
+            <p>{items.length} {items.length === 1 ? 'learner' : 'learners'} · printed {localToday()} from EDUNEXUS, with the marks recorded by then{changes.length ? `; ${changes.length} marked on screen and not yet recorded are left out` : ''}. A session nobody marked is shown as not marked: it is neither present nor absent.</p>
+            <p className="register-sign"><span>Adviser’s signature</span><span>Date</span></p>
+          </div>
+        ) : null}
+        {sheet ? (
+          <div className="card-body no-print">
             <p className="card-note">
               {items.length} {items.length === 1 ? 'learner' : 'learners'} on this date · sheet version <span className="mono">{sheet.version}</span>
               {changes.length ? <> · {changes.length} marked, not yet recorded </> : null}
               {changes.length ? <button type="button" className="btn ghost small" onClick={() => setDraft({})}>Undo my marks</button> : null}
+              {/* The header's review button is a long way up a phone screen after a class of thirty. */}
+              {editable && changes.length && !overBatch ? <button type="button" className="btn small" onClick={() => setReviewing(true)}><Icon name="check" size={14} />Review {changes.length} {changes.length === 1 ? 'mark' : 'marks'}</button> : null}
             </p>
             {sheet.pagination.next_after_id ? (
               <button type="button" className="btn ghost small" onClick={() => void more()}>Show more learners</button>
@@ -534,11 +716,11 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
         ) : null}
       </div>
 
-      {manager && sectionId ? <History api={api} sectionId={sectionId} dayOn={dayOn} /> : null}
+      {manager && sectionId ? <div className="no-print"><History api={api} sectionId={sectionId} dayOn={dayOn} /></div> : null}
 
-      <Callout tone="info" title="An unmarked session stays unknown">
-        A session nobody has marked is not an absence and not a presence: it is unrecorded, and it is drawn that way. Nothing here is counted into a school day, a percentage or an SF2 total. The school&apos;s approved mark meanings and half-day rules have not been supplied, so EDUNEXUS records what was observed and computes nothing from it.
-      </Callout>
+      <div className="no-print"><Callout tone="info" title="An unmarked session stays unknown">
+        A session nobody has marked is not an absence and not a presence: it is unrecorded, and it is drawn that way. Marking everyone present fills in only the learners nobody has marked yet, and nothing is recorded until you review. The SF2 counts each day from these marks by the rule the principal records on School profile; a month with an unmarked session stays empty there until it is marked.
+      </Callout></div>
 
       {reviewing && sheet ? (
         <ReviewSheet
@@ -549,7 +731,14 @@ export function Attendance({ api, manager, setStatus, reload, token, route }: Pr
           changes={changes}
           onClose={() => setReviewing(false)}
           onDone={text => { setReviewing(false); setDraft({}); setStatus({ text, kind: 'done' }); reload(); }}
+          onStale={refresh}
         />
+      ) : null}
+      {leaving ? (
+        <Confirm title="Leave without recording?" tone="plain" confirmLabel="Leave without recording"
+          body={`${changes.length} ${changes.length === 1 ? 'learner is' : 'learners are'} marked on this register but not recorded yet. Leaving discards ${changes.length === 1 ? 'that mark' : 'those marks'}; what is on file stays as it is.`}
+          onClose={() => setLeaving(null)}
+          onConfirm={() => { const then = leaving; setLeaving(null); setDraft({}); then(); }} />
       ) : null}
     </>
   );

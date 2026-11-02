@@ -2,24 +2,50 @@ import type { ReactNode } from 'react';
 import type { Api, Row } from './api';
 import type { IconName } from './components/icons';
 import type { Status } from './components/primitives';
-import { School, SchoolYears, YearScoped } from './screens/Setup';
+import type { SessionAuth } from './two-step';
+import { School, SchoolYears } from './screens/Setup';
 import { Activity, Invitations, Staff } from './screens/Staff';
 import { Learners } from './screens/Learners';
 import { Upcoming } from './screens/Upcoming';
 import { Enrollment } from './screens/Enrollment';
 import { Calendar } from './screens/Calendar';
-import { Attendance } from './screens/Attendance';
+import { SchoolAttendance } from './screens/SchoolAttendance';
+import { Sf2Screen } from './screens/Sf2';
+import { SchoolForm4 } from './screens/SchoolForms';
+import { AttendanceAndSf2 } from './screens/AttendanceViews';
 import { Months } from './screens/Months';
 import { Monitor } from './screens/Monitor';
 import { Followups } from './screens/Followups';
 import { Subjects } from './screens/Subjects';
 import { Imports } from './screens/Imports';
+import { RosterSubmit } from './screens/RosterSubmissions';
 import { Policies } from './screens/Policies';
 import { Overview } from './screens/Overview';
 import { Access } from './screens/Access';
 import { Scores } from './screens/Scores';
+import { ReportCards } from './screens/ReportCards';
+import { NextYear } from './screens/NextYear';
+import { GradeEntry } from './screens/GradeEntry';
+import { PublicSite } from './screens/PublicSite';
+import { Help } from './screens/Help';
+import { Profile } from './screens/Profile';
 
-export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
+export type Role = 'principal' | 'administrative_officer' | 'teacher';
+
+/**
+ * What the shell lends a screen about the signed-in account. Optional, because a
+ * screen rendered outside the shell (a test, the demo) has no sign-in service;
+ * a screen says so rather than offering an action it cannot take.
+ */
+export type AccountTools = {
+  /** Merges a change into the shell's own copy of `/me`, so the top bar follows a saved profile at once. */
+  updateMe: (patch: Row) => void;
+  changePassword?: (() => void) | undefined;
+  /** The sign-in service, for two-step sign-in and signing out elsewhere. */
+  auth?: SessionAuth | undefined;
+};
+
+export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route; account?: AccountTools | undefined };
 
 export type Route = {
   id: string;
@@ -39,6 +65,14 @@ export type Route = {
   /** The screen draws its own heading, so the shared page header is skipped. */
   ownHeader?: boolean;
   manager?: boolean;
+  /**
+   * Roles whose navigation leaves this screen out because it is not their
+   * work (the group leader's notes, 9 October). It hides the screen only: the
+   * API still decides what each role may read and write.
+   */
+  hiddenFor?: Role[];
+  /** Reached from the profile menu and the palette rather than the rail. */
+  offRail?: boolean;
   built?: boolean;
   render: (props: ScreenProps) => ReactNode;
 };
@@ -56,6 +90,28 @@ export const routes: Route[] = [
   },
 
   {
+    id: 'profile', nav: 'My profile', icon: 'user', group: 'Workspace', built: true, offRail: true, ownHeader: true,
+    title: 'My profile',
+    lede: 'How you appear, how you sign in, and what the workspace remembers for you.',
+    record: 'staff_profiles, staff_photos',
+    render: p => <Profile {...p} />,
+  },
+
+  {
+    id: 'help', nav: 'Help & FAQ', icon: 'help', group: 'Workspace', built: true,
+    title: 'Help and frequently asked questions',
+    lede: 'What each screen is for, the steps in order, and when a screen will stop you and why.',
+    record: 'none: help is fixed text and reads no record',
+    render: p => <Help {...p} />,
+  },
+  {
+    id: 'public-site', nav: 'Public site', icon: 'school', group: 'Workspace', manager: true, built: true, ownHeader: true,
+    title: 'Public site',
+    lede: 'Announcements, events and school details on the school’s front page, published only when you say so.',
+    record: 'announcements, site_settings',
+    render: p => <PublicSite {...p} />,
+  },
+  {
     id: 'school', nav: 'School profile', icon: 'school', group: 'Setup', built: true, ownHeader: true,
     title: 'School profile',
     lede: 'Name and address printed on every official form.',
@@ -63,25 +119,11 @@ export const routes: Route[] = [
     render: p => <School {...p} />,
   },
   {
-    id: 'years', nav: 'School years', icon: 'years', group: 'Setup', built: true, ownHeader: true,
-    title: 'School years',
-    lede: 'Draft, activate and close a school year.',
-    record: 'academic_years',
+    id: 'years', nav: 'School years & sections', icon: 'years', group: 'Setup', built: true, ownHeader: true,
+    title: 'School years, terms and sections',
+    lede: 'Draft, activate and close a school year, divide it into its terms, and create its classes.',
+    record: 'academic_years, reporting_periods, sections', feeds: 'SF2, SF9, SF10',
     render: p => <SchoolYears {...p} />,
-  },
-  {
-    id: 'periods', nav: 'Reporting periods', icon: 'periods', group: 'Setup', built: true, ownHeader: true,
-    title: 'Reporting periods',
-    lede: 'The grading periods a school year is divided into.',
-    record: 'reporting_periods', feeds: 'SF9, SF10',
-    render: p => <YearScoped {...p} page="Reporting periods" />,
-  },
-  {
-    id: 'sections', nav: 'Sections & advisers', icon: 'sections', group: 'Setup', built: true, ownHeader: true,
-    title: 'Sections and advisers',
-    lede: 'Classes for a school year, each with one adviser.',
-    record: 'sections', feeds: 'SF2',
-    render: p => <YearScoped {...p} page="Sections" />,
   },
 
   {
@@ -99,11 +141,20 @@ export const routes: Route[] = [
     render: p => <Enrollment {...p} />,
   },
   {
-    id: 'imports', nav: 'Roster import', icon: 'imports', group: 'Learners', manager: true, built: true, ownHeader: true,
+    id: 'imports', nav: 'Roster import', icon: 'imports', group: 'Learners', built: true, ownHeader: true,
     title: 'Roster import',
-    lede: 'Bring in a class list from a reviewed CSV.',
-    record: 'import_previews',
-    render: p => <Imports {...p} />,
+    lede: 'Bring in a class list from a reviewed CSV, or submit yours for review.',
+    record: 'import_previews, roster_submissions',
+    // An adviser submits their section's list; only a manager imports it, and on the school's division of work that is the administrative officer.
+    hiddenFor: ['principal'],
+    render: p => (p.manager ? <Imports {...p} /> : <RosterSubmit {...p} />),
+  },
+  {
+    id: 'next-year', nav: 'Next year’s classes', icon: 'forward', group: 'Learners', manager: true, built: true, ownHeader: true,
+    title: 'Next year’s classes',
+    lede: 'Enrol this year’s learners into next year from their approved outcomes, sections drawn at random.',
+    record: 'enrollments, next_year_placements', feeds: 'SF2, SF4',
+    render: p => <NextYear {...p} />,
   },
 
   {
@@ -116,9 +167,18 @@ export const routes: Route[] = [
   {
     id: 'attendance', nav: 'Daily attendance', icon: 'attendance', group: 'Attendance', built: true, ownHeader: true,
     title: 'Daily attendance',
-    lede: 'Morning and afternoon marks for one section.',
+    lede: 'Morning and afternoon marks for one section, and the month’s SF2 they make.',
+    record: 'attendance_marks, form_issuances', feeds: 'SF2',
+    // The advisers keep the register; the principal and administrative officer read it through Attendance today and the forms.
+    hiddenFor: ['principal', 'administrative_officer'],
+    render: p => <AttendanceAndSf2 {...p} />,
+  },
+  {
+    id: 'attendance-today', nav: 'Attendance today', icon: 'attendance', group: 'Attendance', manager: true, built: true, ownHeader: true,
+    title: 'Attendance across the school',
+    lede: 'Every section’s register for one day, in counts.',
     record: 'attendance_marks', feeds: 'SF2',
-    render: p => <Attendance {...p} />,
+    render: p => <SchoolAttendance {...p} />,
   },
   {
     id: 'months', nav: 'Monthly consolidation', icon: 'months', group: 'Attendance', manager: true, built: true, ownHeader: true,
@@ -151,19 +211,53 @@ export const routes: Route[] = [
   },
   {
     id: 'policies', nav: 'Assessment policies', icon: 'policies', group: 'Academics', manager: true, built: true, ownHeader: true,
+    // Retired from the menu with the quiz scores they govern (the group leader's notes, 10 October): grades come in as
+    // subject averages from the ECR. The API and any records stay, for the day the school's grading rule is adopted.
+    hiddenFor: ['principal', 'administrative_officer'],
     title: 'Assessment policies',
     lede: 'Draft, adopt and bind the school’s assessment policy.',
     record: 'assessment_policy_drafts, adoptions, bindings',
     render: p => <Policies {...p} />,
   },
   {
-    id: 'scores', nav: 'Scores', icon: 'scores', group: 'Academics', built: true, ownHeader: true,
-    title: 'Assessment scores',
-    lede: 'Raw marks for one assessment, for your section.',
+    id: 'scores', nav: 'Quiz and test scores', icon: 'scores', group: 'Academics', built: true, ownHeader: true,
+    title: 'Quiz and test scores',
+    lede: 'An adviser’s raw marks for each quiz, task and test, kept as entered; nothing is totalled or graded here.',
+    hiddenFor: ['principal', 'administrative_officer', 'teacher'],
     record: 'assessment_tasks, assessment_scores', feeds: 'SF9',
     render: p => <Scores {...p} />,
   },
+  {
+    id: 'report-cards', nav: 'Promotion', icon: 'scores', group: 'Academics', built: true, ownHeader: true,
+    title: 'Promotion',
+    lede: 'Advisers endorse each learner’s promotion and the principal approves it; the report card entries from the ECR are kept here too.',
+    record: 'report_grades, report_summaries, report_values, report_notes', feeds: 'SF9, SF10',
+    render: p => <ReportCards {...p} />,
+  },
+  {
+    id: 'grade-entry', nav: 'Grade entry', icon: 'monitor', group: 'Academics', manager: true, built: true, ownHeader: true,
+    title: 'Grade entry',
+    lede: 'How far each section’s report cards have come: grades, general averages and outcomes recorded.',
+    record: 'report_grades, report_summaries, promotion_decisions', feeds: 'SF9, SF10',
+    render: p => <GradeEntry {...p} />,
+  },
 
+  {
+    id: 'sf2', nav: 'School Form 2', icon: 'months', group: 'School forms', built: true, ownHeader: true,
+    title: 'School Form 2 · Daily attendance report',
+    lede: 'A section’s month on the SF2, computed from the register by the school’s rule.',
+    record: 'form_issuances', feeds: 'SF2',
+    // An adviser finds the SF2 inside Daily attendance.
+    hiddenFor: ['teacher'],
+    render: p => <Sf2Screen {...p} />,
+  },
+  {
+    id: 'sf4', nav: 'School Form 4', icon: 'months', group: 'School forms', manager: true, built: true, ownHeader: true,
+    title: 'School Form 4 · Monthly learner’s movement and attendance',
+    lede: 'The school’s month on the SF4, from every section’s register.',
+    record: 'form_issuances', feeds: 'SF4',
+    render: p => <SchoolForm4 {...p} />,
+  },
   {
     id: 'staff', nav: 'Staff access', icon: 'staff', group: 'People', manager: true, built: true, ownHeader: true,
     title: 'Staff access',
@@ -194,10 +288,18 @@ export const routes: Route[] = [
   },
 ];
 
-export const groups = ['Workspace', 'Setup', 'Learners', 'Attendance', 'Academics', 'People'];
+export const groups = ['Workspace', 'Setup', 'Learners', 'Attendance', 'Academics', 'School forms', 'People'];
 
-export const routeFor = (id: string, manager: boolean) => {
-  const route = routes.find(r => r.id === id);
-  if (route && (!route.manager || manager)) return route;
+/** Whether a role's navigation offers a screen. */
+export const available = (route: Route, role: unknown) => (!route.manager || role !== 'teacher') && !route.hiddenFor?.includes(role as Role);
+
+// The SF9 and SF10 screens became buttons on each learner in the registry (0.58.0), and the reporting periods
+// joined School years (0.60.0); an old link lands where the work now is.
+// Sections & advisers left the rail in 0.84.0 (decision D2a): a year's sections are on School years, a teacher's on Staff access.
+const moved: Record<string, string> = { sf9: 'learners', sf10: 'learners', periods: 'years', sections: 'years' };
+
+export const routeFor = (id: string, role: unknown) => {
+  const route = routes.find(r => r.id === (moved[id] ?? id));
+  if (route && available(route, role)) return route;
   return routes[0]!;
 };

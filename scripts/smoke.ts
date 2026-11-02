@@ -37,6 +37,13 @@ const page = await check('GET /app', `${base}/app`, {}, 200);
 const assets = page ? [...(await page.text()).matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map(m => m[1]!) : [];
 if (page && !assets.some(a => a.endsWith('.js'))) failures.push('/app references no script');
 for (const asset of assets) await check(`GET ${asset}`, `${base}${asset}`, {}, 200);
+// The public front page, its own assets, and its one public read, which needs no token.
+const front = await check('GET /', `${base}/`, {}, 200);
+const frontAssets = front ? [...(await front.text()).matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map(m => m[1]!).filter(a => !assets.includes(a)) : [];
+if (front && !frontAssets.some(a => a.endsWith('.js'))) failures.push('/ references no script of its own');
+for (const asset of frontAssets) await check(`GET ${asset}`, `${base}${asset}`, {}, 200);
+const publicSite = await check('GET /api/v1/public/site', `${base}/api/v1/public/site`, {}, 200);
+if (publicSite && !('announcements' in ((await publicSite.json()) as { data: object }).data)) failures.push('/api/v1/public/site answered without announcements');
 const contract = await check('GET /openapi.json', `${base}/openapi.json`, {}, 200);
 const published = contract ? ((await contract.json()) as { info?: { version?: string } }).info?.version : undefined;
 if (published !== version) failures.push(`/openapi.json reports ${published ?? 'nothing'}, package.json says ${version}`);
@@ -48,9 +55,9 @@ for (const op of operations) {
   await check(`${op.method.toUpperCase()} ${op.path}`, `${base}${path}`, init, 401);
 }
 
-const total = operations.length + 4 + assets.length;
+const total = operations.length + 6 + assets.length + frontAssets.length;
 if (failures.length) {
   console.error(`${failures.length} of ${total} live checks failed against ${base}:\n${failures.map(f => `  - ${f}`).join('\n')}`);
   process.exit(1);
 }
-console.log(`All ${total} live checks passed against ${base}: health, readiness, the workspace and its ${assets.length} assets answer, the contract reports ${version}, and all ${operations.length} operations refuse an anonymous caller.`);
+console.log(`All ${total} live checks passed against ${base}: health, readiness, the workspace and its ${assets.length} assets, the front page and its ${frontAssets.length} and its public read answer, the contract reports ${version}, and all ${operations.length} operations refuse an anonymous caller.`);

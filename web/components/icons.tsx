@@ -42,6 +42,7 @@ const paths = {
   back: <><path d="m14 6-6 6 6 6" /></>,
   forward: <><path d="m10 6 6 6-6 6" /></>,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.75h.01" /></>,
+  help: <><circle cx="12" cy="12" r="9" /><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.4-2.6 4" /><path d="M12 17.4h.01" /></>,
   alert: <><path d="M10.3 3.9 2.4 17.1A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 16.5h.01" /></>,
   stop: <><circle cx="12" cy="12" r="9" /><path d="m9 9 6 6M15 9l-6 6" /></>,
   collapse: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 4v16" /><path d="m7.5 10-2 2 2 2" /></>,
@@ -60,6 +61,8 @@ const paths = {
   updown: <><path d="M8 9.5 12 5l4 4.5" /><path d="m8 14.5 4 4.5 4-4.5" /></>,
   eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></>,
   'eye-off': <><path d="m3 3 18 18" /><path d="M10.6 6.1A8.7 8.7 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3.2 3.9" /><path d="M6.3 8.2A16 16 0 0 0 2.5 12S6 18 12 18a9.2 9.2 0 0 0 3.4-.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
+  // A page with its lines, for opening one of the school forms.
+  form: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h6M9 9h2" /></>,
   print: <><path d="M7 9V3h10v6" /><path d="M7 19H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="7" y="14" width="10" height="7" /></>,
 } as const;
 

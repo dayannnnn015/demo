@@ -1,3 +1,4 @@
+import { blockedPreview, wouldRefuse } from '../../core/dry-run.js';
 import type { z } from 'zod';
 import type { Context } from '../foundation/service.js';
 import type { Row } from '../../core/db.js';
@@ -31,6 +32,7 @@ export async function executeEnrollmentRecord(id: EnrollmentRecordOperationId, c
   if (id === 'enrollmentRecordPreview') {
     const [row] = await tx.query('select edunexus.preview_enrollment_record($1,$2,$3,$4,$5,$6) as preview', params);
     result = row!.preview as Row;
+    if (result.can_commit && result.review_hash) result = blockedPreview(result, await wouldRefuse(tx, () => tx.query(`select ${columns} from edunexus.review_enrollment_record($1,$2,$3,$4,$5,$6,$7)`, [...params, result.review_hash]))) as Row;
     await record(disclosed(result as Snapshot));
   } else {
     const rows = await tx.query(`select ${columns} from edunexus.review_enrollment_record($1,$2,$3,$4,$5,$6,$7)`, [...params, b.review_hash]);

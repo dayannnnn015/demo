@@ -5,7 +5,8 @@ const version=z.number().int().min(1).max(2147483646),order=z.number().int().min
 export const offeringSchemas={
   list:z.strictObject({active:z.enum(['true','false','all']).default('true'),limit:z.coerce.number().int().min(1).max(100).default(50),after_id:uuid.optional()}),
   create:z.strictObject({subject_id:uuid,subject_version:version,display_order:order,reason:subjectReason}),
-  update:z.strictObject({version,active:z.boolean(),display_order:order,refresh_subject:z.boolean(),subject_version:version.nullable(),reason:subjectReason}),
+  update:z.strictObject({version,active:z.boolean(),display_order:order,refresh_subject:z.boolean(),subject_version:version.nullable(),reason:subjectReason})
+    .refine(v=>v.refresh_subject===(v.subject_version!==null),{path:['subject_version'],message:'Give the subject’s current version only when refreshing it from the catalog.'}),
   history:z.strictObject({limit:z.coerce.number().int().min(1).max(10).default(5),before_version:z.coerce.number().int().min(1).max(2147483647).optional()})
 };
 export const offeringOperations=([

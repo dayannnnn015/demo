@@ -1,38 +1,33 @@
 /*
-  EDUNEXUS design tokens.
+  EDUNEXUS design tokens: a minimal workspace.
 
-  The interface is drawn as a register. Every DepEd form this system feeds —
-  SF2, SF4, SF9, SF10 — is a ruled sheet: names down the left, dated columns
-  across, a rule under the heading and a hairline between every row. The
-  workspace borrows that structure, because it is the structure the staff
-  already read, and it is why the corners are square and the separation is a
-  line rather than a shadow.
+  The records are the only thing on screen that should hold the eye, so
+  everything around them recedes: a white rail divided from the page by one
+  hairline, a near-white canvas, flat white cards, neutral greys, small rounded
+  corners and no shadow except on something floating above the page. Hierarchy
+  comes from type size and weight and from space, not from colour or boxes.
 
-  A deep navy rail against white working surfaces, with one blue accent. The
-  rail is the only dark region on screen: it carries navigation, which is
-  furniture, so the records themselves stay the brightest, sharpest thing in
-  front of the reader.
+  One blue accent is kept for links, focus and the charts; the primary action
+  is near-black, so a single dark button on a screen is unmistakably the next
+  step. Ochre rather than red means "needs attention", so red stays rare and
+  always means a blocked action.
 
-  Navy and blue are the same hue family at different depths, so the chart ramp,
-  the active navigation item and the primary button are one colour seen at four
-  strengths rather than four decisions. Greys are mixed slightly blue to match.
-
-  Ochre rather than red means "needs attention", so red stays rare and always
-  means a blocked action.
+  The rail keeps its own tokens (--rail-*) even though it is now light, so it
+  can be retuned in one place; its ink values are checked against --rail-900.
 */
 :root {
   color-scheme: light;
 
-  /* Rail — the one dark surface. Ink values are checked against --rail-900. */
-  --rail-900: #0a2550; /* rail base */
-  --rail-850: #0d2f63; /* sunk block inside the rail */
-  --rail-800: #123a76; /* raised block inside the rail */
-  --rail-700: #17498f; /* hover */
-  --rail-600: #1d5bb0; /* current page */
-  --rail-line: #244a85;
-  --rail-ink: #ffffff; /* 14.8:1 on --rail-900, 6.5:1 on --rail-600 */
-  --rail-dim: #ffffff; /* rail labels are white; hierarchy is size and weight */
-  --rail-faint: #b9d3f0; /* 9.3:1 — icons and rules; never body text */
+  /* Rail — light, divided from the page by one hairline. Ink values are checked against --rail-900. */
+  --rail-900: #ffffff; /* rail base */
+  --rail-850: #f7f8fa; /* sunk block inside the rail */
+  --rail-800: #f3f4f6; /* raised block inside the rail */
+  --rail-700: #f3f4f6; /* hover */
+  --rail-600: #eef0f3; /* current page */
+  --rail-line: #eceef1;
+  --rail-ink: #111827; /* 17.7:1 on --rail-900, 15.6:1 on --rail-600 */
+  --rail-dim: #3f4654; /* 9.9:1 — navigation labels */
+  --rail-faint: #6b7280; /* 4.8:1 — icons, group labels and rules */
 
   /* Accent */
   --accent-900: #0b2f52;
@@ -56,17 +51,21 @@
 
   /* Neutrals */
   --white: #ffffff;
-  --canvas: #eceff5; /* deep enough that a white surface reads raised with no shadow */
-  --sunk: #f7f9fc;
-  --hover: #eef2f7;
-  --line: #e2e8f0;
-  --line-soft: #edf1f6;
-  --line-strong: #cbd5e1;
-  --ink-900: #0f1b2a; /* headings */
-  --ink-700: #33445c; /* 9.9:1 on white — body */
-  --ink-600: #465872; /* 7.3:1 — dense table body, where 13px needs the extra weight */
-  --ink-500: #5a6b82; /* 5.4:1 on white, 4.9:1 on --canvas — secondary text */
-  --ink-400: #8496ad; /* 3.1:1 — icons and rules only, never text of any size */
+  /* The sign-in page's painted hillside, and the words over it. Not retuned for dark: the picture does not change. */
+  --art-sky: #0a3768;
+  --art-ink: #ffffff;
+  --art-dim: #dbe8f5;
+  --canvas: #fafafa; /* barely off white: cards read as surfaces by their hairline, not by contrast */
+  --sunk: #fafafb;
+  --hover: #f3f4f6;
+  --line: #e8eaed;
+  --line-soft: #f1f2f4;
+  --line-strong: #d4d8de;
+  --ink-900: #111827; /* headings and the primary action */
+  --ink-700: #374151; /* 10.3:1 on white — body */
+  --ink-600: #4b5563; /* 7.6:1 — dense table body */
+  --ink-500: #6b7280; /* 4.8:1 on white, 4.6:1 on --canvas — secondary text */
+  --ink-400: #9ca3af; /* icons and rules only, never text of any size */
 
   /* Meaning */
   --amber-700: #8a5209;
@@ -97,7 +96,8 @@
   --hatch-faint: repeating-linear-gradient(135deg, transparent 0 4px, var(--line) 4px 5px);
 
   /* Type */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-inter: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-inter);
   --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, monospace;
 
   --t-10: 0.625rem;
@@ -124,16 +124,15 @@
   --s7: 48px;
   --s8: 64px;
 
-  /* Square by design. The system reads as drawn with a ruler, so corners stay
-     sharp everywhere; these stay named so the whole scale tunes from one place. */
-  --r-sm: 0;
-  --r: 0;
-  --r-md: 0;
-  --r-lg: 0;
+  /* Small, consistent corners: soft enough to read calm, small enough to stay orderly. */
+  --r-sm: 4px;
+  --r: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
 
-  --shadow-xs: 0 1px 2px rgba(15, 27, 42, .05);
-  --shadow-sm: 0 1px 2px rgba(15, 27, 42, .06), 0 4px 10px -6px rgba(15, 27, 42, .18);
-  --shadow-pop: 0 1px 2px rgba(15, 27, 42, .06), 0 12px 28px -10px rgba(15, 27, 42, .28);
+  --shadow-xs: none;
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, .04);
+  --shadow-pop: 0 1px 2px rgba(17, 24, 39, .05), 0 10px 24px -12px rgba(17, 24, 39, .22);
   --shadow-sheet: 0 0 0 1px rgba(15, 27, 42, .08), -24px 0 60px -24px rgba(15, 27, 42, .38);
 
   /* Motion. One curve and three durations, so everything on screen moves with
@@ -143,7 +142,7 @@
   --base: .18s;
   --slow: .26s;
 
-  --rail-w: 264px;
+  --rail-w: 248px;
   --topbar-h: 60px;
   --measure: 1400px;
   --focus: var(--accent-600);
@@ -156,4 +155,12 @@
   --z-rail: 60;
   --z-sheet: 70;
   --z-skip: 90;
+
+  /* Avatar tones: a ground and the ink drawn on it, each pair at least 7:1. */
+  --tone-slate-bg: #e5e7eb; --tone-slate-ink: #1f2937;
+  --tone-blue-bg: #dceaf6; --tone-blue-ink: #123f6d;
+  --tone-green-bg: #ddf0e7; --tone-green-ink: #0f5640;
+  --tone-ochre-bg: #fdf0d8; --tone-ochre-ink: #6e4107;
+  --tone-plum-bg: #f1e4f3; --tone-plum-ink: #5b2363;
+  --tone-teal-bg: #d6efee; --tone-teal-ink: #0d4f4c;
 }

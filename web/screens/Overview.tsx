@@ -7,6 +7,8 @@ import {
   gradeName, localToday, sentence, value, yearName, type Status,
 } from '../components/primitives';
 import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
+import { GettingStarted } from './GettingStarted';
+import { OutcomeQueue } from './OutcomeQueue';
 
 /**
  * The workspace landing screen.
@@ -44,12 +46,12 @@ const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 const covering = (periods: Row[], today: string) =>
   periods.find(p => String(p.starts_on) <= today && today <= String(p.ends_on));
 
-/** The figures EDUNEXUS is not allowed to state, and the decision each waits on. */
-const GATED: [string, string][] = [
-  ['General average', 'Waits on the grading enclosure'],
-  ['Attendance rate', 'Waits on the mark meanings'],
-  ['Academic standing', 'Waits on the grading enclosure'],
-  ['Class ranking', 'Never requested by the school'],
+/** Where each figure on the school forms comes from: recorded as the school computed it, or counted by the school's own rule. */
+const SOURCES = (rule: boolean | null): [string, string][] => [
+  ['Grades and general average', 'Entered from the ECR, never computed here'],
+  ['Days present and absent', rule === null ? 'Counted by the principal’s attendance rule' : rule ? 'Counted by the principal’s attendance rule' : 'Waiting on the principal’s attendance rule'],
+  ['End-of-year outcomes', 'Recorded by the adviser, approved by the principal'],
+  ['Class ranking and honors', 'Not computed'],
 ];
 
 type Counts = { scope: 'school' | 'current_access'; enrolled: number; withdrawn: number; grades: { grade_level: number; enrolled: number; withdrawn: number }[] };
@@ -61,14 +63,18 @@ export function Overview({ api, me, manager, token }: {
   const [periods, setPeriods] = useState<Row[]>([]);
   const [sections, setSections] = useState<Row[] | null>(null);
   const [staff, setStaff] = useState<Row[]>([]);
+  const [staffRead, setStaffRead] = useState(false);
   const [pending, setPending] = useState<number | null>(null);
   const [recent, setRecent] = useState<Row[]>([]);
   const [counts, setCounts] = useState<Counts | null>(null);
+  const [rule, setRule] = useState<boolean | null>(null);
   const today = localToday();
 
   useEffect(() => {
     setYears(null);
     void api<Page>('/academic-years').then(r => setYears(r.items)).catch(() => setYears([]));
+    // Whether the principal has recorded the attendance rule; it names no learner.
+    void api<{ rule: unknown }>('/attendance-day-rule').then(r => setRule(r.rule !== null)).catch(() => setRule(null));
   }, [api, token]);
 
   const year = years?.find(y => y.status === 'active')
@@ -97,7 +103,7 @@ export function Overview({ api, me, manager, token }: {
 
   useEffect(() => {
     if (!manager) return;
-    void api<Page>(`/staff${query({ limit: 100 })}`).then(r => setStaff(r.items)).catch(() => setStaff([]));
+    void api<Page>(`/staff${query({ limit: 100 })}`).then(r => { setStaff(r.items); setStaffRead(true); }).catch(() => { setStaff([]); setStaffRead(false); });
     void api<Page>(`/staff-invitations${query({ status: 'requested', limit: 50 })}`).then(r => setPending(r.items.length)).catch(() => setPending(null));
     // History rows echo the change they record, so read past them to six real ones.
     void api<Page>(`/audit-events${query({ limit: 40 })}`).then(r => setRecent(r.items.filter(e => !isJournal(String(e.entity_table))).slice(0, 6))).catch(() => setRecent([]));
@@ -125,18 +131,31 @@ export function Overview({ api, me, manager, token }: {
     return named ? String(named) : <span className="muted">Assigned</span>;
   };
 
+  const started = (
+    <GettingStarted
+      api={api} me={me} token={token}
+      facts={{
+        active: year?.status === 'active', periods: periods.length, sections: rooms.length, unassigned,
+        teachers: manager && staffRead ? teachers : null, enrolled: !year ? 0 : counts ? counts.enrolled : null, rule,
+      }}
+    />
+  );
+
   if (loading) {
     return <div className="card"><TableSkeleton columns={4} rows={5} /></div>;
   }
 
   if (!year) {
     return (
+      <>
+      {started}
       <div className="card">
         <EmptyState
           title="No school year exists yet"
           body="EDUNEXUS records everything against a school year. Create one under School years, add its reporting periods, then activate it."
         />
       </div>
+      </>
     );
   }
 
@@ -154,6 +173,11 @@ export function Overview({ api, me, manager, token }: {
         </div>
         {active ? <Badge tone="good">Year active</Badge> : <Badge tone="attention">{sentence(value(year, 'status'))}</Badge>}
       </div>
+
+      {/* What waits for a decision comes before the setup list, which can run long (found in the browser, 28 October). */}
+      {manager ? <OutcomeQueue api={api} yearId={yearId} token={token} /> : null}
+
+      {started}
 
       <div className="tiles">
         <StatTile
@@ -247,7 +271,7 @@ export function Overview({ api, me, manager, token }: {
             {byGrade.length ? (
               <Donut slices={byGrade} centreValue={rooms.length} centreLabel={rooms.length === 1 ? 'section' : 'sections'} />
             ) : (
-              <EmptyState title="No sections yet" body="Create the school's classes under Sections and advisers, each with one adviser." />
+              <EmptyState title="No sections yet" body="Create the school's classes on School years & sections, then give each an adviser on Staff access." />
             )}
           </div>
         </div>
@@ -256,7 +280,7 @@ export function Overview({ api, me, manager, token }: {
       <div className="card">
         <div className="card-head">
           <div>
-            <h2>{manager ? 'Sections and advisers' : 'Your sections'}</h2>
+            <h2>{manager ? 'Sections and their advisers' : 'Your sections'}</h2>
             <p className="card-note">
               {unassigned
                 ? `${unassigned} ${unassigned === 1 ? 'section has' : 'sections have'} no adviser. Attendance cannot be recorded for a section until one is assigned.`
@@ -273,7 +297,7 @@ export function Overview({ api, me, manager, token }: {
           empty={<EmptyState
             title={manager ? 'No sections yet' : 'You advise no sections'}
             body={manager
-              ? 'Create the school\'s classes under Sections and advisers.'
+              ? 'Create the school\'s classes on School years & sections.'
               : 'A principal or administrative officer assigns advisers. Until then there are no learners for you to read.'}
           />}
           columns={[
@@ -310,9 +334,9 @@ export function Overview({ api, me, manager, token }: {
           dashboard should see that its absence was decided — and by whom. */}
       <div className="card">
         <div className="gated">
-          <h3>Nothing in EDUNEXUS computes a grade or a rate</h3>
+          <h3>Where the figures on the school forms come from</h3>
           <div className="gated-row">
-            {GATED.map(([figure, waiting]) => (
+            {SOURCES(rule).map(([figure, waiting]) => (
               <div className="gated-box" key={figure}>
                 <b>{figure}</b>
                 <span>{waiting}</span>
@@ -320,9 +344,10 @@ export function Overview({ api, me, manager, token }: {
             ))}
           </div>
           <p>
-            These depend on rules only the school can supply — the current DepEd grading enclosure, and the approved meaning of each
-            attendance mark. Until those arrive, the system records what was entered and works nothing out from it. An unmarked session
-            and an unentered score stay unknown rather than counting as zero.
+            Grades, general averages and outcomes are typed from the school’s own class records and printed as entered: EDUNEXUS
+            computes none of them. Attendance on the SF2, SF4 and report cards is counted from the register by the rule the principal
+            records on School profile. An unmarked session and an unentered score stay unknown rather than counting as zero, so a month
+            with a gap stays empty instead of being guessed.
           </p>
         </div>
       </div>

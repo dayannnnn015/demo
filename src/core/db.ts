@@ -11,11 +11,11 @@ export interface Database {
   close(): Promise<void>;
 }
 
-export function createDatabase(url: string, ssl: boolean): Database {
+export function createDatabase(url: string, ssl: boolean, max = 3): Database {
   const pool = new Pool({
     connectionString: url,
     ssl: databaseTls(url, ssl),
-    max: 3,
+    max,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 10000,
     maxLifetimeSeconds: 1200,
@@ -27,15 +27,21 @@ export function createDatabase(url: string, ssl: boolean): Database {
     async transaction<T>(work: (tx: Query) => Promise<T>): Promise<T> {
       const client = await pool.connect();
       let discard = false;
+      // A connection that drops between two of this transaction's queries emits 'error' on the client, not the pool;
+      // unheard, that ends the whole process. The next query fails with it instead, and the client is discarded.
+      const dropped = () => { discard = true; };
+      client.on('error', dropped);
       try {
-        await client.query('begin');
+        // If this side goes away mid-transaction, the server ends it after 30 idle seconds instead of keeping its locks,
+        // the shared academic lock among them, until the network notices. No request pauses that long between queries.
+        await client.query("begin; set local idle_in_transaction_session_timeout = '30s'");
         const result = await work({ async query<R extends Row>(text: string, params: unknown[] = []) { return (await client.query<R>(text, params)).rows; } });
         await client.query('commit');
         return result;
       } catch (error) {
         try { await client.query('rollback'); } catch { discard = true; }
         throw error;
-      } finally { client.release(discard); }
+      } finally { client.off('error', dropped); client.release(discard); }
     },
     async close() { await pool.end(); },
   };

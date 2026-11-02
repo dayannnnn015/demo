@@ -25,6 +25,9 @@ export const weekday = (date: string) => weekdays[new Date(`${date}T00:00:00Z`).
 
 export const monthName = (month: Month) => `${months[month.m - 1]} ${month.y}`;
 
+/** "12 October": a date within a month already named, as the forms write one. */
+export const dayAndMonth = (date: string) => `${Number(date.slice(8, 10))} ${months[Number(date.slice(5, 7)) - 1]}`;
+
 /** A date held inside a range, both ends included. String order is date order here. */
 export const clamp = (date: string, low: string, high: string) => (date < low ? low : date > high ? high : date);
 

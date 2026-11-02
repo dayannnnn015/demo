@@ -2,10 +2,8 @@ import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'reac
 import type { Api, Page, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import { Sheet } from '../components/overlay';
-import {
-  Badge, Callout, Cell, EmptyState, Finder, Select, StatusLine, Table, TableSkeleton, Unrecorded,
-  gradeName, idle, learnerName, sentence, value, type Status,
-} from '../components/primitives';
+import { lrnDigits } from '../record-fields';
+import { Badge, Callout, Cell, EmptyState, Finder, Select, StatusLine, Table, TableSkeleton, Unrecorded, gradeName, idle, learnerName, sentence, value, type Status, ScrollArea } from '../components/primitives';
 
 /**
  * The reviewed corrections to learner and enrollment records (Sections 2B.1
@@ -22,7 +20,7 @@ export type Entry = { event_type: EventType; effective_on: string; section_id: s
 type State = { enrolled_on: string; effective_on: string; status: 'enrolled' | 'withdrawn'; section_id: string; last_reason: string };
 type Timeline = { enrollment_id: string; academic_year_id: string; grade_level: number; version: number; entries: Entry[]; record_state: 'valid' | 'voided'; usable_for_reporting: boolean };
 type RevisionPlan = {
-  version: number; review_hash: string; previous_grade_level: number; corrected_grade_level: number; correction_kind: 'timeline' | 'placement';
+  version: number; review_hash: string | null; can_commit?: boolean; blocked?: { code: string; message: string }; previous_grade_level: number; corrected_grade_level: number; correction_kind: 'timeline' | 'placement';
   sections: { id: string; name: string; grade_level: number; adviser_user_id: string | null }[];
   before_entries: Entry[]; after_entries: Entry[]; reason: string; first_affected_on: string; previous_state: State; proposed_state: State;
 };
@@ -147,7 +145,7 @@ const tidy = (reason: string) => reason.trim().replace(/\s+/g, ' ');
  * is what binds the confirmation to exactly what was read; a conflict kills it,
  * so the review is dropped rather than retried.
  */
-function useReview<P extends { review_hash?: string | null; can_commit?: boolean }>(api: Api) {
+function useReview<P extends { review_hash?: string | null; can_commit?: boolean; blocked?: { code: string; message: string } }>(api: Api) {
   const [status, setStatus] = useState<Status>(idle);
   const [busy, setBusy] = useState(false);
   const [plan, setPlan] = useState<P | null>(null);
@@ -160,7 +158,9 @@ function useReview<P extends { review_hash?: string | null; can_commit?: boolean
       const result = await api<P>(url, 'POST', body);
       setSent(body);
       setPlan(result);
-      setStatus(result.can_commit === false ? { text: 'This cannot be confirmed as proposed. What stands in the way is listed below.', kind: 'error' } : idle);
+      // A review whose commit would be refused says so here, before Confirm, in the words Confirm would use.
+      setStatus(result.blocked ? { text: `This cannot be confirmed as proposed: ${result.blocked.message}`, kind: 'error' }
+        : result.can_commit === false ? { text: 'This cannot be confirmed as proposed. What stands in the way is listed below.', kind: 'error' } : idle);
     } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
     finally { setBusy(false); }
   };
@@ -241,7 +241,7 @@ function EntryEditor({ entries, setEntries, sections, problems }: {
   const put = (index: number, patch: Partial<Entry>) => setEntries(entries.map((e, i) => (i === index ? { ...e, ...patch } : e)));
   const types = (index: number): EventType[] => (index === 0 ? ['enrolled'] : ['reassigned', 'withdrawn', 'reentered']);
   return (
-    <div className="table-wrap">
+    <ScrollArea>
       <table>
         <thead>
           <tr><th scope="col">#</th><th scope="col">What happened</th><th scope="col">Effective</th><th scope="col">Section</th><th scope="col">Reason</th><th scope="col" className="actions">Remove</th></tr>
@@ -283,7 +283,7 @@ function EntryEditor({ entries, setEntries, sections, problems }: {
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -427,7 +427,7 @@ export function PlacementSheet({ api, enrollment, sections, sectionName, onClose
             </div>
           </div>
           {grade && !targets.length ? (
-            <Callout tone="attention" title={`No ${gradeName(grade)} section in this school year`}>Add one on the Sections and advisers screen first.</Callout>
+            <Callout tone="attention" title={`No ${gradeName(grade)} section in this school year`}>Add one on School years &amp; sections first.</Callout>
           ) : null}
           {grade && targets.length ? (
             <div className="form-grid">
@@ -470,7 +470,7 @@ function LearnerPicker({ api, exclude, onChoose, setStatus }: { api: Api; exclud
         onClear={() => setFound(null)}
         fields={[
           { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
-          { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9]{12}', maxLength: 12 },
+          { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9 -]{12,20}', maxLength: 20 },
         ]}
       />
       {found === null ? <p className="muted">Search for the other record. Nothing is read until you do.</p> : (
@@ -479,7 +479,7 @@ function LearnerPicker({ api, exclude, onChoose, setStatus }: { api: Api; exclud
           rowKey={r => String(r.id)}
           empty={<EmptyState title="No other learner found" body="Check the spelling or search by LRN." />}
           columns={[
-            { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={r.lrn ? `LRN ${value(r, 'lrn')}` : <Unrecorded label="LRN not issued" />} /> },
+            { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={r.lrn ? `LRN ${value(r, 'lrn')}` : <Unrecorded label="LRN missing" />} /> },
             { header: 'Birth date', cell: r => <span className="mono">{value(r, 'birth_date')}</span> },
             { header: 'Sex', cell: r => sentence(value(r, 'sex')) },
             { header: '', cell: r => <button type="button" className="btn secondary small" onClick={() => onChoose(r)}>Choose</button> },
@@ -497,7 +497,7 @@ function ProfileFacts({ title, profile }: { title: string; profile: Profile }) {
       <div className="card-body">
         <dl className="facts">
           <div><dt>Name</dt><dd>{learnerName(profile)}</dd></div>
-          <div><dt>LRN</dt><dd>{profile.lrn ? <span className="mono">{profile.lrn}</span> : <Unrecorded label="LRN not issued" />}</dd></div>
+          <div><dt>LRN</dt><dd>{profile.lrn ? <span className="mono">{profile.lrn}</span> : <Unrecorded label="LRN missing" />}</dd></div>
           <div><dt>Birth date</dt><dd className="mono">{profile.birth_date}</dd></div>
           <div><dt>Sex</dt><dd>{sentence(profile.sex)}</dd></div>
         </dl>
@@ -752,7 +752,7 @@ export function LrnCorrection({ api, learner, setStatus, onDone }: { api: Api; l
       <div className="form-grid">
         <div className="field">
           <label className="label" htmlFor={`${id}-lrn`}>Corrected LRN</label>
-          <input id={`${id}-lrn`} className="mono" inputMode="numeric" maxLength={12} value={lrn} onChange={event => setLrn(event.target.value.trim())} />
+          <input id={`${id}-lrn`} className="mono" inputMode="numeric" maxLength={20} value={lrn} onChange={event => setLrn(lrnDigits(event.target.value))} />
           <span className="hint">Exactly twelve digits. Recorded now as <span className="mono">{value(learner, 'lrn')}</span>.</span>
         </div>
         <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />

@@ -1,6 +1,35 @@
 export class AppError extends Error {
-  constructor(public status: number, public code: string, message: string) { super(message); }
+  constructor(public status: number, public code: string, message: string, public fields?: { path: string; message: string }[]) { super(message); }
 }
+
+/**
+ * The unique rules a person runs into by typing something already recorded,
+ * keyed by the constraint PostgreSQL names. Each is said beside the field the
+ * screen asked for, or in words when no one field is to blame; any other
+ * conflict keeps the generic answer, since its constraint name is internal.
+ */
+const duplicates: Record<string, { field?: string; message: string }> = {
+  learners_lrn_key: { field: 'lrn', message: 'This LRN is already recorded for another learner. Search for it before registering.' },
+  sections_year_grade_name_idx: { field: 'name', message: 'This grade already has a section with this name this school year.' },
+  academic_years_start_year_key: { field: 'start_year', message: 'This school year is already recorded.' },
+  reporting_periods_academic_year_id_ordinal_key: { field: 'ordinal', message: 'This school year already has a period with this number.' },
+  subjects_code_key: { field: 'code', message: 'This code is already in the catalog.' },
+  section_subjects_section_id_subject_id_key: { field: 'subject_id', message: 'This section already offers this subject. Reactivate it rather than adding it again.' },
+  assessment_policy_drafts_code_key: { field: 'code', message: 'A policy draft already has this code.' },
+  assessment_adoption_active_idx: { field: 'policy_id', message: 'This policy is already adopted for this school year.' },
+  assessment_binding_active_idx: { field: 'offering_id', message: 'This learning area already has a policy bound. Release it before binding another.' },
+  assessment_tasks_offering_id_reporting_period_id_component__key: { field: 'sequence', message: 'This component already has an assessment with this number this term.' },
+  staff_invitation_open_idx: { field: 'email', message: 'An invitation for this address is already waiting.' },
+  enrollments_valid_learner_year_idx: { message: 'This learner is already enrolled this school year. To change their section, or to take back a learner who left, record a movement on that enrollment.' },
+  // Raised by the enrollment guards rather than an index, so known by their words.
+  'Identity already enrolled in this year': { message: 'This learner is already enrolled this school year. To change their section, or to take back a learner who left, record a movement on that enrollment.' },
+  'Identity already has a valid enrollment in this year': { message: 'This learner is already enrolled this school year. To change their section, or to take back a learner who left, record a movement on that enrollment.' },
+  academic_years_one_active_idx: { message: 'Another school year is active. Close it before activating this one.' },
+  attendance_followup_open_idx: { message: 'This learner already has an open follow-up case.' },
+  roster_submission_waiting_idx: { message: 'This section already has a class list waiting for review.' },
+  staff_name_request_open_idx: { message: 'You already have a correction waiting. Withdraw it on My profile to ask for a different one.' },
+};
+const constraintOf = (error: unknown) => { const e = error as { constraint?: unknown; constraint_name?: unknown } | null; const name = e?.constraint ?? e?.constraint_name; return typeof name === 'string' ? name : undefined; };
 
 export function normalizeError(error: unknown): AppError {
   if (error instanceof AppError) return error;
@@ -26,12 +55,12 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0401') return new AppError(409, 'PLACEMENT_HISTORY_CHANGED', 'Grade-placement corrections preserve every date, movement type, and reason. Review only the grade and replacement sections.');
   if (code === 'P0500') return new AppError(409, 'CALENDAR_DATES', 'Use distinct dates inside the school year and read at most 62 dates at a time.');
   if (code === 'P0501') return new AppError(409, 'CALENDAR_UNCHANGED', 'The calendar proposal has no changes.');
-  if (code === 'P0502') return new AppError(409, 'CALENDAR_CONFLICT', 'Resolve the base-day or section-override conflicts shown in the calendar preview.');
+  if (code === 'P0502') return new AppError(409, 'CALENDAR_CONFLICT', 'Resolve the conflicts the calendar preview shows: a school day not set yet, a section with its own schedule, or marks already recorded in a session the change would stop.');
   if (code === 'P0503') return new AppError(409, 'CALENDAR_REVIEW_CHANGED', 'The calendar proposal or related school records changed. Preview and review again.');
   if (code === 'P0600') return new AppError(409, 'ATTENDANCE_DATE', 'Select a date inside the section school year.');
   if (code === 'P0601') return new AppError(409, 'ATTENDANCE_YEAR', 'Record attendance only in an active year and on or before today.');
   if (code === 'P0602') return new AppError(409, 'ATTENDANCE_ENROLLMENT', 'The learner was not enrolled in this section on that date. Refresh the dated roster.');
-  if (code === 'P0603') return new AppError(409, 'ATTENDANCE_SESSION', 'These marks require a configured classroom session. Alternative-delivery recording is not available yet.');
+  if (code === 'P0603') return new AppError(409, 'ATTENDANCE_SESSION', 'There is no classroom session to mark on that date: the calendar holds a weekend, a holiday, a free half day, an alternative-delivery day or nothing at all for it. Marks are taken only in a classroom session; the principal or administrative officer sets the calendar.');
   if (code === 'P0604') return new AppError(409, 'ATTENDANCE_UNCHANGED', 'The attendance proposal has no changes.');
   if (code === 'P0605') return new AppError(409, 'ATTENDANCE_REVIEW_CHANGED', 'The attendance proposal or related records changed. Preview and review again.');
   if (code === 'P0606') return new AppError(409, 'ATTENDANCE_DEPENDENCY', 'Existing attendance conflicts with this correction. Review and clear affected marks before changing the enrollment or schedule.');
@@ -45,8 +74,41 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P1402') return new AppError(409, 'ADOPTION_BOUND', 'Release the subject bindings before withdrawing this adoption.');
   if (code === 'P1403') return new AppError(409, 'OFFERING_BOUND', 'Release the assessment-policy binding before retiring this offering.');
   if (code === 'P1500') return new AppError(409, 'INVITATION_STATE', 'This invitation was already completed or cancelled. Request a new one.');
+  if (code === 'P1700') return new AppError(409, 'SUBMISSION_CLOSED', 'This class list is no longer waiting.');
+  if (code === 'P1701') return new AppError(403, 'NOT_SECTION_ADVISER', 'Submit a class list only for a section you currently advise.');
+  if (code === 'P1702') return new AppError(409, 'SUBMISSION_YEAR', 'The school year is closed, or the enrollment date falls outside it.');
+  if (code === 'P1703') return new AppError(409, 'SUBMISSION_WAITING', 'A class list for this section is already waiting. Withdraw it first, or ask a manager to decide it.');
+  if (code === 'P2000') return new AppError(409, 'PROMOTION_APPROVED', 'This outcome is approved. The principal or administrative officer returns it before it can change.');
+  if (code === 'P2200') return new AppError(409, 'ANNOUNCEMENT_ARCHIVED', 'An archived announcement is kept as it was. Write a new one instead.');
+  if (code === 'P2201') return new AppError(409, 'ANNOUNCEMENT_STATE', 'The announcement is not in a state that allows this. Read it again.');
+  if (code === 'P2402') return new AppError(409, 'NAME_REQUEST_DECIDED', 'This request is already decided or withdrawn. Read it again.');
+  if (code === 'P2403') return new AppError(409, 'OWN_NAME_REQUEST', 'Nobody decides their own correction. Another principal or administrative officer decides it.');
+  if (code === 'P2401') return new AppError(409, 'SESSION_UNKNOWN', 'This sign-in cannot be told apart from your others. Sign out, sign in again, then try once more.');
+  if (code === 'P2400') return new AppError(409, 'PHOTO_MISSING', 'There is no photo on this profile. Upload one first, or choose initials or an icon.');
+  if (code === 'P2300') return new AppError(409, 'FAQ_ARCHIVED', 'An archived question is kept as it was. Write a new one instead.');
+  if (code === 'P2301') return new AppError(409, 'FAQ_STATE', 'The question is not in a state that allows this. Read it again.');
+  if (code === 'P2100') return new AppError(409, 'NEXT_YEAR_INVALID', 'Next year’s classes go into the school year right after this one, while it is a draft or active.');
+  if (code === 'P2102') return new AppError(409, 'PLACEMENT_INELIGIBLE', 'A learner is placed only from an approved promotion or retention, into a section of the grade it leads to.');
+  if (code === 'P2001') return new AppError(409, 'PROMOTION_MISSING', 'There is no recommended outcome to decide for this learner.');
+  if (code === 'P1900') return new AppError(409, 'RECORD_YEAR_CLOSED', 'A closed school year’s records are read only.');
+  if (code === 'P1901') return new AppError(409, 'NO_KINDERGARTEN_CARD', 'There is no Kindergarten card to record for: the school has not supplied its Kindergarten assessment policy.');
+  if (code === 'P1902') return new AppError(409, 'NOT_IN_SECTION', 'Record only for learners in this section.');
+  if (code === 'P1903') return new AppError(422, 'GRADE_RANGE', 'A grade is a number from 0 to 100 with at most two decimal places, as the ECR shows it.');
+  if (code === 'P1904') return new AppError(409, 'NO_CHANGES', 'Nothing has changed.');
+  if (code === 'P1905') return new AppError(409, 'PERIOD_YEAR', 'Use a reporting period of this school year.');
+  if (code === 'P1906') return new AppError(422, 'VALUE_MARK', 'Mark each behaviour statement AO, SO, RO or NO.');
+  if (code === 'P1907') {
+    // The database says which card holds what was refused; its words are literal, never built from a record.
+    const said = String((error as { message?: unknown } | null)?.message ?? '');
+    const which = /^[A-Z][^\n"]{3,200}$/.test(said) ? `: ${said.charAt(0).toLowerCase()}${said.slice(1)}` : '';
+    return new AppError(409, 'CARD_HAS_NO_BOX', `This learner’s report card has no box for that${which}. It would be recorded but never printed on the SF9 or SF10.`);
+  }
+  if (code === 'P1800') return new AppError(403, 'PRINCIPAL_ONLY', 'Only the principal records the school’s attendance rule.');
+  if (code === 'P1801') return new AppError(409, 'RULE_UNCHANGED', 'The rule is already recorded that way.');
+  if (code === 'P1802') return new AppError(409, 'REISSUE_REASON', 'This form was issued before with different content. Give the reason it is being corrected.');
+  if (code === 'P1704') return new AppError(409, 'SUBMISSION_IMPORT', 'Accept a class list only with an import you committed for its section.');
   if (code === 'P1600') return new AppError(409, 'TASK_STATE', 'This assessment is archived or its school year is closed.');
-  if (code === 'P1601') return new AppError(409, 'TASK_COMPONENT', 'Bind an adopted assessment policy to this offering and use one of its component codes.');
+  if (code === 'P1601') return new AppError(409, 'TASK_COMPONENT', 'Use a component code of the assessment policy bound to this learning area. With no policy bound now, the principal binds one first.');
   if (code === 'P1602') return new AppError(409, 'TASK_PERIOD', 'Use a reporting period of the offering school year.');
   if (code === 'P1603') return new AppError(409, 'ASSESSMENT_UNCHANGED', 'The proposal has no changes.');
   if (code === 'P1604') return new AppError(409, 'TASK_MAXIMUM', 'Recorded scores exceed the proposed maximum. Correct those scores first.');
@@ -71,12 +133,25 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0707') return new AppError(409, 'MONTH_FROZEN', 'A manager must return or reopen the affected attendance month before editing.');
   if (code === 'P0708') return new AppError(409, 'MONTH_DEPENDENCY', 'This change affects a submitted or locked month. Return or reopen the affected months first.');
   if (code === 'P0709') return new AppError(409, 'MONTH_SIZE', 'Monthly review currently supports at most 1000 distinct enrollments per section.');
-  if (code === '23505') return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
+  if (code === '23505') {
+    const known = duplicates[constraintOf(error) ?? ''] ?? duplicates[String((error as { message?: unknown } | null)?.message ?? '')];
+    if (!known) return new AppError(409, 'ALREADY_EXISTS', 'A conflicting record already exists.');
+    return new AppError(409, 'ALREADY_EXISTS', known.message, known.field ? [{ path: known.field, message: known.message }] : undefined);
+  }
   if (code === '23503' || code === '23001') return new AppError(409, 'INVALID_REFERENCE', 'The referenced record does not exist or is still in use.');
-  if (code === '23514') return new AppError(409, 'RULE_VIOLATION', 'This change violates a school record rule. Check dates, status, and assignments.');
+  if (code === '23514') {
+    // A rule a migration raised says which rule it was, in words written for it
+    // and never built from a record's values. A CHECK constraint's own message
+    // names a table and a constraint instead, so that stays generic.
+    const said = (error as { message?: unknown } | null)?.message;
+    const raised = !constraintOf(error) && typeof said === 'string' && /^[A-Z][^\n"]{3,200}$/.test(said) && !/violates|relation/i.test(said);
+    return new AppError(409, 'RULE_VIOLATION', raised ? `This change breaks a school record rule: ${said.charAt(0).toLowerCase()}${said.slice(1).replace(/\.$/, '')}.` : 'This change violates a school record rule. Check dates, status, and assignments.');
+  }
   if (code === '42501') return new AppError(403, 'FORBIDDEN', 'You do not have permission for this operation.');
   if (code === '40001' || code === '40P01' || code === '55P03') return new AppError(409, 'RETRY_REQUIRED', 'Another change is in progress. Refresh the record and try again.');
-  if (code === '57014' || code?.startsWith('08') || code === 'CONNECTION_CLOSED' || code === 'CONNECT_TIMEOUT') {
+  // A connection dropped mid-request carries no SQLSTATE, only node-postgres's message; nothing was committed with it.
+  const dropped = !code && /^(Connection terminated|Client has encountered a connection error)/.test((error as { message?: string } | null)?.message ?? '');
+  if (code === '57014' || code?.startsWith('08') || code === 'CONNECTION_CLOSED' || code === 'CONNECT_TIMEOUT' || dropped) {
     return new AppError(503, 'SERVICE_UNAVAILABLE', 'The service is temporarily unavailable.');
   }
   return new AppError(500, 'INTERNAL_ERROR', 'The request could not be completed.');

@@ -21,6 +21,9 @@ import { Icon } from './icons';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
+/** Every overlay open now, innermost last: a review over a form's own view must not close the view on its Escape. */
+const opened: object[] = [];
+
 /**
  * Holds the keyboard inside an open overlay, closes on Escape, and hands focus
  * back to whatever opened it. The page behind is locked with a class rather
@@ -33,12 +36,16 @@ export function useTrap(onClose: () => void) {
   useEffect(() => { close.current = onClose; }, [onClose]);
 
   useEffect(() => {
+    const self = {};
+    opened.push(self);
     const returnTo = document.activeElement as HTMLElement | null;
     document.documentElement.classList.add('locked');
     const panel = box.current;
     (panel?.querySelector<HTMLElement>(FOCUSABLE) ?? panel)?.focus();
 
     const key = (event: KeyboardEvent) => {
+      // Only the innermost overlay answers the keyboard.
+      if (opened[opened.length - 1] !== self) return;
       if (event.key === 'Escape') { event.preventDefault(); close.current(); return; }
       if (event.key !== 'Tab' || !panel) return;
       const items = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
@@ -53,7 +60,9 @@ export function useTrap(onClose: () => void) {
     addEventListener('keydown', key, true);
     return () => {
       removeEventListener('keydown', key, true);
-      document.documentElement.classList.remove('locked');
+      opened.splice(opened.indexOf(self), 1);
+      // The page stays locked while an outer overlay is still open.
+      if (!opened.length) document.documentElement.classList.remove('locked');
       returnTo?.focus?.();
     };
   }, []);
@@ -71,24 +80,33 @@ const backdrop = (onClose: () => void) => (event: React.MouseEvent) => {
  * A side panel for one task: register a learner, add a section, request an
  * invitation. It arrives when asked for and leaves when it is done, so a
  * screen stays the register it is named after.
+ *
+ * `full` is for a document rather than a task, such as an SF9: it takes the
+ * whole working area beside the rail instead of sliding in at the side, and
+ * follows the rail as it collapses or becomes a drawer (the group leader's
+ * note of 12 October). Its `actions` ride in the head, so they stay in reach
+ * however long the document is.
  */
-export function Sheet({ title, note, wide, onClose, children }: {
+export function Sheet({ title, note, wide, full, actions, onClose, children }: {
   title: string;
   note?: string | undefined;
   wide?: boolean | undefined;
+  full?: boolean | undefined;
+  actions?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
   const box = useTrap(onClose);
   const heading = useId();
   return (
-    <div className="sheet" onMouseDown={backdrop(onClose)}>
-      <div className={`sheet-panel${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={heading} tabIndex={-1} ref={box}>
+    <div className={`sheet${full ? ' full' : ''}`} onMouseDown={full ? undefined : backdrop(onClose)}>
+      <div className={`sheet-panel${wide ? ' wide' : ''}${full ? ' full' : ''}`} role="dialog" aria-modal="true" aria-labelledby={heading} tabIndex={-1} ref={box}>
         <div className="sheet-head">
           <div>
             <h2 id={heading}>{title}</h2>
             {note ? <p>{note}</p> : null}
           </div>
+          {actions ? <div className="sheet-actions">{actions}</div> : null}
           <button type="button" className="sheet-close" aria-label="Close" onClick={onClose}><Icon name="close" size={17} /></button>
         </div>
         <div className="sheet-body">{children}</div>

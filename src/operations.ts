@@ -17,4 +17,12 @@ import { adoptionOperations } from './modules/assessment-adoptions/contracts.js'
 import { bindingOperations } from './modules/assessment-bindings/contracts.js';
 import { invitationOperations } from './modules/staff-invitations/contracts.js';
 import { scoreOperations } from './modules/assessment-scores/contracts.js';
-export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations, ...followupOperations, ...subjectOperations, ...offeringOperations, ...policyOperations, ...adoptionOperations, ...bindingOperations, ...invitationOperations, ...scoreOperations];
+import { learnerRecordOperations } from './modules/learner-record/contracts.js';
+import { schoolReportOperations } from './modules/school-reports/contracts.js';
+import { submissionOperations } from './modules/roster-submissions/contracts.js';
+import { formOperations } from './modules/forms/contracts.js';
+import { reportOperations } from './modules/report-records/contracts.js';
+import { nextYearOperations } from './modules/next-year/contracts.js';
+import { siteOperations } from './modules/site/contracts.js';
+import { profileOperations } from './modules/profiles/contracts.js';
+export const operations = [...foundation, ...registryOperations, ...reviewOperations, ...timelineOperations, ...identityOperations, ...enrollmentRecordOperations, ...placementOperations, ...calendarOperations, ...attendanceOperations, ...monthOperations, ...monitorOperations, ...followupOperations, ...subjectOperations, ...offeringOperations, ...policyOperations, ...adoptionOperations, ...bindingOperations, ...invitationOperations, ...scoreOperations, ...learnerRecordOperations, ...schoolReportOperations, ...submissionOperations, ...formOperations, ...reportOperations, ...nextYearOperations, ...siteOperations, ...profileOperations];

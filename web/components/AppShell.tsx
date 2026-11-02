@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Row } from '../api';
-import { groups, routes, type Route } from '../routes';
+import { groups, routes, type Route, available } from '../routes';
 import { BrandMark } from './brand';
 import { Icon } from './icons';
 import { CommandPalette } from './palette';
+import { editions, faqForCode } from '../help';
+import { TourOverlay } from './tour';
+import { HelpContext, type HelpTopic } from '../help/context';
+import { HelpSheet } from '../screens/Help';
 import { sentence } from './primitives';
+import { SeededNotice } from './seeded';
+import { UpdateNotice } from './update';
+import { Avatar, type Look } from './avatar';
+export { SeededNotice } from './seeded';
 
-/** Two letters is enough to tell 33 people apart, and it needs no photograph. */
-const initials = (name: string) =>
-  name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('') || '?';
 
 /**
  * Interface preferences live in sessionStorage, alongside the session itself.
@@ -45,14 +50,14 @@ function useDismiss(open: boolean, close: () => void) {
   return wrap;
 }
 
-function ProfileMenu({ me, onSignOut, onChangePassword }: { me: Row; onSignOut: () => void; onChangePassword?: (() => void) | undefined }) {
+function ProfileMenu({ me, onSignOut, onChangePassword, onProfile }: { me: Row; onSignOut: () => void; onChangePassword?: (() => void) | undefined; onProfile: () => void }) {
   const [open, setOpen] = useState(false);
   const wrap = useDismiss(open, () => setOpen(false));
   const name = String(me.display_name);
   return (
-    <div className="profile" ref={wrap}>
-      <button type="button" className="profile-trigger" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(v => !v)}>
-        <span className="avatar" aria-hidden="true">{initials(name)}</span>
+    <div className="profile" ref={wrap} data-tour="profile">
+      <button type="button" className="profile-trigger" aria-label={`${name}, ${sentence(String(me.role))}: account menu`} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(v => !v)}>
+        <Avatar name={name} look={me.profile as Look | null} />
         <span className="profile-text">
           <b>{name}</b>
           <span>{sentence(String(me.role))}</span>
@@ -65,9 +70,12 @@ function ProfileMenu({ me, onSignOut, onChangePassword }: { me: Row; onSignOut: 
             <b>{name}</b>
             <span>{sentence(String(me.role))}</span>
           </div>
+          <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onProfile(); }}>
+            <Icon name="user" size={16} />My profile
+          </button>
           {onChangePassword ? (
             <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onChangePassword(); }}>
-              <Icon name="user" size={16} />Change password
+              <Icon name="eye-off" size={16} />Change password
             </button>
           ) : null}
           <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onSignOut(); }}>
@@ -111,6 +119,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
               title={collapsed ? route.nav : undefined}
               aria-label={collapsed ? route.nav : undefined}
               onClick={() => onNavigate(route.id)}
+              data-tour={`nav-${route.id}`}
             >
               <Icon name={route.icon} size={17} />
               <span className="nav-label">{route.nav}</span>
@@ -140,10 +149,12 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
 }) {
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
+  const [help, setHelp] = useState<HelpTopic | null>(null);
+  const [tour, setTour] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(() => remembered('rail-collapsed', false));
   const [shut, setShut] = useState(() => remembered<string[]>('nav-shut', []));
   const manager = me.role !== 'teacher';
-  const visible = routes.filter(route => !route.manager || manager);
+  const visible = routes.filter(route => available(route, me.role));
 
   const setRail = (next: boolean) => { setCollapsed(next); remember('rail-collapsed', next); };
   const toggleGroup = (group: string) => setShut(open => {
@@ -157,12 +168,39 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
   const openPalette = useCallback((event: KeyboardEvent) => {
     if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
     event.preventDefault();
+    // A tour holds the page until it ends; the palette would open beneath its shade.
+    if (document.querySelector('.tour')) return;
     setPalette(true);
   }, []);
   useEffect(() => {
     addEventListener('keydown', openPalette);
     return () => removeEventListener('keydown', openPalette);
   }, [openPalette]);
+
+  // `?` opens this screen's help, unless it is being typed, or something is already open over the page. The top
+  // bar's Help button went in 0.82.1 (the group's note: help was everywhere, and the rail is enough); the key stays,
+  // because it shows nothing until it is pressed.
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== '?' || event.ctrlKey || event.metaKey || event.altKey) return;
+      const typing = event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable="true"]');
+      if (typing || document.querySelector('[aria-modal="true"]')) return;
+      event.preventDefault();
+      setHelp({ screen: true });
+    };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, []);
+  // A link followed from help goes somewhere else, and the help it came from no longer describes the page.
+  useEffect(() => {
+    const away = () => setHelp(null);
+    addEventListener('hashchange', away);
+    return () => removeEventListener('hashchange', away);
+  }, []);
+  const role = me.role;
+  // A tour starts from help, and the help it started from would sit under it pointing at nothing.
+  const helpValue = useMemo(() => ({ explain: (code: string) => faqForCode(code, role), open: setHelp, tour: (id: string) => { setHelp(null); setTour(id); } }), [role]);
+  const touring = tour ? editions.en.tours.find(t => t.id === tour) : undefined;
 
   return (
     <div className="app" data-rail={collapsed ? 'collapsed' : 'full'} data-drawer={drawer}>
@@ -172,12 +210,12 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
           is reachable again once it is closed, so it is not itself a control. */}
       <div className="scrim" onClick={() => setDrawer(false)} aria-hidden="true" />
 
-      <nav className="rail" aria-label="Sections">
+      <nav className="rail" aria-label="Sections" data-tour="rail">
         <div className="rail-head">
           <span className="brand">
             <span className="brand-mark" aria-hidden="true"><BrandMark size={24} /></span>
             <span className="brand-text">
-              <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
+              <b>EDUNEXUS<span className="tag-dev">Dev</span>{me.seeded_data ? <span className="tag-dev">Seeded</span> : null}</b>
               <span>Learner records</span>
             </span>
           </span>
@@ -196,7 +234,7 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
 
         <div className="nav-scroll">
           {groups.map(group => {
-            const items = visible.filter(route => route.group === group);
+            const items = visible.filter(route => route.group === group && !route.offRail);
             if (!items.length) return null;
             return (
               <NavGroup
@@ -229,7 +267,7 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
 
       <div className="main">
         <header className="topbar">
-          <button type="button" className="rail-open" aria-label="Show sections" aria-expanded={drawer} onClick={() => setDrawer(true)}>
+          <button type="button" className="rail-open" aria-label="Show sections" aria-expanded={drawer} onClick={() => setDrawer(true)} data-tour="rail-open">
             <Icon name="menu" size={20} />
           </button>
           <div className="topbar-title">
@@ -240,7 +278,7 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
                 not a control: a year is activated on the School years screen,
                 where what that means is spelled out. */}
             {context ? (
-              <span className={`scope${contextTone === 'none' ? ' none' : ''}`}>
+              <span className={`scope${contextTone === 'none' ? ' none' : ''}`} data-tour="scope">
                 {contextTone === 'none'
                   ? <Icon name="alert" size={14} />
                   : <span className="scope-dot" aria-hidden="true" />}
@@ -248,21 +286,26 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
               </span>
             ) : null}
             <span className="topbar-sep" aria-hidden="true" />
-            <button type="button" className="search-trigger" onClick={() => setPalette(true)} aria-label="Go to a screen">
+            <button type="button" className="search-trigger" onClick={() => setPalette(true)} aria-label="Go to a screen" data-tour="palette">
               <Icon name="search" size={15} />
               <span>Go to a screen</span>
               <kbd className="kbd">Ctrl K</kbd>
             </button>
-            <ProfileMenu me={me} onSignOut={onSignOut} onChangePassword={onChangePassword} />
+            <ProfileMenu me={me} onSignOut={onSignOut} onChangePassword={onChangePassword} onProfile={() => onNavigate('profile')} />
           </div>
         </header>
-        <main className="view" id="main">{children}</main>
+        <HelpContext.Provider value={helpValue}>
+          <main className="view" id="main"><UpdateNotice /><SeededNotice me={me} />{children}</main>
+          {help ? <HelpSheet topic={help} route={current} role={role} onClose={() => setHelp(null)} /> : null}
+          {touring ? <TourOverlay tour={touring} role={role} onNavigate={onNavigate} onClose={() => setTour(null)} /> : null}
+        </HelpContext.Provider>
       </div>
 
       {palette ? (
         <CommandPalette
           routes={visible}
           current={current.id}
+          role={me.role}
           onNavigate={onNavigate}
           onClose={() => setPalette(false)}
         />

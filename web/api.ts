@@ -52,17 +52,58 @@ function createRequest(client: SupabaseClient, onSessionLost: () => void) {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       const error = payload.error ?? {};
-      if (response.status === 401 || error.code === 'STAFF_ACCESS_REQUIRED') onSessionLost();
+      // A session that still owes its second step goes back to the sign-in form, which asks for the code.
+      if (response.status === 401 || error.code === 'STAFF_ACCESS_REQUIRED' || error.code === 'TWO_STEP_REQUIRED') onSessionLost();
       throw new ApiError(response.status, error.code ?? 'REQUEST_FAILED', error.message ?? 'The request failed.', error.fields ?? []);
     }
     return payload.data as T;
   };
 }
 
-export const message = (error: unknown) =>
-  error instanceof ApiError && error.fields.length
-    ? [error.message, ...error.fields.map(f => `${f.path}: ${f.message}`)].join('\n')
+/**
+ * The validator's wording names patterns and types; staff read it as noise. A
+ * field's own hint already says what the field wants, so a format refusal is
+ * said with that, and the common limits in plain words.
+ */
+export function plainFieldMessage(text: string, hint?: string) {
+  if (/must match pattern/i.test(text)) return hint ?? 'This is not in the expected form.';
+  let m = /Too small: expected string to have >=(\d+) character/i.exec(text);
+  if (m) return `Too short: at least ${m[1]} characters.`;
+  m = /Too big: expected string to have <=(\d+) character/i.exec(text);
+  if (m) return `Too long: at most ${m[1]} characters.`;
+  m = /Too small: expected (?:number|int)\w* to be >=?(-?[\d.]+)/i.exec(text);
+  if (m) return `Must be at least ${m[1]}.`;
+  m = /Too big: expected (?:number|int)\w* to be <=?(-?[\d.]+)/i.exec(text);
+  if (m) return `Must be at most ${m[1]}.`;
+  if (/received (null|undefined)|^Required$/i.test(text)) return 'Required.';
+  if (/Invalid ISO date|Invalid date/i.test(text)) return 'Enter a date as YYYY-MM-DD.';
+  if (/Invalid UUID/i.test(text)) return 'Choose one from the list.';
+  if (/Invalid option|Invalid enum/i.test(text)) return 'Choose one of the options offered.';
+  return text;
+}
+/** The validator's own lead line, which says nothing a person can act on. */
+export const GENERIC_REFUSAL = 'Review the request fields.';
+
+/**
+ * Which server code produced each refusal message handed out recently. Screens
+ * put `message(error)` straight into their status line, a hundred places that
+ * pass on text and not the error; remembering the code here lets the status
+ * line explain a refusal without each of them passing it along.
+ */
+const recent = new Map<string, string>();
+export const codeFor = (text: string) => recent.get(text);
+
+export const message = (error: unknown) => {
+  const text = error instanceof ApiError && error.fields.length
+    ? [error.message === GENERIC_REFUSAL ? 'Some details need correcting.' : error.message, ...error.fields.map(f => `${f.path}: ${plainFieldMessage(f.message)}`)].join('\n')
     : error instanceof Error ? error.message : 'The request failed. Please try again.';
+  if (error instanceof ApiError) {
+    recent.delete(text);
+    recent.set(text, error.code);
+    if (recent.size > 50) recent.delete(recent.keys().next().value!);
+  }
+  return text;
+};
 
 export const query = (params: Record<string, string | number | undefined | null>) => {
   const search = new URLSearchParams();

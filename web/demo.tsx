@@ -4,7 +4,8 @@ import { ApiError, type Api, type Row } from './api';
 import { AppShell } from './components/AppShell';
 import { BrandMark } from './components/brand';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
-import { routeFor } from './routes';
+import { available, routeFor, routes } from './routes';
+import { applyPreferences, followDevice, startScreen, type Preferences } from './preferences';
 import './styles/app.css';
 
 /**
@@ -12,13 +13,13 @@ import './styles/app.css';
  * local API holding only synthetic records. Sign-in is replaced by choosing a
  * synthetic staff member, whose identifier is the bearer token that API
  * accepts. This page is never part of the production build, which bundles
- * `index.html` alone, and the identifiers mean nothing to the real API.
+ * `app.html` alone, and the identifiers mean nothing to the real API.
  */
 const people: [string, string, string][] = [
   ['00000000-0000-4000-8000-000000000001', 'Demo Principal', 'Manages every record'],
   ['00000000-0000-4000-8000-000000000002', 'Demo Administrative Officer', 'Manages learner records'],
-  ['00000000-0000-4000-8000-000000000003', 'Demo Adviser, Grade 1', 'Has two weeks of attendance and some scores'],
-  ['00000000-0000-4000-8000-000000000004', 'Demo Adviser, Grade 2', 'Has an empty register'],
+  ['00000000-0000-4000-8000-000000000003', 'Demo Adviser, Grade 1', 'Has last month’s register and this month’s so far'],
+  ['00000000-0000-4000-8000-000000000004', 'Demo Adviser, Grade 2', 'Has one day of the register half-taken'],
 ];
 
 const demoApi = (token: string): Api => async <T,>(path: string, method = 'GET', body?: unknown): Promise<T> => {
@@ -46,16 +47,25 @@ function Demo() {
   const [year, setYear] = useState<Row | null>(null);
   const [school, setSchool] = useState<Row | null>(null);
   const api = useMemo(() => demoApi(token), [token]);
+  const profile = me?.profile as Preferences | null | undefined;
+  useEffect(() => { applyPreferences(profile ?? null); }, [profile]);
+  useEffect(() => followDevice(), []);
 
   useEffect(() => {
-    const sync = () => setPage(currentHash());
+    // A link in a sentence changes the address directly; the last screen's message must not follow it to the next.
+    let shown = currentHash();
+    const sync = () => { const next = currentHash(); if (next !== shown) setStatus(idle); shown = next; setPage(next); };
     addEventListener('hashchange', sync);
     return () => removeEventListener('hashchange', sync);
   }, []);
   useEffect(() => {
     try { if (token) sessionStorage.setItem('edunexus-demo-as', token); else sessionStorage.removeItem('edunexus-demo-as'); } catch { /* A private window. */ }
     if (!token) { setMe(null); return; }
-    void api<Row>('/me').then(setMe).catch(() => setToken(''));
+    void api<Row>('/me').then(row => {
+      setMe(row);
+      const start = startScreen((row.profile as Row | null)?.landing, location.hash, id => routes.some(r => r.id === id && available(r, row.role)));
+      if (start) { location.hash = `#/${start}`; setPage(start); }
+    }).catch(() => setToken(''));
   }, [api, token]);
   useEffect(() => {
     if (!me) return;
@@ -86,7 +96,7 @@ function Demo() {
   }
 
   const manager = me.role !== 'teacher';
-  const route = routeFor(page, manager);
+  const route = routeFor(page, me.role);
   const navigate = (id: string) => { location.hash = `#/${id}`; setPage(id); setStatus(idle); setTick(t => t + 1); };
   return (
     <AppShell
@@ -100,7 +110,7 @@ function Demo() {
     >
       {route.ownHeader ? null : <PageHeader route={route} />}
       <StatusLine status={status} />
-      {route.render({ api, me, manager, setStatus, reload: () => setTick(t => t + 1), token: tick, route })}
+      {route.render({ api, me, manager, setStatus, reload: () => setTick(t => t + 1), token: tick, route, account: { updateMe: patch => setMe(m => (m ? { ...m, ...patch } : m)) } })}
     </AppShell>
   );
 }

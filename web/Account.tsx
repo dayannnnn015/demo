@@ -4,8 +4,9 @@ import { message } from './api';
 import { BrandMark } from './components/brand';
 import { Icon } from './components/icons';
 import { StatusLine, type Status, idle } from './components/primitives';
+import { TwoStepSignIn, owesSecondStep } from './two-step';
 
-type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
+type Stage = 'loading' | 'signin' | 'two-step' | 'set-password' | 'ready';
 
 /**
  * A password field that can be read back.
@@ -15,8 +16,10 @@ type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
  * password twice on a shared keyboard. The toggle lets the person decide which
  * risk they are in, which is the only way that judgement can be made correctly.
  */
-function Password({ id, label, hint, autoComplete, value, onChange }: {
+function Password({ id, name = id, label, hint, autoComplete, value, onChange }: {
   id: string;
+  /** What a password manager files the value under; it needs a name as well as an id. */
+  name?: string;
   label: string;
   hint?: string;
   autoComplete: string;
@@ -30,6 +33,7 @@ function Password({ id, label, hint, autoComplete, value, onChange }: {
       <span className="password-wrap">
         <input
           id={id}
+          name={name}
           type={shown ? 'text' : 'password'}
           autoComplete={autoComplete}
           minLength={autoComplete === 'new-password' ? 12 : undefined}
@@ -50,6 +54,20 @@ function Password({ id, label, hint, autoComplete, value, onChange }: {
       {hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
+}
+
+/**
+ * Tells the browser that this email and password just worked, so its own
+ * password manager offers to save them, or to update the one it holds (decision
+ * D1a). Chrome and Edge are told directly; Firefox and Safari find out from the
+ * named fields and the submitted form. EDUNEXUS keeps nothing: the password goes
+ * only to the browser's store, and the session still ends with the tab.
+ */
+export function offerToSave(email: string, password: string) {
+  const Credential = (globalThis as { PasswordCredential?: new (data: { id: string; password: string }) => globalThis.Credential }).PasswordCredential;
+  if (!Credential || !email || !password || !globalThis.navigator?.credentials?.store) return;
+  // A refusal or a dismissed prompt changes nothing about the sign-in.
+  void globalThis.navigator.credentials.store(new Credential({ id: email, password })).catch(() => undefined);
 }
 
 /**
@@ -85,11 +103,14 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
         const { data } = await client.auth.getSession();
         if (cancelled) return;
         if (data.session) {
+          setEmail(data.session.user?.email ?? '');
           if (arrival === 'invite' || arrival === 'recovery') {
             setStage('set-password');
             setStatus(idle);
             return;
           }
+          // A refresh, or the API's TWO_STEP_REQUIRED, with only the password given so far: ask for the code.
+          if (await owesSecondStep(client.auth)) { if (!cancelled) { setStage('two-step'); setStatus(idle); } return; }
           finish();
           return;
         }
@@ -108,6 +129,20 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
 
   return (
     <div className="auth">
+      {/* The front page's painted hillside, from this origin. It shows no person; the words are the school's. */}
+      <section className="auth-art">
+        <picture>
+          <source media="(max-width: 760px)" srcSet="/images/hero-balili-v1-phone.webp" type="image/webp" />
+          <img src="/images/hero-balili-v1-1200.webp" width="1200" height="533" alt="" decoding="async" />
+        </picture>
+        <div className="auth-art-copy">
+          <p className="auth-gov">Republic of the Philippines · Department of Education</p>
+          <p className="auth-school">Balili Elementary School</p>
+          <p className="auth-place">La Trinidad, Benguet</p>
+        </div>
+      </section>
+      <main className="auth-panel">
+      <a className="auth-back" href="/">← The school’s front page</a>
       <div className="auth-card">
         <div className="auth-brand">
           <span className="brand-mark"><BrandMark size={30} /></span>
@@ -117,14 +152,19 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
           </span>
         </div>
 
-        {stage === 'set-password' ? (
+        {stage === 'two-step' ? (
+          <>
+            <h1>Enter your code</h1>
+            <p className="auth-lede">Your account uses two-step sign-in. Open the authenticator app on your phone and type the code it shows for EDUNEXUS.</p>
+          </>
+        ) : stage === 'set-password' ? (
           <>
             <h1>Choose a password</h1>
             <p className="auth-lede">This finishes setting up your account. You will use it to sign in from now on.</p>
           </>
         ) : (
           <>
-            <h1>Sign in</h1>
+            <h1>Sign in to EDUNEXUS</h1>
             <p className="auth-lede">Use the school email address your account was created with.</p>
           </>
         )}
@@ -132,15 +172,19 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
         <StatusLine status={status} />
 
         {stage === 'signin' ? (
-          <form onSubmit={submit(async () => {
-            const { error } = await client.auth.signInWithPassword({ email: email.trim(), password });
+          <form method="post" onSubmit={submit(async () => {
+            const address = email.trim();
+            const { error } = await client.auth.signInWithPassword({ email: address, password });
+            if (error) { setPassword(''); throw error; }
+            // The password was right, so the browser may keep it, even before a two-step code is asked for.
+            offerToSave(address, password);
             setPassword('');
-            if (error) throw error;
+            if (await owesSecondStep(client.auth)) { setStage('two-step'); setStatus(idle); return; }
             finish();
           })}>
             <div className="field">
               <label className="label" htmlFor="email">School email</label>
-              <input id="email" type="email" autoComplete="username" inputMode="email" required value={email} onChange={e => setEmail(e.target.value)} />
+              <input id="email" name="email" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <Password id="password" label="Password" autoComplete="current-password" value={password} onChange={setPassword} />
             <div className="form-actions">
@@ -170,19 +214,28 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               }}>Email a recovery link</button>
             </div>
             <div className="auth-foot">
-              <p>Accounts are created by the school, not self-registered. The reply to a recovery request is the same whether or not an account exists.</p>
+              <p>Your browser can save your password. You stay signed in until this tab is closed, so on a shared computer, close the tab when you are done.</p>
+              <p>Accounts are created by the school, not self-registered.</p>
             </div>
           </form>
+        ) : null}
+
+        {stage === 'two-step' ? (
+          <TwoStepSignIn auth={client.auth} onDone={finish}
+            onCancel={() => { void client.auth.signOut().finally(() => { setStage('signin'); setStatus(idle); }); }} />
         ) : null}
 
         {stage === 'set-password' ? (
           <form onSubmit={submit(async () => {
             if (newPassword !== confirmation) throw new Error('The two passwords do not match.');
             const { error } = await client.auth.updateUser({ password: newPassword });
+            if (error) { setNewPassword(''); setConfirmation(''); throw error; }
+            offerToSave(email, newPassword);
             setNewPassword(''); setConfirmation('');
-            if (error) throw error;
             finish();
           })}>
+            {/* Whose password this is, for the browser's password manager; the person need not type it. */}
+            <input type="email" name="email" autoComplete="username" value={email} readOnly hidden />
             <Password id="new-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={newPassword} onChange={setNewPassword} />
             <Password id="confirm-password" label="Confirm password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
             <div className="form-actions">
@@ -194,6 +247,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
           </form>
         ) : null}
       </div>
+      </main>
     </div>
   );
 }
@@ -243,6 +297,8 @@ export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (
       if (check.error) { setStatus({ kind: 'error', text: check.error.code === 'invalid_credentials' ? 'That is not your current password.' : passwordProblem(check.error) }); return; }
       const changed = await auth.updateUser({ password: next });
       if (changed.error) { setStatus({ kind: 'error', text: passwordProblem(changed.error) }); return; }
+      // So the browser's saved password follows the change, rather than filling the old one next time.
+      offerToSave(email, next);
       setNext(''); setConfirmation('');
       onDone('Password changed. Use the new one the next time you sign in.');
     } catch (error) {

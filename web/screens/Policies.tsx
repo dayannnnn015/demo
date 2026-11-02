@@ -5,10 +5,7 @@ import type { Route } from '../routes';
 import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
-import {
-  Badge, Callout, Cell, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded,
-  gradeName, idle, localToday, sentence, yearName, type Status,
-} from '../components/primitives';
+import { Badge, Callout, Cell, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status, ScrollArea } from '../components/primitives';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -201,7 +198,7 @@ function DraftSheet({ api, draft, onClose, onDone }: { api: Api; draft: Draft | 
         </div>
 
         <h3>Components</h3>
-        <div className="table-wrap">
+        <ScrollArea>
           <table>
             <thead><tr><th scope="col">Code</th><th scope="col">Name</th><th scope="col" className="numeric">Weight (%)</th><th scope="col" className="actions">Remove</th></tr></thead>
             <tbody>
@@ -216,7 +213,7 @@ function DraftSheet({ api, draft, onClose, onDone }: { api: Api; draft: Draft | 
             </tbody>
             <tfoot><tr><th scope="row" colSpan={2}>Total</th><td className="numeric"><b>{totalPercent(rows)}%</b></td><td /></tr></tfoot>
           </table>
-        </div>
+        </ScrollArea>
         <div className="form-actions">
           <button type="button" className="btn secondary small" disabled={rows.length >= 10} onClick={() => setRows([...rows, { code: '', name: '', percent: '' }])}>Add a component</button>
         </div>

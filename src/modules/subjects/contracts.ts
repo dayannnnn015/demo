@@ -1,9 +1,10 @@
 import {z} from 'zod';
+import {plainName,plainNameMessage,shortCode,shortCodeMessage} from '../../core/text.js';
 import {uuid} from '../foundation/contracts.js';
 export const subjectReason=z.string().trim().min(10).max(500).regex(/^[^\u0000-\u001f\u007f]*$/);
-const metadata={name:z.string().trim().min(1).max(120).regex(/^[^\u0000-\u001f\u007f]*$/),kind:z.enum(['learning_area','developmental_domain']),grade_levels:z.array(z.number().int().min(0).max(6)).min(1).max(7),active:z.boolean()};
+const metadata={name:z.string().trim().min(1).max(120).regex(plainName,plainNameMessage),kind:z.enum(['learning_area','developmental_domain']),grade_levels:z.array(z.number().int().min(0).max(6)).min(1).max(7).refine(v=>new Set(v).size===v.length,'Choose each grade level once'),active:z.boolean()};
 export const subjectSchemas={
-  create:z.strictObject({code:z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_-]{0,23}$/),...metadata,reason:subjectReason}),
+  create:z.strictObject({code:z.string().trim().regex(shortCode,shortCodeMessage),...metadata,reason:subjectReason}),
   update:z.strictObject({version:z.number().int().min(1).max(2147483646),...metadata,reason:subjectReason}),
   list:z.strictObject({active:z.enum(['true','false','all']).default('true'),q:z.string().trim().min(1).max(60).optional(),limit:z.coerce.number().int().min(1).max(100).default(50),after_id:uuid.optional()}),
   history:z.strictObject({limit:z.coerce.number().int().min(1).max(10).default(5),before_version:z.coerce.number().int().min(1).max(2147483647).optional()})

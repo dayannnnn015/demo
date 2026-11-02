@@ -4,10 +4,19 @@ import { query } from '../api';
 import { actionName, fieldNames, isJournal, recordName } from '../activity';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
+import { InviteList } from './InviteBatch';
 import {
   Badge, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, Pager, Select, Table, Task,
   Unrecorded, sentence, value, type Field, type Status,
 } from '../components/primitives';
+import { Affects } from '../components/affects';
+import { Avatar, type Look } from '../components/avatar';
+import { fullPicture } from './Profile';
+import { NameRequestQueue } from './ProfileRecords';
+import { AssignAdvisers } from './SetupBatch';
+import { Confirm } from '../components/overlay';
+import { ApiError, message } from '../api';
+import { gradeName, yearName } from '../components/primitives';
 
 type Props = { api: Api; me?: Row; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -21,34 +30,82 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
   const [rows, setRows] = useState<Page | null>(null);
   const [offset, setOffset] = useState(0);
   const [granting, setGranting] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [years, setYears] = useState<Row[]>([]);
+  const [yearId, setYearId] = useState('');
+  const [sections, setSections] = useState<Row[] | null>(null);
+  const year = years.find(y => String(y.id) === yearId) ?? null;
   useEffect(() => { setRows(null); void api<Page>(`/staff${query({ limit: 25, offset })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, offset, token]);
+  // The years whose advisers can still change. A teacher's row opens on the active one, or else the newest draft; at the
+  // end of a year next year's draft is set up beside it, so both are offered (found in the test pass, N7).
+  useEffect(() => {
+    void api<Page>('/academic-years').then(r => {
+      const open = r.items.filter(y => y.status !== 'closed').sort((a, b) => Number(b.start_year) - Number(a.start_year));
+      setYears(open);
+      setYearId(current => (open.some(y => String(y.id) === current) ? current : String((open.find(y => y.status === 'active') ?? open[0])?.id ?? '')));
+    }).catch(() => setYears([]));
+  }, [api, token]);
+  useEffect(() => {
+    if (!year) { setSections([]); return; }
+    setSections(null);
+    void (async () => {
+      const all: Row[] = [];
+      for (let skip = 0; ; skip += 100) {
+        const page = await api<Page>(`/sections${query({ academic_year_id: String(year.id), limit: 100, offset: skip })}`);
+        all.push(...page.items);
+        if (!page.pagination?.has_more) break;
+      }
+      setSections(all.sort((a, b) => Number(a.grade_level) - Number(b.grade_level) || String(a.name).localeCompare(String(b.name))));
+    })().catch(() => setSections([]));
+  }, [api, year?.id, token]);
   const allowed = me.role === 'principal' ? roles : roles.slice(0, 1);
 
   return (
     <>
       <PageHeader
         route={route}
-        actions={<button type="button" className="btn" onClick={() => setGranting(true)}><Icon name="plus" size={15} />Grant access</button>}
+        actions={<>
+          {year && year.status !== 'closed' ? <button type="button" className="btn secondary" onClick={() => setAssigning(true)} data-tour="staff-assign">Assign advisers</button> : null}
+          <button type="button" className="btn" onClick={() => setGranting(true)} data-tour="staff-grant"><Icon name="plus" size={15} />Grant access</button>
+        </>}
       />
 
+      <NameRequestQueue api={api} token={token} setStatus={setStatus} reload={reload} />
+
       <div className="card">
-        <div className="card-head"><div>
-          <h2>People with access</h2>
-          <p className="card-note">Suspending blocks someone immediately without deleting anything they recorded.</p>
-        </div></div>
+        <div className="card-head">
+          <div>
+            <h2 data-tour="staff-list">People with access</h2>
+            <p className="card-note">Suspending blocks someone immediately without deleting anything they recorded.</p>
+          </div>
+          {years.length > 1 ? (
+            <div className="card-head-actions">
+              <span className="field inline">
+                <label className="label" htmlFor="staff-year">Advisers for</label>
+                <Select id="staff-year" value={yearId} onChange={event => setYearId(event.target.value)}>
+                  {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearName(y)} ({y.status === 'active' ? 'active' : 'being set up'})</option>)}
+                </Select>
+              </span>
+            </div>
+          ) : null}
+        </div>
         <Table
           loading={rows === null}
           rows={rows?.items ?? []}
           rowKey={r => String(r.user_id)}
           empty={<EmptyState title="No staff yet" body="Grant access to an account the operator already created, or request an invitation for a colleague." />}
           columns={[
-            { header: 'Name', cell: r => <b>{value(r, 'display_name')}</b> },
+            { header: 'Name', cell: r => <span className="person"><Avatar name={value(r, 'display_name')} look={r.avatar as Look | null} size="sm" /><b>{value(r, 'display_name')}</b></span> },
             { header: 'Permission level', cell: r => sentence(value(r, 'role')) },
+            { header: 'Position', cell: r => (r.position ? String(r.position) : <span className="muted">Not set</span>) },
             { header: 'Access', cell: r => r.active ? <Badge tone="good">Active</Badge> : <Badge tone="stopped">Suspended</Badge> },
           ]}
           detail={row => {
             if (me.role !== 'principal' && row.role !== 'teacher') return <p className="muted">Only a principal can change an administrative account.</p>;
-            const fields: Field[] = [nameField];
+            // The SF4 prints each adviser's position and specialization beside their section.
+            const fields: Field[] = [nameField,
+              { key: 'position', label: 'Position', optional: true, maxLength: 120, hint: 'As the SF4 prints it, for example Teacher III or Master Teacher II.' },
+              { key: 'specialization', label: 'Major or specialization', optional: true, maxLength: 120 }];
             if (row.user_id !== me.user_id) fields.push(
               { key: 'role', label: 'Permission level', options: allowed },
               { key: 'active', label: 'Access', options: [['true', 'Active'], ['false', 'Suspended']] },
@@ -56,7 +113,9 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
             return (
               <>
                 {row.user_id === me.user_id ? <p className="muted">You cannot change your own permission level or access.</p> : null}
-                <Editor fields={fields} initial={row} setStatus={setStatus} onSaved={reload}
+                <StaffPhoto api={api} row={row} own={row.user_id === me.user_id} setStatus={setStatus} reload={reload} />
+                {row.role === 'teacher' && row.active && year && sections ? <Advises api={api} teacher={row} year={year} sections={sections} setStatus={setStatus} reload={reload} /> : null}
+                <Editor fields={fields} initial={row} setStatus={setStatus} onSaved={reload} warning={<Affects what="staff" />}
                   onSubmit={data => api(`/staff/${row.user_id}`, 'PATCH', { ...data, ...('active' in data ? { active: data.active === 'true' } : {}), version: row.version })} />
               </>
             );
@@ -64,6 +123,10 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
         />
         <Pager offset={offset} count={rows?.items.length ?? 0} hasMore={Boolean(rows?.pagination?.has_more)} onChange={setOffset} />
       </div>
+
+      {assigning && year ? (
+        <AssignAdvisers api={api} year={year} onClose={n => { setAssigning(false); if (n) { reload(); setStatus({ text: n === 1 ? '1 adviser change saved.' : `${n} adviser changes saved.`, kind: 'done' }); } }} />
+      ) : null}
 
       {granting ? (
         <FormSheet
@@ -80,19 +143,130 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
   );
 }
 
+/**
+ * A colleague's photo, as their manager sees it, and the way to take it down
+ * when it should not be there. The person changes their own on My profile.
+ */
+function StaffPhoto({ api, row, own, setStatus, reload }: { api: Api; row: Row; own: boolean; setStatus: (s: Status) => void; reload: () => void }) {
+  const look = row.avatar as (Look & { version?: number; photo?: { sha256: string; thumb: string } | null }) | null;
+  const [full, setFull] = useState<{ sha256: string; base64: string } | null>(null);
+  const [taking, setTaking] = useState(false);
+  const sha = look?.photo?.sha256;
+  useEffect(() => {
+    if (!sha) return;
+    void fullPicture(api, String(row.user_id), sha).then(setFull);
+  }, [sha]);
+  if (!look?.photo) return null;
+  return (
+    <div className="staff-photo">
+      <Avatar name={value(row, 'display_name')} look={look} size="lg" image={full} label={`Photo of ${value(row, 'display_name')}`} />
+      <div>
+        <p className="muted">{own ? 'Your photo. Change or remove it on My profile.' : 'Uploaded by this person. Take it down if it is not a suitable picture of them; they can upload another.'}</p>
+        {own ? null : <button type="button" className="btn secondary small" onClick={() => setTaking(true)}>Take down photo</button>}
+      </div>
+      {taking ? (
+        <FormSheet
+          title="Take down this photo"
+          note={`It is deleted for good, and ${value(row, 'display_name')} shows by their initials until they upload another.`}
+          submitLabel="Take down photo"
+          fields={[reasonField]}
+          onSubmit={data => api(`/staff/${String(row.user_id)}/photo/remove`, 'POST', { version: Number(look.version ?? 0), reason: data.reason })}
+          onSaved={() => { setTaking(false); reload(); setStatus({ text: 'The photo was taken down and deleted.', kind: 'done' }); }}
+          onClose={() => setTaking(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The sections a teacher advises, set from their own row (decision D2a: the
+ * group asked for the adviser to be chosen on the person, not on a separate
+ * screen). Each change is the same versioned section update the one-table
+ * assignment sends; taking a section from another adviser says so first.
+ */
+function Advises({ api, teacher, year, sections, setStatus, reload }: { api: Api; teacher: Row; year: Row; sections: Row[]; setStatus: (s: Status) => void; reload: () => void }) {
+  const id = String(teacher.user_id);
+  const mine = sections.filter(s => s.adviser_user_id === id).map(s => String(s.id));
+  const [chosen, setChosen] = useState<string[]>(mine);
+  const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
+  useEffect(() => { setChosen(sections.filter(s => s.adviser_user_id === id).map(s => String(s.id))); }, [sections, id]);
+  const closed = year.status === 'closed';
+  const add = sections.filter(s => chosen.includes(String(s.id)) && s.adviser_user_id !== id);
+  const release = sections.filter(s => !chosen.includes(String(s.id)) && s.adviser_user_id === id);
+  const taken = add.filter(s => s.adviser_user_id);
+  const named = (s: Row) => `${gradeName(s.grade_level)} · ${String(s.name)}`;
+  const save = async () => {
+    setBusy(true);
+    let done = 0;
+    try {
+      for (const s of [...release, ...add]) {
+        await api(`/sections/${String(s.id)}`, 'PATCH', { version: s.version, adviser_user_id: add.includes(s) ? id : null });
+        done++;
+      }
+      setAsking(false);
+      setStatus({ kind: 'done', text: `${String(teacher.display_name)} advises ${chosen.length ? chosen.map(c => named(sections.find(s => String(s.id) === c)!)).join(', ') : 'no section'} in ${yearName(year)}.` });
+      reload();
+    } catch (error) {
+      setAsking(false);
+      setStatus({ kind: 'error', text: `${done ? `${done} of the changes were saved before this stopped. ` : ''}${error instanceof ApiError && error.isConflict ? 'A section changed while you were choosing. It has been read again; choose again.' : message(error)}` });
+      reload();
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="advises" data-tour="staff-advises">
+      <h3>Advises in {yearName(year)}</h3>
+      {sections.length ? (
+        <>
+          <div className="advises-grid" role="group" aria-label={`Sections ${String(teacher.display_name)} advises`}>
+            {sections.map(s => {
+              const other = s.adviser_user_id && s.adviser_user_id !== id;
+              return (
+                <label key={String(s.id)} className="advises-option">
+                  <input type="checkbox" disabled={closed || busy} checked={chosen.includes(String(s.id))}
+                    onChange={e => setChosen(c => (e.target.checked ? [...c, String(s.id)] : c.filter(x => x !== String(s.id))))} />
+                  <span>{named(s)}</span>
+                  {other ? <span className="muted">advised by someone else</span> : !s.adviser_user_id ? <span className="muted">no adviser</span> : null}
+                </label>
+              );
+            })}
+          </div>
+          {closed ? <p className="muted">{yearName(year)} is closed; its advisers can no longer change.</p> : (
+            <div className="form-actions">
+              <button type="button" className="btn" disabled={busy || (!add.length && !release.length)} onClick={() => (taken.length ? setAsking(true) : void save())}>
+                {busy ? 'Saving…' : 'Save sections'}
+              </button>
+              {add.length || release.length ? <button type="button" className="btn ghost" disabled={busy} onClick={() => setChosen(mine)}>Undo changes</button> : null}
+            </div>
+          )}
+        </>
+      ) : <p className="muted">{yearName(year)} has no sections yet. Create them on <a href="#/years">School years &amp; sections</a>.</p>}
+      {asking ? (
+        <Confirm title="Move these sections to this teacher?" tone="plain" busy={busy} confirmLabel="Move and save" onClose={() => setAsking(false)} onConfirm={() => void save()}
+          body={`${taken.map(named).join(', ')} ${taken.length === 1 ? 'has' : 'have'} another adviser now. Saving makes ${String(teacher.display_name)} the adviser instead, and the other adviser stops seeing ${taken.length === 1 ? 'that class' : 'those classes'} at once.`} />
+      ) : null}
+    </div>
+  );
+}
+
 export function Invitations({ api, me, setStatus, reload, token, route }: Props) {
   // An older API omits the flag; only an explicit false hides the action.
   const canCreate = me?.account_service !== false;
   const [rows, setRows] = useState<Page | null>(null);
   const [status, setFilter] = useState('requested');
   const [asking, setAsking] = useState(false);
+  const [listing, setListing] = useState(false);
   useEffect(() => { setRows(null); void api<Page>(`/staff-invitations${query({ status, limit: 50 })}`).then(setRows).catch(() => setRows({ items: [] })); }, [api, status, token]);
 
   return (
     <>
       <PageHeader
         route={route}
-        actions={<button type="button" className="btn" onClick={() => setAsking(true)}><Icon name="plus" size={15} />Request an invitation</button>}
+        actions={<>
+          {me ? <button type="button" className="btn secondary" onClick={() => setListing(true)} data-tour="invite-list"><Icon name="plus" size={15} />Request from a list</button> : null}
+          <button type="button" className="btn" onClick={() => setAsking(true)}><Icon name="plus" size={15} />Request an invitation</button>
+        </>}
       />
 
       {canCreate ? (
@@ -107,7 +281,7 @@ export function Invitations({ api, me, setStatus, reload, token, route }: Props)
 
       <div className="card">
         <div className="card-head">
-          <h2>Invitations</h2>
+          <h2 data-tour="invite-table">Invitations</h2>
           <div className="field inline">
             <label className="label" htmlFor="invite-filter">Show</label>
             <Select id="invite-filter" value={status} onChange={e => setFilter(e.target.value)}>
@@ -124,7 +298,7 @@ export function Invitations({ api, me, setStatus, reload, token, route }: Props)
           empty={<EmptyState title="Nothing in this state" body="Requests you record appear here until the operator creates the account." />}
           columns={[
             { header: 'Email', cell: r => <span className="mono">{value(r, 'email')}</span> },
-            { header: 'Name', cell: r => <b>{value(r, 'display_name')}</b> },
+            { header: 'Name', cell: r => <span className="person"><Avatar name={value(r, 'display_name')} look={r.avatar as Look | null} size="sm" /><b>{value(r, 'display_name')}</b></span> },
             { header: 'Permission level', cell: r => sentence(value(r, 'role')) },
             { header: 'State', cell: r => r.status === 'provisioned'
               ? <Badge tone="good">Completed</Badge>
@@ -161,6 +335,15 @@ export function Invitations({ api, me, setStatus, reload, token, route }: Props)
         />
       </div>
 
+      {listing && me ? (
+        <InviteList api={api} me={me} onClose={written => {
+          setListing(false);
+          if (!written) return;
+          reload();
+          setStatus({ text: written === 1 ? '1 invitation requested.' : `${written} invitations requested.`, kind: 'done' });
+        }} />
+      ) : null}
+
       {asking ? (
         <FormSheet
           title="Request an invitation"
@@ -190,7 +373,7 @@ export function Activity({ api, token }: { api: Api; token: number }) {
   return (
     <div className="card">
       <div className="card-head"><div>
-        <h2>Recorded changes</h2>
+        <h2 data-tour="activity-list">Recorded changes</h2>
         <p className="card-note">Field names only. Values, learner names and credentials are never copied here. A reviewed change also writes its own history entry, so it appears twice.</p>
       </div></div>
       <Table

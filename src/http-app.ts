@@ -28,9 +28,17 @@ import { executeSubject } from './modules/subjects/service.js';
 import { executeFollowup } from './modules/attendance-followups/service.js';
 import { executeMonitor } from './modules/attendance-monitor/service.js';
 import { executeMonth } from './modules/attendance-months/service.js';
+import { executeLearnerRecord } from './modules/learner-record/service.js';
+import { executeSchoolReport } from './modules/school-reports/service.js';
+import { executeSubmission } from './modules/roster-submissions/service.js';
+import { executeForm } from './modules/forms/service.js';
+import { executeReport } from './modules/report-records/service.js';
+import { executeNextYear } from './modules/next-year/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
-import { appPage } from './app-page.js';
+import { appPage, sitePage } from './app-page.js';
+import { executeSite, readPublicSite } from './modules/site/service.js';
+import { executeProfile } from './modules/profiles/service.js';
 
 export interface Dependencies { database: Database; auth: Authenticator; origins: string[]; logger: Logger; publicAuth?: { url: string; publishableKey: string }; identities?: IdentityProvisioner; }
 
@@ -81,7 +89,7 @@ export function createApp(deps: Dependencies) {
   // root stays a machine-readable descriptor. Otherwise it opens the workspace,
   // because a person typing the bare address expects the app, not JSON.
   if (!deps.publicAuth) app.get('/', (_req, res) => res.json({ service: 'EDUNEXUS', health: '/health/live', contract: '/openapi.json' }));
-  app.get('/health/live', (_req, res) => res.json({ status: 'ok' }));
+  app.get('/health/live', (_req, res) => res.json({ status: 'ok', version: openapi.info.version }));
   app.get('/health/ready', async (_req, res) => {
     try {
       await deps.database.transaction(async tx => {
@@ -110,7 +118,22 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.assessment_policy_binding_events') is not null
           and to_regclass('edunexus.staff_invitation_events') is not null
           and to_regclass('edunexus.assessment_score_events') is not null
-          and to_regprocedure('edunexus.read_assessment_components(uuid)') is not null as ready`);
+          and to_regprocedure('edunexus.read_assessment_components(uuid)') is not null
+          and to_regprocedure('edunexus.read_enrollment_attendance(uuid)') is not null
+          and to_regprocedure('edunexus.read_sf4_counts(uuid,date)') is not null
+          and to_regclass('edunexus.roster_submission_events') is not null
+          and to_regprocedure('edunexus.read_sf4_source(uuid,date)') is not null
+          and to_regprocedure('edunexus.read_report_records(uuid)') is not null
+          and to_regprocedure('edunexus.read_sf10_source(uuid)') is not null
+          and to_regprocedure('edunexus.read_promotions(uuid,uuid)') is not null
+          and to_regprocedure('edunexus.read_next_year_source(uuid,uuid)') is not null
+          and to_regprocedure('edunexus.read_grade_entry(uuid)') is not null
+          and to_regprocedure('edunexus.read_public_site()') is not null
+          and to_regprocedure('edunexus.read_site_faqs(boolean)') is not null
+          and to_regprocedure('edunexus.record_report_card(uuid,jsonb,text)') is not null
+          and to_regprocedure('edunexus.read_my_profile()') is not null
+          and to_regprocedure('edunexus.read_my_sessions(uuid)') is not null
+          and to_regprocedure('edunexus.read_my_activity(text,bigint,integer)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -118,13 +141,34 @@ export function createApp(deps: Dependencies) {
     } catch { throw new AppError(503, 'NOT_READY', 'The service is not ready.'); }
   });
   app.get('/openapi.json', (_req, res) => res.json(openapi));
+  // The front page's data, for anyone and without a token: only what the school
+  // published, its profile and its school-wide days without classes. A minute's
+  // shared cache keeps a busy morning off the database.
+  app.get('/api/v1/public/site', async (_req, res) => {
+    const data = await deps.database.transaction(async tx => {
+      await assertRuntimeRole(tx);
+      await tx.query("select set_config('statement_timeout','5000',true)");
+      return readPublicSite(tx);
+    });
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
+    res.json({ data, requestId: res.locals.requestId });
+  });
   if (deps.publicAuth) {
-    app.get(['/', '/account/setup', '/app'], (_req, res) => {
+    // The public front page. It talks to this origin only: no sign-in service, no third party.
+    app.get(['/', '/announcements', '/announcements/:id', '/calendar', '/faq', '/about', '/contact'], (_req, res) => {
+      res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      // Kept out of search engines until the school goes live with real records (see the runbooks).
+      if (process.env.EDUNEXUS_SITE_INDEX !== 'yes') res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      res.type('html').send(sitePage());
+    });
+    app.get(['/account/setup', '/app'], (_req, res) => {
       // The bundle is hashed and same-origin; styles and fonts ship as files.
       // `img-src 'self'` exists for one file, /favicon.svg, which a browser
       // fetches as an image and default-src would otherwise block. It stays at
-      // 'self' with no `data:`: the workspace itself still renders no image,
-      // and nothing user-supplied is ever served from this origin.
+      // 'self' with no `data:`. The sign-in page shows the front page's hillside
+      // from /images/; past it the workspace renders no image, and nothing
+      // user-supplied is ever served from this origin.
       res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.type('html').send(appPage());
@@ -139,12 +183,16 @@ export function createApp(deps: Dependencies) {
       const identity = await deps.auth.verify(authorization.slice(7));
       // Commit the rate counter separately: a failed business transaction must
       // still consume a request. No personal data is stored in the counter.
-      const allowed = await withActor(deps.database, identity, res.locals.requestId, async tx => {
-        await currentStaff(tx, identity);
+      const caller = await withActor(deps.database, identity, res.locals.requestId, async tx => {
+        const staff = await currentStaff(tx, identity);
         const [bucket] = await tx.query<{ allowed: boolean }>('select edunexus.consume_request() as allowed');
-        return bucket?.allowed;
+        return { allowed: bucket?.allowed, role: staff.role };
       });
-      if (!allowed) { res.setHeader('Retry-After', '60'); throw new AppError(429, 'RATE_LIMITED', 'Too many requests. Try again in one minute.'); }
+      if (!caller.allowed) { res.setHeader('Retry-After', '60'); throw new AppError(429, 'RATE_LIMITED', 'Too many requests. Try again in one minute.'); }
+      // Refuse before reading the input: an adviser sending a manager's request
+      // is told it is not theirs, not which of its fields are wrong. The check
+      // inside the transaction stays, since a role can change between the two.
+      if ('manager' in operation && caller.role === 'teacher') throw new AppError(403, 'FORBIDDEN', 'A principal or administrative officer account is required.');
       const rawId = (req.params as Record<string, string>).id;
       const id = rawId === undefined ? undefined : uuid.parse(rawId);
       if ('body' in operation && !req.is('application/json')) throw new AppError(415, 'JSON_REQUIRED', 'Send an application/json request body.');
@@ -154,7 +202,7 @@ export function createApp(deps: Dependencies) {
         const staff = await currentStaff(tx, identity);
         if ('manager' in operation && staff.role === 'teacher') throw new AppError(403, 'FORBIDDEN', 'A principal or administrative officer account is required.');
         const input = { body, query, ...(id ? { id } : {}) };
-        const context = { tx, staff, identity, ...(deps.identities ? { identities: deps.identities } : {}) };
+        const context = { tx, staff, identity, client: { userAgent: req.get('user-agent') }, ...(deps.identities ? { identities: deps.identities } : {}) };
         if (!('module' in operation)) return executeOperation(operation.id, context, input);
         if (operation.module === 'registry') return executeRegistry(operation.id, context, input);
         if (operation.module === 'registry-review') return executeReview(operation.id, context, input);
@@ -167,6 +215,14 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'assessment-bindings') return executeBinding(operation.id, context, input);
         if (operation.module === 'staff-invitations') return executeInvitation(operation.id, context, input);
         if (operation.module === 'assessment-scores') return executeScore(operation.id, context, input);
+        if (operation.module === 'learner-record') return executeLearnerRecord(operation.id, context, input);
+        if (operation.module === 'school-reports') return executeSchoolReport(operation.id, context, input);
+        if (operation.module === 'roster-submissions') return executeSubmission(operation.id, context, input);
+        if (operation.module === 'forms') return executeForm(operation.id, context, input);
+        if (operation.module === 'report-records') return executeReport(operation.id, context, input);
+        if (operation.module === 'next-year') return executeNextYear(operation.id, context, input);
+        if (operation.module === 'site') return executeSite(operation.id, context, input);
+        if (operation.module === 'profiles') return executeProfile(operation.id, context, input);
         if (operation.module === 'section-subjects') return executeOffering(operation.id, context, input);
         if (operation.module === 'subjects') return executeSubject(operation.id, context, input);
         if (operation.module === 'attendance-followups') return executeFollowup(operation.id, context, input);
@@ -191,7 +247,7 @@ export function createApp(deps: Dependencies) {
       : normalizeError(error);
     if (normalized.status >= 500) deps.logger.error({ requestId: res.locals.requestId, code: normalized.code }, 'request failed');
     if (normalized.status === 401) res.setHeader('WWW-Authenticate', 'Bearer');
-    res.status(normalized.status).json({ error: { code: normalized.code, message: normalized.message }, requestId: res.locals.requestId });
+    res.status(normalized.status).json({ error: { code: normalized.code, message: normalized.message, ...(normalized.fields ? { fields: normalized.fields } : {}) }, requestId: res.locals.requestId });
   };
   app.use(errors);
   return app;

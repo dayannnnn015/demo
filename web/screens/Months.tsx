@@ -1,19 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { Api, Page } from '../api';
+import type { Api, Page, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import type { Route } from '../routes';
 import { clamp, firstOf, lastOf, monthName, monthOf, step, weekday, type Month } from '../dates';
 import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
 import { ScopePickers, useScope } from '../components/scope';
+import { Sf4Report } from './Sf4';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, StatusLine, Table, TableSkeleton,
   idle, byLearnerName, learnerName, localToday, type Status,
 } from '../components/primitives';
 import { MarkValue, type Mark } from './Attendance';
 import { Session } from './Calendar';
+import { Affects } from '../components/affects';
 
-type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
+type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
 type Mode = 'classroom' | 'alternative_delivery' | 'no_class' | 'suspended';
 type Status2 = 'draft' | 'submitted' | 'locked';
@@ -48,6 +50,8 @@ export const issueText: Record<string, string> = {
 };
 
 const actionName: Record<Action, string> = { submit: 'Submit this month', return: 'Return to draft', lock: 'Lock this month', reopen: 'Reopen this month' };
+/** The names the tour of closing a month points at. */
+const tourName: Record<Action, string> = { submit: 'month-submit', return: 'month-return', lock: 'month-lock', reopen: 'month-reopen' };
 
 const actionNote: Record<Action, string> = {
   submit: 'Submitting freezes the month. Its marks, the calendar dates it covers and its membership become read-only, and an immutable snapshot of who was enrolled and what was marked is kept.',
@@ -107,6 +111,7 @@ function TransitionSheet({ api, sectionId, monthOn, version, action, onClose, on
   return (
     <Sheet title={actionName[action]} note={actionNote[action]} wide onClose={onClose}>
       <StatusLine status={status} />
+      <Affects what="month" />
 
       {plan ? (
         <>
@@ -288,7 +293,7 @@ function History({ api, sectionId, monthOn }: { api: Api; sectionId: string; mon
  * school day, an attendance credit, a percentage or an SF4 total, because the
  * rules that turn sessions into any of those have not been supplied.
  */
-export function Months({ api, setStatus, reload, token, route }: Props) {
+export function Months({ api, me, setStatus, reload, token, route }: Props) {
   const scope = useScope(api, token);
   const [month, setMonth] = useState<Month | null>(null);
   const [current, setCurrent] = useState<Current | null>(null);
@@ -328,7 +333,7 @@ export function Months({ api, setStatus, reload, token, route }: Props) {
         <PageHeader route={route} />
         <div className="card">
           <div className="card-head"><div className="toolbar"><ScopePickers scope={scope} /></div></div>
-          <EmptyState title="No sections in this year" body="Create a section on the Sections and advisers screen before consolidating a month." />
+          <EmptyState title="No sections in this year" body="Create a section on School years & sections before consolidating a month." />
         </div>
       </>
     );
@@ -359,6 +364,7 @@ export function Months({ api, setStatus, reload, token, route }: Props) {
               // lead to a refusal is not offered.
               disabled={!current || (action === 'submit' && !current.can_submit)}
               onClick={() => setActing(action)}
+              data-tour={tourName[action]}
             >{actionName[action]}</button>
           ))}
         </>}
@@ -366,7 +372,7 @@ export function Months({ api, setStatus, reload, token, route }: Props) {
 
       <div className="card">
         <div className="card-head">
-          <div className="toolbar">
+          <div className="toolbar" data-tour="month-pick">
             <ScopePickers scope={scope} />
             {month ? (
               <div className="field inline">
@@ -436,6 +442,8 @@ export function Months({ api, setStatus, reload, token, route }: Props) {
 
       {sectionId && monthOn ? <Membership api={api} sectionId={sectionId} monthOn={monthOn} token={token} /> : null}
       {sectionId && monthOn ? <History api={api} sectionId={sectionId} monthOn={monthOn} /> : null}
+
+      {year && monthOn ? <Sf4Report api={api} me={me} year={year} monthOn={monthOn} setStatus={setStatus} /> : null}
 
       {acting && current ? (
         <TransitionSheet

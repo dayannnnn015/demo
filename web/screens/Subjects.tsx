@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { Api, Row } from '../api';
 import { query } from '../api';
 import type { Route } from '../routes';
@@ -8,6 +8,10 @@ import {
   Badge, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, PrintButton, Select, Table,
   Task, Unrecorded, gradeName, type Field, type Status,
 } from '../components/primitives';
+import { cardFor, disputedFor, formName, gradesOf, lineOf, reportCardAreas, type ReportCardArea } from '../learning-areas';
+import { BatchSheet, type Candidate } from '../components/batch';
+import { Affects } from '../components/affects';
+export { stopsBatch, type Candidate } from '../components/batch';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -123,6 +127,146 @@ function SubjectHistory({ api, subject }: { api: Api; subject: Subject }) {
   );
 }
 
+/** A proposed learning area: its name, its permanent code, and any note the documents force — prose that has to wrap, unlike a cell's mono meta line. */
+function AreaCell({ code, name, note }: { code: string; name: string; note?: string | undefined }) {
+  return (
+    <span className="batch-area">
+      <span><b>{name}</b> <span className="mono batch-code">{code}</span></span>
+      {note ? <span className="batch-note">{note}</span> : null}
+    </span>
+  );
+}
+
+/** The documents a row is printed on. Each name stays on one line: "Grades 4–" over "6 card" reads as two things. */
+const printedOn = (area: ReportCardArea) =>
+  area.from.map((f, i) => <span key={f}>{i ? ' · ' : ''}<span className="batch-form">{formName[f]}</span></span>);
+
+/** Whether the catalog already holds this code exactly as the cards print it. */
+const sameAs = (subject: Subject, area: ReportCardArea) =>
+  subject.name === area.name && subject.kind === 'learning_area' && String(subject.grade_levels) === String(gradesOf(area));
+
+/** Rows for the catalog sheet. A code already taken is never re-proposed, whatever it names: codes are permanent. */
+export function catalogCandidates(catalog: Subject[]): Candidate[] {
+  const byCode = new Map(catalog.map(s => [s.code, s]));
+  return reportCardAreas.map(area => {
+    const found = byCode.get(area.code);
+    return {
+      key: area.code,
+      label: area.code,
+      chosen: true,
+      blocked: !found ? undefined : sameAs(found, area) ? 'Already in the catalog' : `Code already used for “${found.name}”, ${gradesText(found.grade_levels)}`,
+      cells: [
+        <AreaCell code={area.code} name={area.name} note={area.note} />,
+        <span className="batch-area"><span>{gradesText(gradesOf(area))}</span><span className="batch-note">{printedOn(area)}</span></span>,
+      ],
+    };
+  });
+}
+
+/**
+ * Rows for one section's card. Only a subject the catalog already holds, as an
+ * available learning area applying to this grade, can be offered — the same
+ * test the database applies — and a retired offering is reactivated from its
+ * own row rather than offered twice.
+ */
+export function offeringCandidates(grade: number, catalog: Subject[], existing: Offering[]): Candidate[] {
+  return cardFor(grade).map(area => {
+    const subject = catalog.find(s => s.code === area.code);
+    const offering = subject && existing.find(o => o.subject_id === subject.id);
+    const disputed = disputedFor(area, grade);
+    const blocked = !subject ? 'Not in the catalog yet'
+      : offering ? (offering.active ? 'Already offered' : 'Retired here — reactivate it from its row')
+      : !subject.active ? 'Archived in the catalog'
+      : !subject.grade_levels.includes(grade) ? `The catalog does not list it for ${gradeName(grade)}`
+      : undefined;
+    return {
+      key: area.code,
+      label: area.code,
+      chosen: !disputed,
+      blocked,
+      cells: [
+        <span className="mono">{lineOf(area, grade)}</span>,
+        <AreaCell code={area.code} name={subject?.name ?? area.name} note={disputed ? area.note : undefined} />,
+        <span className="batch-note">{printedOn(area)}</span>,
+      ],
+    };
+  });
+}
+
+function AddReportCardAreas({ api, catalog, onClose }: { api: Api; catalog: Subject[]; onClose: (written: number) => void }) {
+  // The catalog as this sheet last read it. A row that went in keeps saying so
+  // after a re-read, because its outcome is drawn before its candidate state.
+  const [current, setCurrent] = useState(catalog);
+  const candidates = useMemo(() => catalogCandidates(current), [current]);
+  return (
+    <BatchSheet
+      title="Add the report-card learning areas"
+      note="Each subject is its own record. A refused row does not stop the others."
+      intro={(
+        <Callout tone="info" title="Copied from the school’s own forms">
+          These are the learning areas printed on the school’s report cards for Grades 1 to 6, and on DepEd’s SF10 as revised in 2025 under DepEd Order No. 10, s. 2024.
+          Nothing is added until you tick it, and each one is recorded under your name with the reason below. Codes are permanent; names and grades can be revised later.
+          No Kindergarten card has been supplied, so none is proposed for Kindergarten.
+        </Callout>
+      )}
+      headers={['Learning area', 'Applies to']}
+      candidates={candidates}
+      empty={null}
+      verb={n => (n === 1 ? 'Add 1 subject' : `Add ${n} subjects`)}
+      past="Added"
+      send={(code, reason) => {
+        const area = reportCardAreas.find(a => a.code === code)!;
+        return api('/subjects', 'POST', { code, name: area.name, kind: 'learning_area', grade_levels: gradesOf(area), active: true, reason });
+      }}
+      reread={async () => setCurrent((await collect<Subject>(api, '/subjects', { active: 'all' })).items)}
+      onClose={onClose}
+    />
+  );
+}
+
+function OfferReportCard({ api, section, catalog: opened, onClose }: { api: Api; section: Row; catalog: Subject[]; onClose: (written: number) => void }) {
+  const grade = Number(section.grade_level);
+  const [catalog, setCatalog] = useState(opened);
+  const [existing, setExisting] = useState<Offering[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  // Retired offerings included: they are unique per section too, so offering one again is a refusal, not a second row.
+  useEffect(() => {
+    void collect<Offering>(api, `/sections/${String(section.id)}/subjects`, { active: 'all' }).then(r => setExisting(r.items)).catch(() => setFailed(true));
+  }, [api, section.id]);
+  const candidates = useMemo(() => (existing ? offeringCandidates(grade, catalog, existing) : null), [existing, grade, catalog]);
+  const disputed = cardFor(grade).some(area => disputedFor(area, grade));
+  return (
+    <BatchSheet
+      title={`Offer the ${gradeName(grade)} card to ${sectionName(section)}`}
+      note="Each offering is its own record. A refused row does not stop the others."
+      intro={grade === 0 ? null : (
+        <Callout tone="info" title={`The learning areas the ${gradeName(grade)} card prints`}>
+          In the order the card prints them, which becomes their order in the section. Only subjects already in the catalog can be offered; add the others from the catalog first.
+          {disputed ? ' The documents disagree about the rows left unticked, so whether this section takes them is yours to decide.' : ''}
+        </Callout>
+      )}
+      headers={['Line', 'Learning area', 'Printed on']}
+      candidates={candidates}
+      problem={failed ? <Callout tone="stopped" title="This section’s offerings could not be read">Nothing was offered. Close this and try again.</Callout> : undefined}
+      empty={<EmptyState title={`No ${gradeName(grade)} card has been supplied`} body="There is no set to offer from. Offer this section’s subjects one at a time." />}
+      verb={n => (n === 1 ? 'Offer 1 subject' : `Offer ${n} subjects`)}
+      past="Offered"
+      send={(code, reason) => {
+        const area = reportCardAreas.find(a => a.code === code)!;
+        const subject = catalog.find(s => s.code === code)!;
+        return api(`/sections/${String(section.id)}/subjects`, 'POST', { subject_id: subject.id, subject_version: subject.version, display_order: lineOf(area, grade), reason });
+      }}
+      // Both halves go stale: a catalog revision refuses the pinned version, and another manager may have offered a subject meanwhile.
+      reread={async () => {
+        const [subjects, offerings] = await Promise.all([collect<Subject>(api, '/subjects', { active: 'all' }), collect<Offering>(api, `/sections/${String(section.id)}/subjects`, { active: 'all' })]);
+        setCatalog(subjects.items);
+        setExisting(offerings.items);
+      }}
+      onClose={onClose}
+    />
+  );
+}
+
 /** The catalog every section chooses from. Codes are permanent; everything else is versioned. */
 function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }: {
   api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void;
@@ -131,11 +275,17 @@ function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }
   const id = useId();
   const [show, setShow] = useState<'true' | 'false' | 'all'>('true');
   const [search, setSearch] = useState('');
+  const [fromCards, setFromCards] = useState(false);
   const needle = search.trim().toLowerCase();
   const rows = (catalog ?? [])
     .filter(s => show === 'all' || String(s.active) === show)
     .filter(s => !needle || `${s.code} ${s.name}`.toLowerCase().includes(needle))
     .sort((a, b) => a.code.localeCompare(b.code));
+  const fromCardsButton = manager ? (
+    <button type="button" className="btn secondary" disabled={catalog === null} onClick={() => setFromCards(true)} data-tour="subjects-cards">
+      <Icon name="plus" size={15} />Add from the report cards
+    </button>
+  ) : null;
 
   return (
     <div className="card">
@@ -144,6 +294,7 @@ function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }
           <h2>Subject catalog</h2>
           <p className="card-note">The subjects a section may be given. Nothing here is an official curriculum, and no subject carries a grading rule.</p>
         </div>
+        {fromCardsButton ? <div className="card-head-actions">{fromCardsButton}</div> : null}
       </div>
       <div className="card-head">
         <div className="toolbar">
@@ -167,7 +318,7 @@ function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }
         rowKey={row => row.id}
         empty={<EmptyState
           title={catalog?.length ? 'Nothing matches' : 'The catalog is empty'}
-          body={catalog?.length ? 'No subject matches this filter.' : 'No subject has been added yet. EDUNEXUS seeds none of its own: every subject here is one the school chose.'}
+          body={catalog?.length ? 'No subject matches this filter.' : 'No subject has been added yet. EDUNEXUS seeds none of its own: every subject here is one the school chose, including any chosen from the report cards.'}
         />}
         columns={[
           { header: 'Code', cell: row => <b className="mono">{row.code}</b> },
@@ -203,6 +354,18 @@ function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }
           onSubmit={data => api('/subjects', 'POST', subjectBody(data))}
           onSaved={() => { setAdding(false); reload(); setStatus({ text: 'Subject added to the catalog.', kind: 'done' }); }}
           onClose={() => setAdding(false)}
+        />
+      ) : null}
+      {fromCards && catalog ? (
+        <AddReportCardAreas
+          api={api}
+          catalog={catalog}
+          onClose={written => {
+            setFromCards(false);
+            if (!written) return;
+            reload();
+            setStatus({ text: written === 1 ? '1 subject added to the catalog.' : `${written} subjects added to the catalog.`, kind: 'done' });
+          }}
         />
       ) : null}
     </div>
@@ -272,6 +435,7 @@ function OfferingPanel({ api, offering, current, yearStatus, setStatus, reload }
           initial={{ display_order: offering.display_order, active: String(offering.active), reason: '' }}
           submitLabel="Save"
           setStatus={setStatus}
+          warning={<Affects what="subjects" />}
           onSaved={reload}
           onSubmit={data => api(`/section-subjects/${offering.id}`, 'PATCH', {
             version: offering.version, active: data.active === 'true', display_order: data.display_order,
@@ -286,6 +450,7 @@ function OfferingPanel({ api, offering, current, yearStatus, setStatus, reload }
             initial={{ reason: '' }}
             submitLabel="Refresh the pinned details"
             setStatus={setStatus}
+          warning={<Affects what="subjects" />}
             onSaved={reload}
             onSubmit={data => api(`/section-subjects/${offering.id}`, 'PATCH', {
               version: offering.version, active: offering.active, display_order: offering.display_order,
@@ -317,6 +482,7 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
   const [showRetired, setShowRetired] = useState(false);
   const [adding, setAdding] = useState(false);
   const [offering, setOffering] = useState(false);
+  const [offeringCard, setOfferingCard] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -324,19 +490,23 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
     void collect<Subject>(api, '/subjects', { active: 'all' }).then(r => setCatalog(r.items)).catch(() => setCatalog([]));
   }, [api, token]);
 
+  // Every offering is read, retired ones included, and the filter only hides
+  // them. Reading active ones alone let a hidden retired subject be offered
+  // again, which the database refuses as a duplicate.
   const { sectionId } = scope;
   useEffect(() => {
     if (!sectionId) { setOfferings(null); setContext(null); return; }
     setOfferings(null);
     setFailed(false);
-    void collect<Offering>(api, `/sections/${sectionId}/subjects`, { active: showRetired ? 'all' : 'true' })
+    void collect<Offering>(api, `/sections/${sectionId}/subjects`, { active: 'all' })
       .then(r => { setOfferings(r.items.sort(byDisplay)); setContext({ section: r.page.section as Row, school_year: r.page.school_year as Context['school_year'] }); })
       .catch(() => { setOfferings([]); setContext(null); setFailed(true); });
-  }, [api, sectionId, showRetired, token]);
+  }, [api, sectionId, token]);
 
   const section = scope.section;
   const yearStatus = (context?.school_year.status ?? scope.year?.status ?? 'draft') as 'draft' | 'active' | 'closed';
   const grade = Number(section?.grade_level);
+  const shown = offerings && (showRetired ? offerings : offerings.filter(o => o.active));
   const offered = new Set((offerings ?? []).map(o => o.subject_id));
   // Retired offerings stay unique per section, so they are excluded too, even
   // when hidden: adding one again means reactivating it, not a second row.
@@ -348,10 +518,10 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
       <PageHeader
         route={route}
         actions={<>
-          {offerings?.length ? <PrintButton label="Print this section's subjects" /> : null}
+          {shown?.length ? <PrintButton label="Print this section's subjects" /> : null}
           {manager ? <button type="button" className="btn secondary" onClick={() => setAdding(true)}><Icon name="plus" size={15} />Add a subject</button> : null}
           {manager ? (
-            <button type="button" className="btn" disabled={!section || yearStatus === 'closed' || catalog === null} onClick={() => setOffering(true)}>
+            <button type="button" className="btn" disabled={!section || yearStatus === 'closed' || catalog === null} onClick={() => setOffering(true)} data-tour="subjects-offer">
               <Icon name="plus" size={15} />Offer a subject
             </button>
           ) : null}
@@ -372,7 +542,7 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
             <div className="card-head"><div className="toolbar"><ScopePickers scope={scope} /></div></div>
             <EmptyState
               title="No section to show"
-              body={manager ? 'This school year has no sections yet. Add them on the Sections and advisers screen.' : 'You are not the current adviser of any section in this school year.'}
+              body={manager ? 'This school year has no sections yet. Add them on School years & sections.' : 'You are not the current adviser of any section in this school year.'}
             />
           </>
         ) : (
@@ -387,12 +557,17 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
               </div>
               <div className="card-head-actions">
                 {context ? <Badge tone={yearStatus === 'closed' ? 'neutral' : yearStatus === 'active' ? 'good' : 'info'}>{yearStatus === 'closed' ? 'Closed year — read only' : yearStatus === 'draft' ? 'Draft year' : 'Active year'}</Badge> : null}
+                {manager ? (
+                  <button type="button" className="btn secondary" disabled={!section || !context || yearStatus === 'closed' || catalog === null} onClick={() => setOfferingCard(true)}>
+                    <Icon name="plus" size={15} />Offer the report-card set
+                  </button>
+                ) : null}
               </div>
             </div>
             {failed ? <div className="card-body"><Callout tone="stopped" title="These offerings could not be read">A teacher reads only the sections they currently advise, in a year that is not closed. Otherwise the request failed.</Callout></div> : null}
             <Table
               loading={offerings === null && !failed && scope.years !== null}
-              rows={offerings ?? []}
+              rows={shown ?? []}
               rowKey={row => row.id}
               empty={<EmptyState
                 title={`No subjects offered to ${sectionName(section)}`}
@@ -449,6 +624,22 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
           }}
           onSaved={() => { setOffering(false); reload(); setStatus({ text: 'Subject offered to the section.', kind: 'done' }); }}
           onClose={() => setOffering(false)}
+        />
+      ) : null}
+
+      {offeringCard && section && catalog ? (
+        <OfferReportCard
+          // A new section is a new sheet: ticks seeded for one card must never carry over to another.
+          key={String(section.id)}
+          api={api}
+          section={section}
+          catalog={catalog}
+          onClose={written => {
+            setOfferingCard(false);
+            if (!written) return;
+            reload();
+            setStatus({ text: written === 1 ? '1 subject offered to the section.' : `${written} subjects offered to the section.`, kind: 'done' });
+          }}
         />
       ) : null}
     </>

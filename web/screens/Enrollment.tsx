@@ -9,6 +9,7 @@ import {
   Badge, Callout, Cell, Editor, EmptyState, Finder, PageHeader, PrintButton, Select, StatusLine, Table,
   TableSkeleton, Task, Unrecorded, gradeName, idle, learnerName, sentence, value, yearName, type Status,
 } from '../components/primitives';
+import { Affects } from '../components/affects';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -21,7 +22,7 @@ const exitReasons: [string, string][] = [
 
 /** The LRN on a learner record, or the mark that says none has been issued. */
 const lrnOf = (learner: Row | undefined) =>
-  !learner ? null : learner.lrn ? `LRN ${String(learner.lrn)}` : <Unrecorded label="LRN not issued" />;
+  !learner ? null : learner.lrn ? `LRN ${String(learner.lrn)}` : <Unrecorded label="LRN missing" />;
 
 /**
  * A movement is a dated event, and which fields it needs depends on the action,
@@ -62,6 +63,7 @@ function MovementForm({ api, enrollment, sections, setStatus, reload }: {
       } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
       finally { setBusy(false); }
     }}>
+      <Affects what="movement" />
       <div className="form-grid">
         <div className="field">
           <label className="label" htmlFor={`act-${enrollment.id}`}>What happened</label>
@@ -175,7 +177,7 @@ function EnrolSheet({ api, sectionId, sectionLabel, reload, onClose, onDone }: {
             onClear={() => setFound(null)}
             fields={[
               { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
-              { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9]{12}', maxLength: 12 },
+              { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9 -]{12,20}', maxLength: 20 },
             ]}
           />
           <hr className="rule" />

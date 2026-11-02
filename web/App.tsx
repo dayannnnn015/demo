@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { createApi, message, type Page, type Row } from './api';
+import { ApiError, createApi, message, type Page, type Row } from './api';
 import { Account, PasswordChange } from './Account';
 import { AppShell } from './components/AppShell';
 import { BrandMark } from './components/brand';
 import { Sheet } from './components/overlay';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
-import { routeFor } from './routes';
+import { available, routeFor, routes } from './routes';
+import { applyPreferences, followDevice, startScreen, type Preferences } from './preferences';
 
 // A screen may carry its own filter after `?`, as the access log does; the route is what precedes it.
 const currentHash = () => location.hash.replace(/^#\/?/, '').replace(/\?.*$/, '') || 'overview';
@@ -46,7 +47,9 @@ export function App() {
 
   // The address bar follows the screen, so a refresh lands where you were.
   useEffect(() => {
-    const sync = () => setPage(currentHash());
+    // A link in a sentence changes the address directly; the last screen's message must not follow it to the next.
+    let shown = currentHash();
+    const sync = () => { const next = currentHash(); if (next !== shown) setStatus(idle); shown = next; setPage(next); };
     addEventListener('hashchange', sync);
     return () => removeEventListener('hashchange', sync);
   }, []);
@@ -62,8 +65,32 @@ export function App() {
 
   useEffect(() => {
     if (!signedIn || !api) return;
-    void api<Row>('/me').then(setMe).catch(error => { setFatal(message(error)); lost(); });
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const read = (attempt: number) => void api<Row>('/me').then(row => {
+      if (stopped) return;
+      setFatal('');
+      setMe(row);
+      // Signing in with nothing in the address opens the screen chosen on My profile.
+      const start = startScreen((row.profile as Row | null)?.landing, location.hash, id => routes.some(r => r.id === id && available(r, row.role)));
+      if (start) { location.hash = `#/${start}`; setPage(start); }
+    }).catch(error => {
+      if (stopped) return;
+      // A busy minute, a server hiccup or a dropped connection is not a lost
+      // session: try again rather than sending the person back to sign in.
+      const passing = !(error instanceof ApiError) || error.status === 429 || error.status >= 500;
+      if (passing && attempt < 4) { setFatal(`${message(error)} Trying again…`); timer = setTimeout(() => read(attempt + 1), 5000 * (attempt + 1)); return; }
+      setFatal(message(error)); lost();
+    });
+    read(0);
+    return () => { stopped = true; if (timer) clearTimeout(timer); };
   }, [signedIn, api, lost]);
+
+  // What the person chose on My profile, applied to the whole page; signing out puts the defaults back,
+  // so a shared machine does not show the next person someone else's dark theme or large text.
+  const profile = me?.profile as Preferences | null | undefined;
+  useEffect(() => { applyPreferences(profile ?? null); }, [profile]);
+  useEffect(() => followDevice(), []);
 
   // The shell's own furniture: the year the top bar names, and the school the
   // rail names. Both are read here rather than by every screen that mentions
@@ -82,7 +109,8 @@ export function App() {
     void api<Row>('/school').then(setSchool).catch(() => setSchool(null));
   }, [me, api, token]);
 
-  if (!client || !api) {
+  // Retrying the staff record after a passing failure shows why, rather than a sign-in form.
+  if (!client || !api || (signedIn && !me && fatal)) {
     return (
       <div className="auth">
         <div className="auth-card">
@@ -101,7 +129,8 @@ export function App() {
   if (!me) return <Account client={client} onReady={() => { setFatal(''); setSignedIn(true); }} />;
 
   const manager = me.role !== 'teacher';
-  const route = routeFor(page, manager);
+  const route = routeFor(page, me.role);
+  const account = { updateMe: (patch: Row) => setMe(current => (current ? { ...current, ...patch } : current)), changePassword: () => setChangingPassword(true), auth: client.auth };
   const navigate = (id: string) => {
     location.hash = `#/${id}`;
     setPage(id);
@@ -117,12 +146,13 @@ export function App() {
       context={year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}
       onNavigate={navigate}
-      onSignOut={() => void client.auth.signOut()}
+      // Signing out leaves the workspace for the school's front page; the session is ended first, so the way back is a fresh sign-in.
+      onSignOut={() => { void client.auth.signOut().finally(() => location.assign('/')); }}
       onChangePassword={() => setChangingPassword(true)}
     >
       {route.ownHeader ? null : <PageHeader route={route} />}
       <StatusLine status={status} />
-      {route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token, route })}
+      {route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token, route, account })}
       {changingPassword ? (
         <Sheet title="Change your password" note="You will be asked for the one you use now." onClose={() => setChangingPassword(false)}>
           <PasswordChange auth={client.auth} onDone={text => { setChangingPassword(false); setStatus({ text, kind: 'done' }); }} />

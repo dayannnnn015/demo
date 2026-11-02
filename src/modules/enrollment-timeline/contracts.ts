@@ -31,7 +31,9 @@ export const correctionResponse = z.object({
   correction_kind: z.enum(['timeline', 'placement']), previous_grade_level: z.number().int().nullable(), corrected_grade_level: z.number().int().nullable(),
 });
 export const revisionPreviewResponse = z.object({
-  enrollment_id: uuid, version: z.number().int(), learner_version: z.number().int(), learner_id:uuid,recorded_learner_id:uuid,actor_user_id: uuid, review_hash: reviewHash,
+  enrollment_id: uuid, version: z.number().int(), learner_version: z.number().int(), learner_id:uuid,recorded_learner_id:uuid,actor_user_id: uuid,
+  review_hash: reviewHash.nullable().describe('Null when the commit would be refused; see blocked'),
+  can_commit: z.boolean().optional(), blocked: z.object({ code: z.string(), message: z.string() }).optional().describe('What Confirm would refuse, found by running the commit and rolling it back'),
   correction_kind: z.enum(['timeline', 'placement']), previous_grade_level: z.number().int(), corrected_grade_level: z.number().int(),
   school_year: z.object({ id: uuid, start_year: z.number().int(), starts_on: z.iso.date(), ends_on: z.iso.date(), status: z.enum(['draft', 'active']), version: z.number().int() }),
   sections: z.array(z.object({ id: uuid, name: z.string(), academic_year_id: uuid, grade_level: z.number().int(), adviser_user_id: uuid.nullable(), version: z.number().int() })),

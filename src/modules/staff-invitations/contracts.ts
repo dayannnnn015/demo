@@ -1,11 +1,12 @@
 import {z} from 'zod';
+import {plainName,plainNameMessage} from '../../core/text.js';
 import {uuid, staffRole} from '../foundation/contracts.js';
 import {subjectReason} from '../subjects/contracts.js';
 const version=z.number().int().min(1).max(2147483646);
 // Deliberately permissive: Supabase, not EDUNEXUS, decides deliverability.
 const email=z.string().trim().toLowerCase().min(5).max(254).regex(/^[^@\s\u0000-\u001f\u007f]+@[^@\s\u0000-\u001f\u007f]+\.[^@\s\u0000-\u001f\u007f]+$/,'Enter a single valid email address.');
 export const invitationSchemas={
-  request:z.strictObject({email,display_name:z.string().trim().min(1).max(150).regex(/^[^\u0000-\u001f\u007f]*$/),role:staffRole,reason:subjectReason}),
+  request:z.strictObject({email,display_name:z.string().trim().min(1).max(150).regex(plainName,plainNameMessage),role:staffRole,reason:subjectReason}),
   provision:z.strictObject({version,user_id:uuid,reason:subjectReason}),
   provisionIdentity:z.strictObject({version,reason:subjectReason}),
   cancel:z.strictObject({version,reason:subjectReason}),
