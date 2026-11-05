@@ -309,6 +309,23 @@ export const routes: Route[] = [
 export const groups = ['Workspace', 'Setup', 'Learners', 'Attendance', 'Academics', 'School forms', 'People'];
 
 /** Whether a role's navigation offers a screen. */
+/**
+ * Screens a person's own assignments rule out, beyond what their role decides.
+ *
+ * Academic history transcribes the school years a learner finished *before*
+ * EDUNEXUS, and an SF10 scholastic block is Grade 1 to Grade 6 — Kindergarten
+ * is never one, it is the credential presented for Grade 1. So an adviser whose
+ * classes are all Kindergarten or Grade 1 has no previous year to encode for
+ * anybody in them, and the screen could only refuse them.
+ *
+ * Their classes decide this, not their role, which is why it cannot be
+ * `hiddenFor`. A manager is never narrowed: theirs is the school-wide view.
+ * Nor is an adviser with no sections yet — someone between assignments keeps
+ * the screen rather than silently losing it.
+ */
+export const hiddenByAssignment = (role: unknown, grades: number[]) =>
+  (role === 'teacher' && grades.length > 0 && grades.every(g => g <= 1) ? ['prior-records'] : []);
+
 export const available = (route: Route, role: unknown) => (!route.manager || role !== 'teacher') && !route.hiddenFor?.includes(role as Role);
 
 // The SF9 and SF10 screens became buttons on each learner in the registry (0.58.0), and the reporting periods

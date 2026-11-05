@@ -8,6 +8,15 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.8', date: '2026-11-05',
+    items: [
+      'Kindergarten and Grade 1 advisers: {prior-records} is no longer in your sidebar. A learner’s record there starts at Grade 1, and Kindergarten is carried as the credential presented for Grade 1 rather than as a school year — so there is nothing there for your classes. Advisers of Grade 2 and above keep it.',
+      'The boxes for typing a grade are wider, and no longer have the little up-and-down arrows that were eating the space. A mark like *88.5* now fits and stays visible.',
+      'Typing a past school year: the hint said *2024 for 2024 – 2025*, which read like a limit. Any year from 1990 to this one has always been accepted, and the hint now says so.',
+      'On the report card, **Previous learner** and **Next learner** are now arrows, which leaves the learner’s name more room.',
+    ],
+  },
+  {
     version: '0.90.7', date: '2026-11-05',
     items: [
       'Advisers: **School profile** and **School years & sections** are no longer in your sidebar. Nothing on either was yours to change, the school year you are working in is named at the top of every screen, and the classes you advise are on your own screens.',

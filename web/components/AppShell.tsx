@@ -155,7 +155,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
   );
 }
 
-export function AppShell({ me, school, current, context, contextTone, onNavigate, onSignOut, onChangePassword, children }: {
+export function AppShell({ me, school, current, context, contextTone, hidden = [], onNavigate, onSignOut, onChangePassword, children }: {
   me: Row;
   /** The school profile record. The rail states what it reads, never a literal:
    *  this is the same name printed on every official form, and it is editable. */
@@ -165,6 +165,9 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
   context?: string | undefined;
   /** Whether that year is open for new records. Ochre when nothing is. */
   contextTone?: 'active' | 'none' | undefined;
+  /** Screens this person's own assignments rule out, on top of their role.
+   *  Kept out of the rail and the command palette alike. */
+  hidden?: string[] | undefined;
   onNavigate: (id: string) => void;
   onSignOut: () => void;
   onChangePassword?: (() => void) | undefined;
@@ -177,7 +180,10 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
   const [collapsed, setCollapsed] = useState(() => remembered('rail-collapsed', false));
   const [shut, setShut] = useState(() => remembered<string[]>('nav-shut', []));
   const manager = me.role !== 'teacher';
-  const visible = routes.filter(route => available(route, me.role));
+  // `hidden` is what this person's own assignments rule out, on top of what
+  // their role does. It leaves the rail and the command palette together, so
+  // there is no way in that the other closes.
+  const visible = routes.filter(route => available(route, me.role) && !hidden.includes(route.id));
   const working = useWorking();
 
   const setRail = (next: boolean) => { setCollapsed(next); remember('rail-collapsed', next); };

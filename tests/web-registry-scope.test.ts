@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ids, testDatabase, type TestDatabase } from './helpers/database.js';
 import { mountScreen, serverApi, type ServerApi } from './helpers/dom.js';
 import { Learners } from '../web/screens/Learners';
-import { available, routes } from '../web/routes';
+import { available, hiddenByAssignment, routes } from '../web/routes';
 
 /**
  * What the Learner registry offers each role, in a real DOM against the real
@@ -168,5 +168,43 @@ describe('what an adviser is not offered in the navigation', () => {
     for (const id of ['attendance', 'calendar', 'learners', 'prior-records', 'report-cards']) {
       expect(available(route(id), 'teacher'), id).toBe(true);
     }
+  });
+});
+
+/**
+ * Academic history, closed to the advisers who can never use it.
+ *
+ * An SF10 scholastic block is Grade 1 to Grade 6; Kindergarten is never one,
+ * it is the credential presented for Grade 1 (and `0051`'s writer refuses any
+ * other grade with `P2504`). So an adviser whose classes are all Kindergarten
+ * or Grade 1 has no previous school year to encode for anybody in them.
+ *
+ * Their classes decide it rather than their role, which is why it is not
+ * `hiddenFor`.
+ */
+describe('Academic history and the grades an adviser teaches', () => {
+  it('closes it to an adviser who teaches only Kindergarten, only Grade 1, or both', () => {
+    for (const grades of [[0], [1], [0, 1], [1, 0, 1]]) {
+      expect(hiddenByAssignment('teacher', grades), grades.join('+')).toEqual(['prior-records']);
+    }
+  });
+
+  it('leaves it open as soon as one class is Grade 2 or above', () => {
+    // The learners in that one class do have a previous year to encode.
+    for (const grades of [[2], [0, 2], [1, 6], [3, 4, 5]]) {
+      expect(hiddenByAssignment('teacher', grades), grades.join('+')).toEqual([]);
+    }
+  });
+
+  it('never narrows a manager, whose view is the whole school', () => {
+    for (const role of ['principal', 'administrative_officer']) {
+      expect(hiddenByAssignment(role, [0, 1]), role).toEqual([]);
+    }
+  });
+
+  it('leaves an adviser with no sections yet alone', () => {
+    // Between assignments is not "only early grades": losing the screen
+    // silently would be indistinguishable from a fault.
+    expect(hiddenByAssignment('teacher', [])).toEqual([]);
   });
 });

@@ -467,7 +467,8 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
   const addable = proposal.filter(a => !listed.has(a.name.toLowerCase()));
 
   const headFields: Field[] = [
-    { key: 'start_year', label: 'School year began', type: 'number', min: 1990, max: 2100, hint: 'The year it started: 2024 for 2024 – 2025.' },
+    { key: 'start_year', label: 'School year began', type: 'number', min: 1990, max: 2100,
+      hint: 'The year the school year began, not the year it ended — a 2015 – 2016 school year is 2015. Any year from 1990 to this one.' },
     { key: 'grade_level', label: 'Grade level', options: [['', 'Choose…'], ...[1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])], choose: true,
       hint: 'Grade 1 to Grade 6. A Kindergarten year is not one of these: it is the credential under Eligibility for Grade 1. Never enter a Kindergarten year’s marks as Grade 1 grades — they are not the same record.' },
     { key: 'school_name', label: 'School that taught the year', maxLength: 150, hint: 'This school, or the previous school for a transferee.' },

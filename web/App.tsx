@@ -6,7 +6,7 @@ import { AppShell } from './components/AppShell';
 import { BrandMark } from './components/brand';
 import { Sheet } from './components/overlay';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
-import { available, routeFor, routes } from './routes';
+import { available, hiddenByAssignment, routeFor, routes } from './routes';
 import { applyPreferences, followDevice, startScreen, type Preferences } from './preferences';
 
 // A screen may carry its own filter after `?`, as the access log does; the route is what precedes it.
@@ -110,6 +110,18 @@ export function App() {
     void api<Row>('/school').then(setSchool).catch(() => setSchool(null));
   }, [me, api, token]);
 
+  // Screens this person's own classes rule out; `hiddenByAssignment` holds
+  // the rule and why. Only a teacher is read for, so nothing else costs a request.
+  const [hidden, setHidden] = useState<string[]>([]);
+  useEffect(() => {
+    if (!me || !api || me.role !== 'teacher') { setHidden([]); return; }
+    let live = true;
+    void api<Page<{ grade_level: number }>>('/sections?limit=100')
+      .then(page => { if (live) setHidden(hiddenByAssignment(me.role, page.items.map(s => Number(s.grade_level)))); })
+      .catch(() => { if (live) setHidden([]); });
+    return () => { live = false; };
+  }, [me, api, token]);
+
   // Retrying the staff record after a passing failure shows why, rather than a sign-in form.
   if (!client || !api || (signedIn && !me && fatal)) {
     return (
@@ -143,6 +155,7 @@ export function App() {
     <AppShell
       me={me}
       school={school}
+      hidden={hidden}
       current={route}
       context={year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}

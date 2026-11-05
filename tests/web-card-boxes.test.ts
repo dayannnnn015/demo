@@ -64,3 +64,51 @@ describe('the Grade 1 report card’s remark boxes', () => {
     expect(css).not.toMatch(/\.paper\.sf9-grades4_6 \.card-comment \{[^}]*height:\s*23mm/);
   });
 });
+
+/**
+ * Two small fixes to screens that staff type into all day (0.90.8).
+ *
+ * Both are CSS or markup rather than behaviour, so this is a guard against a
+ * tidy-up undoing them, not a measurement.
+ */
+describe('the boxes a historical grade is typed into', () => {
+  it('is wide enough for a grade, with the number spinner out of the way', () => {
+    const cell = rule('.grid-form td.grade-cell');
+    expect(cell).toBeTruthy();
+    // 4.5rem left room for barely two digits once the field's padding and the
+    // spinner had taken theirs: 88 fitted, 88.5 did not.
+    const width = /width:\s*([\d.]+)rem/.exec(cell ?? '');
+    expect(width, 'the grade column states a width').toBeTruthy();
+    expect(Number(width![1])).toBeGreaterThanOrEqual(5.5);
+    // The spinner is worth about 17px of the narrowest box on the screen, and
+    // nobody steps a grade by 0.01.
+    expect(css).toMatch(/\.grid-form td\.grade-cell input\[type='number'\][^{]*\{[^}]*appearance: textfield/);
+    expect(css).toMatch(/-webkit-inner-spin-button \{[^}]*appearance: none/);
+  });
+});
+
+describe('moving between learners on the report card', () => {
+  it('uses arrows, and still says which is which to a screen reader', () => {
+    const editor = readFileSync('web/screens/CardEditor.tsx', 'utf8');
+    // The words crowded the row beside the learner picker; the month nav on the
+    // forms is the same control and has been arrows since it was built.
+    expect(editor).toMatch(/aria-label="Previous learner"[\s\S]{0,200}?<Icon name="back"/);
+    expect(editor).toMatch(/aria-label="Next learner"[\s\S]{0,200}?<Icon name="forward"/);
+    // An icon-only button with no name is unusable with a screen reader, which
+    // `tests/web-buttons.test.ts` gates for the whole workspace.
+    expect(editor).toContain('title="Previous learner"');
+    expect(editor).toContain('title="Next learner"');
+  });
+});
+
+describe('the year a historical record began', () => {
+  it('accepts any school year from 1990, and its hint does not read as a floor', () => {
+    const screen = readFileSync('web/screens/PriorRecords.tsx', 'utf8');
+    const field = /\{ key: 'start_year',[\s\S]*?\},/.exec(screen)?.[0] ?? '';
+    expect(field).toContain('min: 1990');
+    // The hint used 2024 as its worked example, and an example in the position
+    // of a rule reads as one. The server's own range is 1990 to this year.
+    expect(field).not.toMatch(/2024/);
+    expect(field).toContain('Any year from 1990 to this one');
+  });
+});

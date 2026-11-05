@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } f
 import type { Api } from '../api';
 import { ApiError, message } from '../api';
 import { Confirm, Sheet } from '../components/overlay';
+import { Icon } from '../components/icons';
 import { Badge, Callout, Select, StatusLine, Table, Unrecorded, learnerName, idle, type Status, ScrollArea } from '../components/primitives';
 import { coreValues, marks, valueCodes } from '../forms/values';
 import { gradeProblem, type ReportLearner, type ReportRecords } from './ReportCards';
@@ -164,8 +165,10 @@ export function CardEditor({ api, records, descriptive, readOnly, setStatus, onS
           <span className="muted">{index + 1} of {learners.length}</span>
         </div>
         <div className="card-head-actions">
-          <button type="button" className="btn ghost small" disabled={index <= 0} onClick={() => go(learners[index - 1]!.enrollment_id)}>Previous learner</button>
-          <button type="button" className="btn ghost small" disabled={index >= learners.length - 1} onClick={() => go(learners[index + 1]!.enrollment_id)}>Next learner</button>
+          <button type="button" className="btn ghost small" disabled={index <= 0} aria-label="Previous learner" title="Previous learner"
+            onClick={() => go(learners[index - 1]!.enrollment_id)}><Icon name="back" size={14} /></button>
+          <button type="button" className="btn ghost small" disabled={index >= learners.length - 1} aria-label="Next learner" title="Next learner"
+            onClick={() => go(learners[index + 1]!.enrollment_id)}><Icon name="forward" size={14} /></button>
         </div>
       </div>
       <div className="card-body report-card-editor">

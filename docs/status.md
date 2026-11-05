@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.7.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.8.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,39 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.8 — four fixes to the screens staff type into
+
+**Academic history is closed to advisers who teach only Kindergarten or
+Grade 1.** An SF10 scholastic block is Grade 1 to Grade 6 and Kindergarten is
+never one — it is the credential presented for Grade 1, and `0051`'s writer
+refuses any other grade with `P2504` — so those advisers have no previous
+school year to encode for anybody in their classes. Their classes decide it
+rather than their role, so the rule is `hiddenByAssignment` in
+`web/routes.tsx`, not the route table's `hiddenFor`. Filtered out rather
+than greyed, because a disabled item with no explanation is read as broken.
+A manager is never narrowed, an adviser with no sections yet is left alone, and
+one class at Grade 2 or above opens it again.
+
+> **The consequence to watch.** A Grade 1 adviser can no longer record the
+> Kindergarten credential under *Eligibility for Grade 1*, which lives on that
+> screen. A manager still can. If the school expects Grade 1 advisers to record
+> it, this is the decision to revisit.
+
+**There was never a 2024 floor on a historical school year.** The field takes
+1990 to this year and the server's own check says the same; the hint used 2024
+as its worked example, and an example in the position of a rule reads as one.
+Reworded to say what the field means.
+
+**The boxes a grade is typed into now fit a grade.** At 4.5rem, once the
+field's side padding and a number input's spinner had taken theirs, there was
+room for barely two digits — 88 fitted, 88.5 did not, and the figure a teacher
+had just typed scrolled out of sight inside its own box. The spinner is gone
+(about 17px of the narrowest box on the screen), the padding is smaller, the
+column is 6rem.
+
+**Previous and Next learner are arrows**, matching the month nav on the forms,
+keeping the words as the accessible name and the tooltip.
 
 ### 0.90.7 — two Setup screens leave an adviser's navigation
 
@@ -378,7 +411,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **236 passed**, 24 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **243 passed**, 24 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |

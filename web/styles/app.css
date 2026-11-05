@@ -2551,9 +2551,21 @@ a.btn { text-decoration: none; }
   clip-path: inset(50%);
   white-space: nowrap;
 }
-/* A grade is two or three characters; the column should not be as wide as a name. */
-.grid-form td.grade-cell { width: 4.5rem; }
-.grid-form td.grade-cell input { text-align: center; }
+/*
+  A grade is up to six characters — 100.00 — and the column should still not be
+  as wide as a name.
+
+  At 4.5rem with the field's ordinary side padding and a number input's spinner,
+  there was room for barely two digits: 88 fitted, 88.5 did not, and the figure
+  a teacher had just typed scrolled out of sight inside its own box. The spinner
+  goes (nobody steps a grade by 0.01, and it was costing about 17px of the
+  narrowest box on the screen), the side padding shrinks, and the column widens.
+*/
+.grid-form td.grade-cell { width: 6rem; }
+.grid-form td.grade-cell input { text-align: center; padding-inline: var(--s1); }
+.grid-form td.grade-cell input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.grid-form td.grade-cell input[type='number']::-webkit-outer-spin-button,
+.grid-form td.grade-cell input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
 .grid-form .field-error { font-size: var(--t-11); }
 
 /*
