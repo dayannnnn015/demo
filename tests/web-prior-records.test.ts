@@ -70,11 +70,11 @@ beforeEach(() => { host = document.createElement('div'); document.body.append(ho
 afterEach(() => { host.remove(); });
 
 /** Mount the screen and let its effects settle, as the shell mounts it. */
-async function mount() {
+async function mount(role: 'principal' | 'teacher' = 'principal') {
   const root = createRoot(host);
   await act(async () => {
     root.render(createElement(PriorRecords, {
-      api, me: { role: 'principal' }, manager: true, setStatus: () => undefined, reload: () => undefined, token: 0, route,
+      api, me: { role }, manager: role !== 'teacher', setStatus: () => undefined, reload: () => undefined, token: 0, route,
     }));
   });
   return root;
@@ -288,5 +288,47 @@ describe('the SF10 as it prints', () => {
     expect(pages).toHaveLength(4);
     // And no year is lost off the end, which is the fault this guards.
     for (let year = 2016; year <= 2024; year += 1) expect(renderToStaticMarkup(createElement(Sf10Sheet, { form: many }))).toContain(`${year} - ${year + 1}`);
+  });
+});
+
+/**
+ * Who has to search, and who is simply shown their learners.
+ *
+ * An adviser's list is the learners in the classes they advise — already
+ * theirs to read — so it is shown on opening and there is no grade to choose.
+ * A manager's is the whole school, and every list under /learners writes a
+ * `record_access_events` row naming what it returned, so theirs still starts
+ * from a search.
+ */
+describe('finding a learner on Academic history', () => {
+  it('shows an adviser their own learners on opening, with no grade filter', async () => {
+    await mount('teacher');
+    // The list is read without anything being chosen first.
+    expect(sent.some(r => r.path.startsWith('/learners?'))).toBe(true);
+    expect(host.textContent).not.toContain('Find the learner first');
+    // And the control that could only ever narrow their own class is gone.
+    expect(host.textContent).not.toContain('Grade level now');
+    expect(host.textContent).not.toContain('Any grade');
+  });
+
+  it('lists the school when a manager searches with Any grade, which used to come back empty', async () => {
+    await mount('principal');
+    // Nothing read yet: a manager starts from a search.
+    expect(sent.some(r => r.path.startsWith('/learners?'))).toBe(false);
+    expect(host.textContent).toContain('Find the learner first');
+
+    // Submit the finder with every field left at its empty value — which is
+    // exactly what "Any grade" is. The gate used to be
+    // `Object.values(search).some(Boolean)`, so this cleared the list and the
+    // screen reported no learners in the school.
+    await press('Search');
+
+    expect(sent.some(r => r.path.startsWith('/learners?'))).toBe(true);
+    expect(host.textContent).not.toContain('Find the learner first');
+  });
+
+  it('keeps the grade filter for a manager', async () => {
+    await mount('principal');
+    expect(host.textContent).toContain('Grade level now');
   });
 });

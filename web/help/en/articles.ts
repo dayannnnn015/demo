@@ -8,7 +8,7 @@ export const articles: Article[] = [
     summary: 'You see every screen. The first work of a school year is setting it up, in order, because each step depends on the one before.',
     body: [
       'Before the first day of classes, work down the list below. Each screen’s guide says what to do there.',
-      'Two things only the principal does: record the school’s attendance rule on {school}, which every attendance figure on the forms is counted by, and approve the outcomes advisers endorse on {report-cards}.',
+      'Two things only the principal does: record the school’s attendance rule on {calendar}, which every attendance figure on the forms is counted by, and approve the outcomes advisers endorse on {report-cards}.',
       'Every month, check {attendance-today}, then review and lock each section’s month on {months} and issue the {sf4}.',
     ],
     path: ['school', 'years', 'calendar', 'invitations', 'staff', 'subjects', 'learners', 'enrollment', 'months', 'sf4', 'report-cards'],

@@ -8,6 +8,15 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.5', date: '2026-11-05',
+    items: [
+      'Advisers: {prior-records} now opens on your own learners, and there is no grade level to choose. You were only ever shown the learners in the classes you advise.',
+      'Fixed: a principal or administrative officer who chose *Any grade* there saw no learners at all. Searching with *Any grade* now lists the school, as it reads.',
+      'The school’s attendance rule has moved from {school} to the {calendar}, next to the dates it works with. It is the same card and the same rule — only the principal records it, and nothing already recorded changed.',
+      '{school} now carries the school’s own details only: its name, ID, address and the heading its forms print.',
+    ],
+  },
+  {
     version: '0.90.4', date: '2026-11-05',
     items: [
       'The Grade 1 progress report card prints better. The two remark boxes for each term are now a fixed size, so the card looks the same whether a remark is one sentence or several, and the three terms are spread down the page instead of bunched at the top.',

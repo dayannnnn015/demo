@@ -169,7 +169,7 @@ export function Sf2Screen({ api, me, manager, setStatus, token, route, views, on
           {failed ? <Callout tone="stopped" title="This SF2 could not be prepared">{failed}</Callout> : null}
           {form && !c?.rule_recorded ? (
             <Callout tone="attention" title="Waiting on the school’s attendance rule">
-              The SF2 has one mark a day; EDUNEXUS records a morning and an afternoon. Until the principal records how the school turns the two into a day, each cell shows the morning and the afternoon (A for absent), and no total, average or percentage is filled in. {manager ? <a href="#/school">Record it on School profile.</a> : 'Ask the principal to record it on School profile.'}
+              The SF2 has one mark a day; EDUNEXUS records a morning and an afternoon. Until the principal records how the school turns the two into a day, each cell shows the morning and the afternoon (A for absent), and no total, average or percentage is filled in. {manager ? <a href="#/calendar">Record it on the instructional calendar.</a> : 'Ask the principal to record it on the instructional calendar.'}
             </Callout>
           ) : null}
           {form && c?.rule_recorded && !c.complete && known && form.to_date ? (

@@ -66,7 +66,7 @@ export function Sf4Report({ api, me, year, monthOn, setStatus, auto = false }: {
           <div className="card-body">
             {!c?.rule_recorded ? (
               <Callout tone="attention" title="Waiting on the school’s attendance rule">
-                The daily average and percentage need the school’s rule for turning a morning and an afternoon into a day. The counted columns are complete; the attendance columns fill in once the principal records the rule on <a href="#/school">School profile</a>.
+                The daily average and percentage need the school’s rule for turning a morning and an afternoon into a day. The counted columns are complete; the attendance columns fill in once the principal records the rule on <a href="#/calendar">the instructional calendar</a>.
               </Callout>
             ) : c.incomplete_sections ? (
               <Callout tone="attention" title={`${c.incomplete_sections} of ${form.sections.length} sections have unknown attendance this month`}>

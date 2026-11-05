@@ -40,6 +40,23 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
   api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route;
 }) {
   const [search, setSearch] = useState<Record<string, string>>({ search: '', grade_level: '' });
+  /*
+   * Whether to list learners at all.
+   *
+   * A teacher's list is the learners in the classes they advise — about twenty,
+   * all of them already theirs to read — so it is shown on opening and there is
+   * nothing to choose first. A manager's is the whole school, and every list
+   * under /learners writes a `record_access_events` row naming exactly the
+   * records it returned, so theirs still starts from a search rather than
+   * logging a read of the registry every time the screen is opened.
+   *
+   * `applied` is the fix for a real bug: the gate used to be
+   * `Object.values(search).some(Boolean)`, and **"Any grade" is the empty
+   * value**, so a manager choosing it cleared the list instead of widening it —
+   * the filter looked like it had found nobody in the school. Applying the
+   * finder is now what opens the list, whatever values it carries.
+   */
+  const [applied, setApplied] = useState(false);
   const [found, setFound] = useState<Page | null>(null);
   const [chosen, setChosen] = useState<Row | null>(null);
   // A learner the Learner registry handed over, as `#/prior-records?learner=<id>`.
@@ -60,7 +77,7 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
   const [beat, setBeat] = useState(0);
   const again = useCallback(() => setBeat(n => n + 1), []);
 
-  const searching = Object.values(search).some(Boolean);
+  const searching = !manager || applied || Object.values(search).some(Boolean);
   /**
    * A learner whose only school year is Kindergarten. They have no previous
    * grade to copy and no SF10 yet, so the screen says so instead of offering a
@@ -123,11 +140,16 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
           <div className="card-tools">
             <Finder
               initial={search}
-              onApply={next => setSearch(next)}
-              onClear={() => setSearch({ search: '', grade_level: '' })}
+              onApply={next => { setSearch(next); setApplied(true); }}
+              onClear={() => { setSearch({ search: '', grade_level: '' }); setApplied(false); }}
               fields={[
                 { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
-                { key: 'grade_level', label: 'Grade level now', optional: true, options: [['', 'Any grade'], ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])] },
+                // Managers only. An adviser reads only the learners in the
+                // classes they advise, so a grade they do not teach could only
+                // ever come back empty; row security is what scopes the list,
+                // not the absence of this control.
+                ...(manager ? [{ key: 'grade_level', label: 'Grade level now', optional: true,
+                  options: [['', 'Any grade'] as [string, string], ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])] }] satisfies Field[] : []),
               ]}
             />
           </div>
@@ -152,7 +174,7 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
           ) : (
             <EmptyState
               title="Find the learner first"
-              body="Search by name or LRN. A learner’s previous school years are typed onto their own permanent record, so this starts from the learner rather than from a class."
+              body="Search by name or LRN, or choose a grade level — Any grade lists the whole school. A learner’s previous school years are typed onto their own permanent record, so this starts from the learner rather than from a class."
             />
           )}
         </div>

@@ -346,7 +346,7 @@ export function Overview({ api, me, manager, token }: {
           <p>
             Grades, general averages and outcomes are typed from the school’s own class records and printed as entered: EDUNEXUS
             computes none of them. Attendance on the SF2, SF4 and report cards is counted from the register by the rule the principal
-            records on School profile. An unmarked session and an unentered score stay unknown rather than counting as zero, so a month
+            records on the instructional calendar. An unmarked session and an unentered score stay unknown rather than counting as zero, so a month
             with a gap stays empty instead of being guessed.
           </p>
         </div>

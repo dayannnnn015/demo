@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.4.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.5.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,39 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.5 — Academic history, and the attendance rule's home
+
+Three asked-for changes, **no permission changed**.
+
+**A bug first.** A manager choosing *Any grade* on Academic history saw **no
+learners at all**. The list was gated on
+`Object.values(search).some(Boolean)`, and *Any grade* is the empty value — so
+the widest choice read as no choice and cleared the list, and the screen
+reported an empty school. Applying the finder now opens the list whatever
+values it carries.
+
+**An adviser is simply shown their learners**, on opening, with no grade level
+to choose. **A manager still starts from a search, and that asymmetry is the
+privacy rule rather than an oversight**: a teacher's list is the classes they
+advise — about twenty, already theirs to read — while a manager's is 897, and
+every list under `/learners` writes a `record_access_events` row naming
+exactly what it returned. A manager opening the screen must not log a read of
+the registry. The oversight card above it still names nobody and writes no
+access row.
+
+**The attendance rule moved off School profile** to the **Instructional
+calendar**, the other half of the same question: the calendar says which dates
+are days of classes, the rule says how a day's morning and afternoon become the
+SF2's one mark. It was **moved, not deleted** — it is the only place the rule
+can be recorded and the SF2 and SF4 are refused without it, so a deletion would
+have left both broken with no way to fix them. Its tour and the nine references
+in help and on five screens moved with it. School profile keeps the school's
+identity and the heading its forms carry.
+
+Gated by `tests/web-attendance-rule-home.test.ts`, which mounts both screens
+against the real API, and three new cases in
+`tests/web-prior-records.test.ts`. All were mutation-tested.
 
 ### 0.90.4 — the Grade 1 card's remark boxes keep a stated height
 

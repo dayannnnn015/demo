@@ -782,7 +782,7 @@ export function Attendance({ api, me, manager, setStatus, reload, token, route, 
       {manager && sectionId ? <div className="no-print"><History api={api} sectionId={sectionId} dayOn={dayOn} /></div> : null}
 
       <div className="no-print"><Callout tone="info" title="An unmarked session stays unknown">
-        A session nobody has marked is not an absence and not a presence: it is unrecorded, and it is drawn that way. Marking everyone present fills in only the learners nobody has marked yet, and nothing is recorded until you review. The SF2 counts each day from these marks by the rule the principal records on School profile; a month with an unmarked session stays empty there until it is marked.
+        A session nobody has marked is not an absence and not a presence: it is unrecorded, and it is drawn that way. Marking everyone present fills in only the learners nobody has marked yet, and nothing is recorded until you review. The SF2 counts each day from these marks by the rule the principal records on the instructional calendar; a month with an unmarked session stays empty there until it is marked.
       </Callout></div>
 
       {reviewing && sheet ? (

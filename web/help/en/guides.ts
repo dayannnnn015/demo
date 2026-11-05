@@ -382,7 +382,7 @@ export const guides: Guide[] = [
       'A correction after issue means issuing again with a reason.',
     ],
     refuses: [
-      'With no attendance rule recorded on {school}, the SF2 shows the marks but no totals.',
+      'With no attendance rule recorded on {calendar}, the SF2 shows the marks but no totals.',
       'A submitted or locked month is read only. The principal returns or reopens it on {months} before it can be corrected.',
       'Days still to come, and days with no classes, cannot be marked.',
     ],

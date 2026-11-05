@@ -265,7 +265,7 @@ export const tours: Tour[] = [
     title: 'The school’s attendance rule',
     summary: 'The two questions the principal answers, which every attendance figure on the forms is counted by.',
     roles: ['principal'],
-    route: 'school',
+    route: 'calendar',
     steps: [
       {
         title: 'The school’s attendance rule',

@@ -172,7 +172,7 @@ export const faq: Faq[] = [
     question: 'Why does the SF2 show the marks but no totals?',
     answer: [
       'Either the school’s attendance rule is not recorded yet, or a session in the month is still unmarked.',
-      'The rule says how a learner present for one session and absent for the other is counted, and the principal records it on {school}. EDUNEXUS does not guess it. An unmarked session shows **?**: mark it and the totals appear.',
+      'The rule says how a learner present for one session and absent for the other is counted, and the principal records it on {calendar}. EDUNEXUS does not guess it. An unmarked session shows **?**: mark it and the totals appear.',
     ],
     routes: ['sf2', 'school'],
   },
@@ -206,7 +206,7 @@ export const faq: Faq[] = [
   {
     id: 'sf4-percent', group: 'forms', roles: ['principal', 'administrative_officer'],
     question: 'Why are the SF4’s averages and percentages empty?',
-    answer: ['They are counted only by the attendance rule the principal records on {school}, and only from months with every session marked. Until both hold, EDUNEXUS leaves them empty rather than estimating them.'],
+    answer: ['They are counted only by the attendance rule the principal records on {calendar}, and only from months with every session marked. Until both hold, EDUNEXUS leaves them empty rather than estimating them.'],
     routes: ['sf4', 'school'],
   },
   {

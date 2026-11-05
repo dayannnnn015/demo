@@ -78,6 +78,7 @@
     "tests/web-roster-template.test.ts",
     "tests/web-teacher-roster.test.ts",
     "tests/web-buttons.test.ts",
-    "tests/web-registry-scope.test.ts"
+    "tests/web-registry-scope.test.ts",
+    "tests/web-attendance-rule-home.test.ts"
   ]
 }

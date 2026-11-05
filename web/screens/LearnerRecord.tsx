@@ -53,7 +53,7 @@ export function LearnerRecord({ api, me, learner, enrollment, yearLabel, section
       <h3>Attendance by month</h3>
       <p className="muted">
         Recorded sessions, two a day, counted the way the monthly review counts them{attendance?.from ? `, from ${attendance.from} to ${attendance.to}` : ''}.
-        These are sessions, not an attendance rate. The days present and absent on the SF2 and SF9 are counted from them by the school’s attendance rule on School profile, and stay empty while it is not recorded.
+        These are sessions, not an attendance rate. The days present and absent on the SF2 and SF9 are counted from them by the school’s attendance rule on the instructional calendar, and stay empty while it is not recorded.
       </p>
       <Table
         stack

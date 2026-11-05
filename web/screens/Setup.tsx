@@ -10,7 +10,6 @@ import {
 } from '../components/primitives';
 
 import { AddSections, AssignAdvisers } from './SetupBatch';
-import { DayRuleCard } from './DayRule';
 import { deped2026, depedCalendar } from '../deped';
 import { Affects } from '../components/affects';
 import { schoolFields } from '../record-fields';
@@ -59,7 +58,6 @@ export function School({ api, me, manager, setStatus, reload, token, route }: Pr
         </div>
       </div>
 
-      <DayRuleCard api={api} me={me} setStatus={setStatus} token={token} />
 
       {editing && school ? (
         <FormSheet

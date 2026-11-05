@@ -6,6 +6,7 @@ import { clamp, firstOf, lastOf, monthName, monthOf, shift, span, step, weekday,
 import { chunks, fillChanges, parseListed, type FillRules, type Listed, type SetChange } from '../calendar-fill';
 import { depedCalendar } from '../deped';
 import { Icon } from '../components/icons';
+import { DayRuleCard } from './DayRule';
 import { Sheet } from '../components/overlay';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, Select, StatusLine, Table, TableSkeleton,
@@ -725,6 +726,13 @@ export function Calendar({ api, me, manager, setStatus, reload, token, route }: 
           </div>
         ) : null}
       </div>
+
+      {/* The other half of the same question. The calendar says which dates are
+          days of classes; the rule says how a day's morning and afternoon
+          become the SF2's one mark. It used to sit on School profile, which is
+          the school's identity and the heading its forms carry, not how a mark
+          becomes a day. The card gates its own actions to the principal. */}
+      <DayRuleCard api={api} me={me} setStatus={setStatus} token={token} />
 
       {manager ? <History api={api} yearId={yearId} sections={sections} /> : (
         <Callout tone="info" title="Read only">
