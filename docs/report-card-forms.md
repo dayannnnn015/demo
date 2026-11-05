@@ -237,6 +237,59 @@ nothing useful**: it stretched the page box while the content stayed at the top.
 The page is a flex column, the block grid takes the slack with
 `grid-auto-rows: 1fr`, and each block's grade table spreads its rows. 94% fill.
 
+### All six elementary grades, and why no change was needed (2026-11-05)
+
+A clarification asked that the SF10 accommodate **Grade 1 through Grade 6** and
+not be limited to four. The four in the code is `PER_SHEET` — four scholastic
+blocks **to a printed side**, which is what the school's own workbook rules —
+not a limit on grade levels. Nothing capped the grades: `cards.ts` builds one
+block per encoded prior year plus one per recorded enrolment and sorts them by
+school year then grade, with no slice, and `Sf10Sheet` rounds the slots up to
+a whole leaf and continues onto further leaves rather than stopping.
+
+So the requirement was already met, and **no code changed**. What was missing
+was a test saying so, which is the thing that would have made the question
+unnecessary. `tests/forms-sf10-six-grades.test.ts` now holds, through the real
+API:
+
+| The rule | The case |
+|---|---|
+| Six grade levels, one section each, in order | Grades 1–5 encoded with Grade 6 current gives exactly six blocks, `[1,2,3,4,5,6]`, years 2021–2026 |
+| Issued without waiting for all six | A Grade 4 learner with nothing encoded is issued an SF10 with one block |
+| A grade not yet encoded stays blank | Grades 1–3 absent from the blocks until encoded, then appearing in order |
+| A grade not yet reached stays blank | Grades 5–6 never appear for a Grade 4 learner |
+| No figure copied between grades | Each grade is encoded with its own average, 81…85, and each block is asserted against its own |
+| Missing is not failed | An unfinished current year carries a null average **and** a null remark |
+
+The copying case is the one that earns its place: pointing one block's average
+at a constant makes it fail with `[84,84,84,84,84,null]`, which is what a
+copied block would look like on a permanent record.
+
+### One side of long bond was asked for, and is not advisable
+
+It is already long bond — `@page sf10 { size: 8.5in 13in }` — and a complete
+six-grade record **already prints on one sheet of paper**: six blocks round up
+to eight slots, four to a side, so it is one leaf printed front and back. Not
+two sheets.
+
+One *side* is a different request, and three things stand against it:
+
+- **Four blocks to a side is the school's own workbook**, the same document the
+  footer citation comes from. Six to a side is a departure from the form a
+  receiving school expects, on the one record that follows a learner between
+  schools.
+- **The side is already 94% full** at four blocks (measured in the print pass
+  above). Six blocks is about 141% of it, so everything shrinks by roughly 0.82
+  linear — 7pt cells reach about 5.7pt.
+- **That size is already known to fail here.** The SF9 print pass found Grades
+  4–6 descriptors reaching paper at 5.5pt when the dialog scaled the sheet, and
+  recorded that it "made the text unreadable". Shrinking the SF10 to fit would
+  reproduce it deliberately.
+
+**Left as it is, pending the user**, who asked "if possible". It is possible
+only by departing from the workbook and dropping below legible type, so it is
+a decision rather than a layout tweak.
+
 ### The footer citation is an open question
 
 Sheet 1 prints *"Revised 2025 based on DepEd Order No. 10, s. 2024"*, from the

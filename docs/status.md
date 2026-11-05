@@ -32,6 +32,35 @@ manager still passes every check exactly as before.
 
 ## What shipped in this session
 
+### The SF10 and all six elementary grades (2026-11-05) — no code changed
+
+A clarification asked that the SF10 carry Grade 1 through Grade 6 and not be
+limited to four. **It already did.** The four is `PER_SHEET` — four scholastic
+blocks to a printed *side*, which is what the school's own SF10 workbook rules
+— and no grade level was ever capped: `cards.ts` builds a block per encoded
+prior year and per recorded enrolment with no slice, and `Sf10Sheet` rounds
+the slots up to a whole leaf and continues onto further leaves. A cap of eight
+did exist once and was removed when it was found to lose a ninth year off a
+permanent record.
+
+What was missing was the test that would have made the question unnecessary.
+`tests/forms-sf10-six-grades.test.ts` (7 cases) now holds every rule the
+clarification names, through the real API: six sections in order; issued
+without waiting for all six; an unencoded grade blank and a not-yet-reached
+grade blank; **no figure copied between grades**, each grade encoded with its
+own average and asserted against it; and a missing record never reading as
+failed, an unfinished year carrying a null average *and* a null remark. It was
+mutation-tested — pointing one block's average at a constant fails it with
+`[84,84,84,84,84,null]`, which is what a copied block looks like.
+
+**The request to fit six grades on one side of long bond is left for the user.**
+It is already long bond, and a six-grade record already prints on **one sheet**
+— eight slots, four to a side, front and back. One *side* would depart from the
+four-blocks-a-side the school's workbook rules, on the record that follows a
+learner between schools, and would shrink 7pt cells to about 5.7pt: the SF9
+print pass recorded 5.5pt as making text unreadable. Full reasoning in
+[report-card-forms.md](report-card-forms.md).
+
 ### 0.90.1 — every control says when it is waiting
 
 The school reported **a delay when clicking**. The delay is real and is not the
@@ -167,7 +196,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **199 passed**, 19 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **206 passed**, 20 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |
@@ -204,6 +233,14 @@ both screens in a real DOM against the real API.
    column, the Excel template, registering without a class, the adviser's pull or
    the oversight card. Retake from `npm run demo`, synthetic records only.
 5. **Step 8, the batch SF10, is deferred** — do not start it unasked.
+
+**Waiting on the user**
+
+5b. **Whether to fit the SF10's six grades onto one *side* of long bond.** It
+   already prints on one sheet, front and back. One side means six blocks a
+   side instead of the workbook's four and about 5.7pt type. Recommended: leave
+   it. If it is wanted anyway, the honest form is an explicit choice at print
+   time rather than a silent change to the form everyone issues.
 
 **Waiting on the school** (see the gates in [constraints.md](constraints.md))
 

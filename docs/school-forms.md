@@ -166,7 +166,7 @@ Then a parent or guardian signature per quarter, a Certificate of Transfer namin
 
 | Gate | Effect |
 |---|---|
-| Official form templates | **Partly open.** Blank SF2 and the SF4 workbook in hand, SF9 for Grades 4–6, signatories named. Still missing: SF9 for Kinder and Grades 1–3, SF10 / Form 137, and the process for correcting an already-issued form. |
+| Official form templates | **Partly open.** Blank SF2 and the SF4 workbook in hand, SF9 for Grades 4–6, signatories named. **The SF10 workbook arrived later and is what the built form follows** — four scholastic blocks to a side on long bond, and the footer citation ([report-card-forms.md](report-card-forms.md)); this row said it was missing until 2026-11-05. Still missing: SF9 for Kinder and Grades 1–3, and the process for correcting an already-issued form. |
 | Mark meanings and conversion rules | **Shut, and sharper.** The official arithmetic and the mark vocabulary are now known. The AM/PM-to-day rule, half-day credit, single-session days, transfer effective dates and alternative-delivery conversion are not, and the form's single daily column raises a new question: whether the school keeps two-session registers at all. |
 | Learner fields and class capacity | **Shut.** Observed section sizes are known; an approved maximum is not. |
 | Grading enclosure and ECR examples | **Shut.** Descriptors and a passing mark are not weights, transmutation or rounding. |
