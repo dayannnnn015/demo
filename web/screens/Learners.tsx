@@ -3,14 +3,14 @@ import type { Api, Page, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
-import { IdentityHistory, IdentitySheet, LrnCorrection, LrnHistory, ReviewActions } from './Reviews';
+import { IdentityHistory, IdentitySheet, ReviewActions } from './Reviews';
 import { LearnerRecord } from './LearnerRecord';
+import { LearnerDetail } from './LearnerProfile';
 import { Sf10Dialog, Sf9Dialog } from './FormDialogs';
 import {
-  Badge, Callout, Cell, Editor, EmptyState, Finder, FormSheet, PageHeader, Pager, StatusLine, idle, localToday, yearName,
+  Badge, Callout, Cell, EmptyState, Finder, FormSheet, PageHeader, Pager, idle, localToday, yearName,
   Table, Task, Unrecorded, gradeName, learnerName, sentence, value, type Field, type Status,
 } from '../components/primitives';
-import { Affects } from '../components/affects';
 import { profileFields } from '../record-fields';
 import { MyClassSheet } from './MyClass';
 
@@ -78,6 +78,15 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
   const sectionLabel = (id: unknown) => String(sections.find(r => r.id === id)?.name ?? 'Unavailable section');
   // The year a registration enrols into. At most one may be active at a time.
   const activeYear = years.find(y => y.status === 'active');
+  /*
+   * Whether this person has any previous school year to encode at all, which is
+   * `hiddenByAssignment`'s rule read from the sections already loaded rather
+   * than fetched again. An SF10 scholastic block begins at Grade 1, so an
+   * adviser whose every class is Kindergarten or Grade 1 has nobody with one;
+   * a manager is never narrowed, and nor is an adviser between assignments.
+   * It only chooses a sentence — the API is what refuses the work.
+   */
+  const canEncodeHistory = manager || !sections.length || sections.some(s => Number(s.grade_level) > 1);
   const searching = Object.values(filters).some(Boolean);
   const found = rows?.items.length ?? 0;
 
@@ -215,46 +224,19 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
               );
             }
             return (
-              <>
-                <EnrollmentHistory api={api} learnerId={id} manager={manager}
-                  yearLabel={yearLabel} sectionLabel={sectionLabel}
-                  onView={enrollment => setViewing({ learner: row, enrollment })}
-                  onSf9={enrollment => setForm({ kind: 'sf9', learner: row, enrollment })} />
-                {manager ? (
-                  <>
-                    <Task title="Correct the details" note="Spelling, birth date, name extension">
-                      <p className="muted">An assigned LRN is never changed here; correcting one is a separate reviewed workflow.</p>
-                      <Editor fields={profileFields} initial={row} setStatus={setStatus} onSaved={reload} warning={<Affects what="learner" />}
-                        onSubmit={data => api(`/learners/${row.id}`, 'PATCH', { ...data, version: row.version })} />
-                    </Task>
-                    {row.lrn == null ? (
-                      <Task title="Fill the official LRN" note="Recorded once, and never cleared">
-                        <p className="muted">EDUNEXUS never invents an LRN. Enter it only when the school has been issued one.</p>
-                        <Editor submitLabel="Assign LRN" setStatus={setStatus} onSaved={reload} warning={<Affects what="lrn" />}
-                          fields={[{ key: 'lrn', label: 'Learner Reference Number', pattern: '[0-9 -]{12,20}', maxLength: 20, hint: 'Exactly twelve digits, leading zeroes included.' }]}
-                          onSubmit={data => api(`/learners/${row.id}/lrn`, 'PATCH', { ...data, version: row.version })} />
-                      </Task>
-                    ) : (
-                      <Task title="Correct the assigned LRN" note="Reviewed, and the old number kept">
-                        <LrnCorrection api={api} learner={row} setStatus={setStatus} onDone={reload} />
-                        <h3>Earlier corrections</h3>
-                        <LrnHistory api={api} learnerId={id} />
-                      </Task>
-                    )}
-                    <Task title="Identity links" note="Duplicate records of the same child">
-                      <p className="muted">When two registry entries are the same child, link the duplicate to the record that is kept. Both stay on file.</p>
-                      <ReviewActions>
-                        <button type="button" className="btn secondary" onClick={() => setIdentity({ learner: row, action: 'link' })}>This is the same child as another record</button>
-                      </ReviewActions>
-                      <IdentityHistory api={api} learnerId={id} />
-                    </Task>
-                    <p className="card-note">
-                      <a href={`#/access?record=${id}`}>Who has opened this record</a> — the privacy access log, narrowed to this learner, including every read of their enrollments.
-                    </p>
-                  </>
-                ) : null}
-
-              </>
+              <LearnerDetail
+                api={api}
+                learner={row}
+                manager={manager}
+                canEncodeHistory={canEncodeHistory}
+                setStatus={setStatus}
+                reload={reload}
+                yearLabel={yearLabel}
+                sectionLabel={sectionLabel}
+                onIdentity={() => setIdentity({ learner: row, action: 'link' })}
+                onView={enrollment => setViewing({ learner: row, enrollment })}
+                onSf9={enrollment => setForm({ kind: 'sf9', learner: row, enrollment })}
+              />
             );
           }}
         />
@@ -346,63 +328,4 @@ export async function possibleDuplicate(api: Api, data: Record<string, unknown>,
   setDistinct(key);
   const names = found.map(row => `${learnerName(row)}${row.lrn ? ` (LRN ${String(row.lrn)})` : ''}`).join('; ');
   throw new ApiError(409, 'POSSIBLE_DUPLICATE', 'This child may already be in the registry.', [{ path: 'last_name', message: `Already in the registry with this surname and birth date: ${names}. Open them from the search instead. If this is a different child, press Register learner again.` }]);
-}
-
-/**
- * A learner's enrolment history, read when their row is opened.
- *
- * It used to sit behind a folded panel and a "Load enrollment records" button:
- * every enrolment returned is named in the privacy audit, so the registry must
- * not fetch them for a list nobody asked for. Opening one learner's record *is*
- * that asking — it is deliberate, it is one learner, and the access row it
- * writes says exactly that. The list itself still never loads them, which is
- * the rule that mattered; the two clicks in front of it were not.
- */
-function EnrollmentHistory({ api, learnerId, manager, yearLabel, sectionLabel, onView, onSf9 }: {
-  api: Api; learnerId: string; manager: boolean;
-  yearLabel: (id: unknown) => string; sectionLabel: (id: unknown) => string;
-  onView: (enrollment: Row) => void; onSf9: (enrollment: Row) => void;
-}) {
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const [status, setStatus] = useState<Status>(idle);
-  useEffect(() => {
-    let live = true;
-    setRows(null);
-    void api<Page>(`/enrollments${query({ learner_id: learnerId, limit: 100, record_state: manager ? 'all' : undefined })}`)
-      .then(result => { if (live) setRows(result.items); })
-      .catch(error => { if (live) { setRows([]); setStatus({ kind: 'error', text: message(error) }); } });
-    return () => { live = false; };
-  }, [api, learnerId, manager]);
-  return (
-    <>
-      <h3>School years</h3>
-      <p className="muted">Every year this learner has been enrolled. Reading them is recorded in the privacy access log.</p>
-      <StatusLine status={status} />
-      <Table
-        loading={rows === null}
-        rows={rows ?? []}
-        rowKey={r => String(r.id)}
-        empty={<p className="muted">This learner has no enrollment records yet.</p>}
-        columns={[
-          { header: 'School year', cell: r => yearLabel(r.academic_year_id) },
-          { header: 'Grade', cell: r => gradeName(r.grade_level) },
-          { header: 'Section', cell: r => sectionLabel(r.section_id) },
-          { header: 'Status', cell: r => sentence(value(r, 'status')) },
-          { header: 'Enrolled', cell: r => <span className="mono">{value(r, 'enrolled_on')}</span> },
-          { header: 'Latest change', cell: r => `${value(r, 'effective_on')} · ${sentence(value(r, 'last_reason'))}` },
-          { header: 'Record', cell: r => (r.record_state === 'voided' ? <Badge tone="stopped">Voided</Badge> : <Badge tone="good">Valid</Badge>) },
-          {
-            header: 'Attendance',
-            // The SF9 here is this year's card, not the current one the registry
-            // row opens, and it is the only way to reach a past year's.
-            cell: r => (r.record_state === 'voided' ? <span className="muted">Not shown for a voided record</span>
-              : <span className="row-actions">
-                  <button type="button" className="btn ghost small" onClick={() => onView(r)}>View the year</button>
-                  <button type="button" className="btn secondary small form-open" onClick={() => onSf9(r)}><Icon name="form" size={14} />SF9</button>
-                </span>),
-          },
-        ]}
-      />
-    </>
-  );
 }

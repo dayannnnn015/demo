@@ -318,6 +318,28 @@ contract is strict, so an extra key is a 422 rather than a silently dropped
 field, and which further fields may exist at all is behind the learner-fields
 gate in [constraints.md](constraints.md) — a decision, not a line of code.
 
+**One learner is read in three parts** (`web/screens/LearnerProfile.tsx`, 0.91.1).
+`LearnerDetail` is what the registry's row panel renders: a `segmented`
+tablist over **Learner profile**, **Academic history** and **Enrollment**, with
+the profile selected first. The three are three different records, not three
+views of one, which is why they are separated — `learners`, the transcribed
+previous years, and the annual `enrollments` timeline. Three rules it carries,
+each the reason the file exists rather than a preference:
+
+- **It shows only what the record holds**, which is `profileFields` and so
+  `ROSTER_HEADER`. A profile is where a reader most readily takes a gap for
+  "nothing to report", so the fields EDUNEXUS does **not** hold — parent,
+  guardian, relationship, contact number, mother tongue, religion, indigenous
+  group — are named in a `Callout` as not collected, rather than left out
+  silently. Adding one of them here is the learner-fields gate's decision.
+- **Academic history is a signpost with no link.** The shortcut into that
+  screen was removed from this panel in 0.90.2, because the rail already
+  carries it; reorganising the panel does not restore it.
+- **Editing is the existing `PATCH /learners/:id`** through `Editor` and
+  `profileFields`, on the same row, so there is no second learner and no second
+  copy of a field. An adviser gets no editor and is told whose the correction
+  is; the API refuses theirs anyway, and the test sends one to prove it.
+
 **The class-list template is generated, and its columns are not the workspace's
 to choose.** `rosterTemplateWorkbook()` in `web/csv.ts` builds the `.xlsx` from
 `ROSTER_HEADER`, the one frontend copy of what `GET /roster-imports/template`

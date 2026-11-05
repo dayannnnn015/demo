@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.91.0.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.91.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -31,7 +31,64 @@ manager still passes every check exactly as before.
 > none, while the deployed 0.86.1 screen still draws learners into sections and
 > sends them. **Do not open Next year's classes on live until this ships.**
 
+## Waiting on the user
+
+**Should the learner's Academic history part link to that screen?** 0.91.1 gave
+it a signpost and no link, because the shortcut was deliberately removed from
+this same panel in 0.90.2 (the rail already carries the screen) and
+reorganising the panel is not a reason to reverse that. Restoring it is one
+anchor in `web/screens/LearnerProfile.tsx` and one assertion in
+`tests/web-learner-profile.test.ts` — but it reverses a settled decision, so it
+is the user's to make, not the next agent's.
+
 ## What shipped in this session
+
+### 0.91.1 — one learner, read in three parts (no migration)
+
+Asked for as a **Learner Profile** feature over "the personal, demographic and
+other relevant information" the bulk import collects. The first finding is the
+one that shaped the increment, and it should be read before anyone picks the
+request up again:
+
+**The class-list import collects nothing the registry did not already hold.**
+`ROSTER_HEADER` in `web/csv.ts`, which `tests/registry-address.test.ts` holds
+equal to what `GET /roster-imports/template` publishes, is
+`lrn, first_name, middle_name, last_name, name_extension, birth_date, sex,
+address` — eight columns, all eight already on `edunexus.learners`. So there was
+no imported information anywhere waiting to be surfaced, and **no parent,
+guardian, relationship, contact number, mother tongue, religion or
+indigenous-group field to show**: each is named by the **learner fields and
+class capacity** gate as what it still blocks. The request's sections A–D could
+not be built as written, and nothing was invented in their place.
+
+What did ship is the reorganisation the request also asked for. The panel under
+a learner on the Learner registry — which stacked the enrolment history, the
+profile correction, the LRN workflow and the identity links in one column — is
+now three parts with the profile first: **Learner profile**, **Academic
+history**, **Enrollment**. Three parts because they are three different
+records, not three views of one.
+
+- **No endpoint, column, policy, row-security predicate or error code changed,
+  and no migration was written.** `web/screens/LearnerProfile.tsx` is new and
+  holds `LearnerDetail` plus `EnrollmentHistory`, moved there from
+  `Learners.tsx`; the registry screen lost 100 lines and gained a component.
+- **Editing is the existing manager-only `PATCH /learners/:id` on the same
+  row**, which is what makes a second learner record impossible. The test
+  counts `learners` across an edit and asserts the version went to 2.
+- **The fields EDUNEXUS does not hold are named in the profile** rather than
+  left as empty lines, because a profile is where an empty line most readily
+  reads as *nothing to report*.
+- **Academic history is a signpost with no link.** The shortcut was removed from
+  this very panel in 0.90.2 because the rail already carries that screen;
+  reorganising the panel is not a reason to restore it. **If the user wants the
+  link back, that is the one open question from this increment.**
+
+`tests/web-learner-profile.test.ts` is new: 12 cases in a real DOM against the
+real API. Both gates that guard a decision — no gated field offered, no second
+door into Academic history — were **mutation-tested**: a planted guardian field
+and a planted `prior-records` link each fail them. This matters because
+0.90.2's own gate was vacuous on its first run.
+
 
 ### 0.91.0 — spacing and a small text size (migration 0055)
 

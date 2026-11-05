@@ -96,7 +96,9 @@ export const guides: Guide[] = [
       'Search by name or LRN, or filter by sex. Names are found in any order and without their accents, so *juan dela cruz*, *Dela Cruz, Juan* and *Pena* for Peña all work; an LRN may be typed with spaces or dashes. Opening a list of learners is written to the {access}, so search for who you need rather than paging through everyone.',
       'Before registering, EDUNEXUS looks for a learner with the same surname and birth date. If one is on file it says so beside the name: open them from the search instead, or press **Register learner** again if this is a different child.',
       'On a learner’s row, **SF9** opens that year’s report card and **SF10** every year EDUNEXUS holds.',
-      'Open a learner, then **School years**, and **View the year** for their attendance month by month. **Print this year** prints it for a parent conference.',
+      'Opening a learner gives three parts. **Learner profile** is who they are: name, LRN, birth date, sex and the one line of address, which is everything a class list carries and everything EDUNEXUS holds about a child. **Academic history** says where the school years from before EDUNEXUS are kept. **Enrollment** is where they are this year and every year they have been enrolled.',
+      '**Correct the details** on the profile fixes a spelling, a birth date, an extension or the address. There is one record per learner, so what you save there is what the registry, the class list, the register and the forms show from then on — it never makes a second learner.',
+      'Open a learner, then **Enrollment** and **School years**, and **View the year** for their attendance month by month. **Print this year** prints it for a parent conference.',
       'If two records are the same child, **This is the same child as another record** links them after a review. Nothing is merged automatically.',
     ],
     refuses: [
@@ -114,8 +116,9 @@ export const guides: Guide[] = [
       'The search there also finds a learner with no enrolment this school year, such as one returning to the school, so they need not be keyed in again.',
       '**Register a new learner into my class** is for a child the school has never held a record for at all. The registry is checked first, so if a learner with the same name and birth date is already on it you take that learner in instead.',
       'On a learner’s row, **SF9** opens this year’s report card and **SF10** their record across the years.',
-      'Open a learner, then **School years**, and **View the year** for their attendance month by month. **Print this year** prints it for a parent conference.',
-      'Only the principal and the administrative officer change a learner’s details. If something is wrong, tell them.',
+      'Opening a learner gives three parts: **Learner profile**, who they are; **Academic history**, where the school years from before EDUNEXUS are kept; and **Enrollment**, where they are this year and every year they have been enrolled.',
+      'Open a learner, then **Enrollment** and **School years**, and **View the year** for their attendance month by month. **Print this year** prints it for a parent conference.',
+      'Only the principal and the administrative officer change a learner’s details, so the profile shows them to you and offers nothing to edit. If something is wrong, tell the office what it says and what it should say.',
     ],
     refuses: [
       'A learner already in a class cannot be taken into yours. Ask the office to move them.',

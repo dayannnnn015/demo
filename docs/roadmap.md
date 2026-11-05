@@ -497,6 +497,30 @@ enforces and suggests no maximum, deliberately.
 
 **Needs:** an approved maximum, or a written statement that there is none.
 
+### 11a. The learner profile's parent, guardian and demographic sections
+
+Gate: **learner fields and class capacity**, the same one. A Learner Profile
+feature was asked for on 2026-11-05 with sections for parent and guardian names,
+relationship and contact information, and "other existing demographic fields".
+**None of them exists to show.** The class-list import's columns are
+`ROSTER_HEADER` — `lrn, first_name, middle_name, last_name, name_extension,
+birth_date, sex, address` — and all eight are already on `edunexus.learners`,
+so there was no imported information to surface and nothing to read back: the
+request's premise that the importer collects more than
+the registry holds is simply not the case. Each missing field — parent or
+guardian, relationship, contact number, mother tongue, religion, indigenous
+group, and any breakdown of the one address line — is named by this gate as what
+it still blocks.
+
+What shipped instead is the reorganisation (0.91.1): the learner reads in three
+parts, and the profile **names the facts EDUNEXUS does not hold** rather than
+leaving them as empty lines. So the screen is ready for the fields and refuses
+to guess at them.
+
+**Needs:** the school's reviewed field list — which facts about a child and
+their family it may keep, and for what purpose. Nothing here is a layout
+problem, so do not design the sections before the list exists.
+
 ### 12. Absence alerts and follow-up thresholds
 
 Gate: **absence-alert rule** — **contested**. The settled record says the school
