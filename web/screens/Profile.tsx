@@ -84,6 +84,24 @@ export function Profile(props: ScreenProps) {
           <p className="card-note">Your password is held by the sign-in service, never by EDUNEXUS. Nobody at the school can read it back to you.</p>
         </div></div>
         <div className="card-body">
+          {/* Which account this is. It comes from the open session, not from
+              `/me`: the address lives on `auth.users`, which the API cannot
+              read, and nothing here is stored. Worth showing because a school
+              with shared staffroom computers is exactly where "whose account
+              am I in?" is a real question. */}
+          <div className="setting">
+            <div>
+              <b>Signed in as</b>
+              <p className="muted">
+                {account?.signedInAs?.email
+                  ? <span className="mono">{account.signedInAs.email}</span>
+                  : <Unrecorded label="Address not available in this view" />}
+              </p>
+            </div>
+            {account?.signedInAs?.lastSignIn
+              ? <span className="muted">This sign-in began {new Date(account.signedInAs.lastSignIn).toLocaleString()}</span>
+              : null}
+          </div>
           <div className="setting">
             <div><b>Password</b><p className="muted">Change it here if you think someone else may know it.</p></div>
             {account?.changePassword

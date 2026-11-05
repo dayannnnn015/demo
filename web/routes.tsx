@@ -44,6 +44,10 @@ export type AccountTools = {
   changePassword?: (() => void) | undefined;
   /** The sign-in service, for signing out elsewhere. */
   auth?: SessionAuth | undefined;
+  /** The address this person signed in with, and when they last did, from the
+   *  session itself. Read, never stored: both live on `auth.users`, which the
+   *  API cannot read. */
+  signedInAs?: { email: string | null; lastSignIn: string | null } | undefined;
 };
 
 export type ScreenProps = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route; account?: AccountTools | undefined };

@@ -8,6 +8,13 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.9', date: '2026-11-05',
+    items: [
+      '{profile} now shows the address you signed in with, under *Signing in*, along with when this sign-in began. On a shared staffroom computer it is the quickest way to check whose account you are in before you record anything.',
+      'Nothing about it is stored by EDUNEXUS: it is read from the sign-in service’s own session, which is also why nobody at the school can read your password back to you.',
+    ],
+  },
+  {
     version: '0.90.8', date: '2026-11-05',
     items: [
       'Kindergarten and Grade 1 advisers: {prior-records} is no longer in your sidebar. A learner’s record there starts at Grade 1, and Kindergarten is carried as the credential presented for Grade 1 rather than as a school year — so there is nothing there for your classes. Advisers of Grade 2 and above keep it.',

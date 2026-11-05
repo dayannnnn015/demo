@@ -21,6 +21,8 @@ export function App() {
   const [status, setStatus] = useState<Status>(idle);
   const [token, setToken] = useState(0);
   const [year, setYear] = useState<Row | null>(null);
+  /** The address and last sign-in on the open session, for My profile to show. */
+  const [signedInAs, setSignedInAs] = useState<{ email: string | null; lastSignIn: string | null }>();
   const [school, setSchool] = useState<Row | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
 
@@ -108,7 +110,15 @@ export function App() {
       .then(r => setYear(r.items.find(y => y.status === 'active') ?? null))
       .catch(() => setYear(null));
     void api<Row>('/school').then(setSchool).catch(() => setSchool(null));
-  }, [me, api, token]);
+    // From the session already open in this tab: nothing is fetched and
+    // nothing is kept.
+    void client?.auth.getSession()
+      .then(({ data }) => setSignedInAs({
+        email: data.session?.user.email ?? null,
+        lastSignIn: data.session?.user.last_sign_in_at ?? null,
+      }))
+      .catch(() => setSignedInAs(undefined));
+  }, [me, api, client, token]);
 
   // Screens this person's own classes rule out; `hiddenByAssignment` holds
   // the rule and why. Only a teacher is read for, so nothing else costs a request.
@@ -143,7 +153,10 @@ export function App() {
 
   const manager = me.role !== 'teacher';
   const route = routeFor(page, me.role);
-  const account = { updateMe: (patch: Row) => setMe(current => (current ? { ...current, ...patch } : current)), changePassword: () => setChangingPassword(true), auth: client.auth };
+  const account = {
+    updateMe: (patch: Row) => setMe(current => (current ? { ...current, ...patch } : current)),
+    changePassword: () => setChangingPassword(true), auth: client.auth, signedInAs,
+  };
   const navigate = (id: string) => {
     location.hash = `#/${id}`;
     setPage(id);

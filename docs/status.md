@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.8.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.9.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,40 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.9 — My profile and Settings reviewed; one field added
+
+A full specification for My profile and Settings & Accessibility was checked
+against what exists. **Almost all of it was already built**, so the work was
+mostly the review.
+
+Already there: the nine accessibility axes and the theme (0043, 0047) — text
+size, motion, contrast, links, focus, target size, line spacing, Atkinson
+Hyperlegible for dyslexia, light/dark/system — applied as `<html>` attributes
+the stylesheets read, saved per account, arriving with `/me` and so restored
+at sign-in; the start screen; the session list with *Sign out everywhere else*;
+*Put these back* as the reset; and a password change that verifies the current
+password by re-authenticating, requires twelve characters and a matching
+confirmation, and shows or hides what is typed.
+
+**Added: the address the person signed in with**, and when this sign-in began.
+Read from the **open session**, not `/me`: both live on `auth.users`, which
+the API deliberately cannot read, since the service-role key is confined to one
+Edge Function. No endpoint, no column, **no migration**, nothing stored. It
+rides on `AccountTools`, which every screen already receives.
+
+**Declined, with reasons, so they are not re-proposed** — the full list is in
+[constraints.md](constraints.md):
+
+| Asked for | Why not |
+|---|---|
+| Interface density, a *Small* font size | Each needs a new column or widened `check` on `staff_profiles`: real migrations for axes nobody has asked for by name |
+| Interface language | No translation layer; help ships one edition, `en` |
+| Time zone | Fixed to `Asia/Manila` by a check in `0001`, and already the school's own |
+| Date and time format | Would put a display preference in front of `web/dates.ts`, which never converts a `YYYY-MM-DD` through local time |
+| Notification preferences | **EDUNEXUS sends no notifications.** The specification's own rule was to offer only categories the system supports |
+| Password update date | Not exposed by the anon client; reading it means the service-role key |
+| Contact number | A new staff field, so a school decision, by the same rule as the learner-fields gate |
 
 ### 0.90.8 — four fixes to the screens staff type into
 
@@ -411,7 +445,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **243 passed**, 24 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **245 passed**, 24 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |

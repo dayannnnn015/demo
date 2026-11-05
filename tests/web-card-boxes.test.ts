@@ -112,3 +112,37 @@ describe('the year a historical record began', () => {
     expect(field).toContain('Any year from 1990 to this one');
   });
 });
+
+/**
+ * My profile says which account you are signed in as (0.90.9).
+ *
+ * A school with shared staffroom computers is exactly where "whose account am
+ * I in?" is a real question, and it was the one identity fact My profile did
+ * not carry. It comes from the open session rather than from `/me`, because
+ * the address lives on `auth.users`, which the API deliberately cannot read —
+ * the service-role key is confined to one Edge Function. So there is no
+ * endpoint, no column and no migration, and nothing is stored.
+ */
+describe('the account My profile is signed in as', () => {
+  it('is read from the session and shown, never fetched or stored', () => {
+    const app = readFileSync('web/App.tsx', 'utf8');
+    const profile = readFileSync('web/screens/Profile.tsx', 'utf8');
+    // Straight off the open session.
+    expect(app).toMatch(/client\?\.auth\.getSession\(\)/);
+    expect(app).toMatch(/last_sign_in_at/);
+    // Carried on the tools every screen already receives, not a new prop chain.
+    expect(readFileSync('web/routes.tsx', 'utf8')).toContain('signedInAs?: {');
+    expect(profile).toContain('Signed in as');
+    // Absent is drawn, never blank — the workspace's own rule, and this value
+    // is genuinely absent in a view with no session behind it.
+    expect(profile).toMatch(/signedInAs\?\.email[\s\S]{0,200}?Unrecorded/);
+  });
+
+  it('adds no endpoint and no stored field for it', () => {
+    // The address is not ours to keep: it belongs to the sign-in service.
+    const contracts = readFileSync('src/modules/foundation/contracts.ts', 'utf8');
+    expect(contracts).not.toMatch(/signedInAs|last_sign_in_at/);
+    const migrations = readFileSync('database/migration-checksums.json', 'utf8');
+    expect(Object.keys(JSON.parse(migrations)).length).toBe(54);
+  });
+});
