@@ -8,6 +8,14 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.7', date: '2026-11-05',
+    items: [
+      'Advisers: **School profile** and **School years & sections** are no longer in your sidebar. Nothing on either was yours to change, the school year you are working in is named at the top of every screen, and the classes you advise are on your own screens.',
+      'If something printed at the top of your SF2 or SF9 is wrong, tell the principal or the administrative officer — that is where it is kept.',
+      'Principals and administrative officers keep both screens exactly as before.',
+    ],
+  },
+  {
     version: '0.90.6', date: '2026-11-05',
     items: [
       '{school} now shows **How this prints on the forms**: the heading the SF2, SF4, SF9 and SF10 all carry, exactly as it will print. Anything not filled in is named there — the forms leave a missing line out rather than printing it blank, so this is the way to see it without printing one.',

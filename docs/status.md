@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.6.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.7.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,34 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.7 — two Setup screens leave an adviser's navigation
+
+Asked for, and it is a **menu change rather than a permission change**:
+`hiddenFor: ['teacher']` leaves a route out of a role's navigation and touches
+nothing the API allows. Both reads are still answered, so nothing an adviser
+could previously do becomes a refusal, and no manager's view moves.
+
+Neither screen was an adviser's work. Every control on **School years &
+sections** is a manager's — the year an adviser works in is named in the top
+bar, and the sections they advise are on their own screens. **School profile**
+is the heading the forms they issue already print, and the attendance rule that
+gave them a reason to open it moved to the calendar in 0.90.5.
+
+**The two teacher guides went with them.** A guide written for a screen a role
+cannot open is exactly how that screen comes to look like part of their job.
+
+**Two stale pieces of help, both missed consequences of the 0.90.5 move**, found
+while doing this and fixed: the manager's School profile guide still advertised
+the attendance rule — it would have sent a principal to the wrong screen — and
+the calendar's guide never mentioned it although the card now lives there. It
+now carries **Record the rule** and what it governs.
+
+`tests/web-registry-scope.test.ts` holds four properties, including that
+**neither route is manager-gated at the API** — a screen hidden from a role
+whose API also refused it would be a permission change dressed as a menu
+change, and this keeps the two from being confused later — and that an adviser
+keeps the five screens their work needs.
 
 ### 0.90.6 — School profile shows what it already knew
 
@@ -350,7 +378,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **221 passed**, 22 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **236 passed**, 24 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |

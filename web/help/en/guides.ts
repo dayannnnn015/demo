@@ -61,7 +61,7 @@ export const guides: Guide[] = [
   {
     route: 'school',
     for: 'manager',
-    summary: 'The school’s name, six-digit school ID and address, printed on every official form, and the school’s attendance rule, which every attendance figure on the forms is counted by.',
+    summary: 'The school’s name, six-digit school ID and address, printed on every official form, with the heading those forms carry and the history of every change to it.',
     steps: [
       'Check the name, the school ID and the address. Fill in the region, division, district, school head and position: every form prints them.',
       'The principal records the school’s attendance rule: under **Attendance rule for the school forms**, choose **Record the rule** and answer the two questions from the school’s own practice, saying where the school approved it.',
@@ -69,14 +69,6 @@ export const guides: Guide[] = [
     ],
     refuses: [
       'EDUNEXUS offers no default answer to the rule’s two questions, because the rule is the school’s and a guessed one would print wrong figures on real forms.',
-    ],
-  },
-  {
-    route: 'school',
-    for: 'teacher',
-    summary: 'The school’s name, ID and address as every form prints them, and the attendance rule your SF2 is counted by. The principal and administrative officer keep it; you read it.',
-    steps: [
-      'If something printed on your SF2 or SF9 heading is wrong, tell the principal or the administrative officer.',
     ],
   },
   {
@@ -93,15 +85,6 @@ export const guides: Guide[] = [
     ],
     refuses: [
       'A year’s periods cannot change once it is active, because report cards and forms are filed under them.',
-    ],
-  },
-  {
-    route: 'years',
-    for: 'teacher',
-    summary: 'The school years and their terms, as the principal and administrative officer set them. Your report cards are filed under these terms.',
-    steps: [
-      'You read this screen; nothing on it is changed by an adviser.',
-      'You see the sections you advise. If one is missing, ask the principal or the administrative officer to make you its adviser on Staff access.',
     ],
   },
   {
@@ -233,11 +216,12 @@ export const guides: Guide[] = [
   {
     route: 'calendar',
     for: 'manager',
-    summary: 'Which days hold classes, and how each session runs. Attendance can be taken only on a configured day.',
+    summary: 'Which days hold classes, how each session runs, and the school’s attendance rule. Attendance can be taken only on a configured day.',
     steps: [
       '**Fill a date range** sets a whole stretch at once. Say how Monday to Friday runs and what Saturday and Sunday are, then type each holiday on its own line, date first, from the school’s approved calendar.',
       'Review the counts, then set the dates. Pick single dates in the month view to change them one at a time.',
       'A date you leave out stays *Not configured*. It is not a school day, a holiday or an absence, and no attendance can be taken on it.',
+      'Below the calendar, **Record the rule** sets the school’s attendance rule: how a learner present for one session and absent for the other is counted, and whether a date with only one classroom session is a day of classes. Only the principal records it. Every attendance figure on the SF2, SF4 and report card is counted by it, and until it is recorded they show the marks but no totals.',
     ],
     refuses: [
       'EDUNEXUS adds no holiday, weekend or suspension by itself. The school’s approved calendar is the only source.',

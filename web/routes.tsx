@@ -115,6 +115,10 @@ export const routes: Route[] = [
   {
     id: 'school', nav: 'School profile', icon: 'school', group: 'Setup', built: true, ownHeader: true,
     title: 'School profile',
+    // An adviser has nothing to do here and nothing to read that their own
+    // screens do not already tell them: the heading is printed on the forms
+    // they issue, and the attendance rule moved to the calendar in 0.90.5.
+    hiddenFor: ['teacher'],
     lede: 'Name and address printed on every official form.',
     record: 'school_profile', feeds: 'SF2, SF4, SF9, SF10',
     render: p => <School {...p} />,
@@ -122,6 +126,9 @@ export const routes: Route[] = [
   {
     id: 'years', nav: 'School years & sections', icon: 'years', group: 'Setup', built: true, ownHeader: true,
     title: 'School years, terms and sections',
+    // Every control on it is a manager's. The year an adviser works in is named
+    // in the top bar, and the sections they advise are on their own screens.
+    hiddenFor: ['teacher'],
     lede: 'Draft, activate and close a school year, divide it into its terms, and create its classes.',
     record: 'academic_years, reporting_periods, sections', feeds: 'SF2, SF9, SF10',
     render: p => <SchoolYears {...p} />,

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ids, testDatabase, type TestDatabase } from './helpers/database.js';
 import { mountScreen, serverApi, type ServerApi } from './helpers/dom.js';
 import { Learners } from '../web/screens/Learners';
-import { routes } from '../web/routes';
+import { available, routes } from '../web/routes';
 
 /**
  * What the Learner registry offers each role, in a real DOM against the real
@@ -123,5 +123,50 @@ describe('Academic history is reached from the rail, and only from there', () =>
     expect(history).toBeTruthy();
     expect(history?.hiddenFor ?? []).not.toContain('teacher');
     expect(history?.manager).not.toBe(true);
+  });
+});
+
+/**
+ * The Setup screens an adviser is not offered.
+ *
+ * Both were readable and had a teacher guide saying so, which is the thing that
+ * made them look like part of an adviser's job. Neither is: every control on
+ * School years & sections is a manager's, and School profile is the heading the
+ * forms an adviser issues already print — the attendance rule that used to give
+ * them a reason to open it moved to the calendar in 0.90.5.
+ *
+ * `hiddenFor` only hides. The API still answers both reads, so nothing an
+ * adviser could previously do becomes a refusal, and no permission moved.
+ */
+describe('what an adviser is not offered in the navigation', () => {
+  const route = (id: string) => routes.find(r => r.id === id)!;
+
+  it('leaves School profile and School years out of an adviser’s navigation', () => {
+    for (const id of ['school', 'years']) {
+      expect(available(route(id), 'teacher'), id).toBe(false);
+    }
+  });
+
+  it('keeps both for the principal and the administrative officer', () => {
+    for (const id of ['school', 'years']) {
+      expect(available(route(id), 'principal'), id).toBe(true);
+      expect(available(route(id), 'administrative_officer'), id).toBe(true);
+    }
+  });
+
+  it('changes no permission: the reads are still allowed', () => {
+    // `hiddenFor` is navigation only, and neither route is manager-gated at the
+    // API. A screen hidden from a role whose API also refused it would be a
+    // permission change dressed as a menu change.
+    for (const id of ['school', 'years']) {
+      expect('manager' in route(id) && route(id).manager, id).toBeFalsy();
+    }
+  });
+
+  it('still leaves an adviser the screens their work actually needs', () => {
+    // A guard against hiding too much: these are the adviser's own screens.
+    for (const id of ['attendance', 'calendar', 'learners', 'prior-records', 'report-cards']) {
+      expect(available(route(id), 'teacher'), id).toBe(true);
+    }
   });
 });
