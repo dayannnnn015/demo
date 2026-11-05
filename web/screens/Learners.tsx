@@ -122,8 +122,17 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
               // year* — the same year the Grade column shows. It used to match
               // any year, so a promoted learner answered to their old grade
               // while their row showed the new one.
-              { key: 'grade_level', label: 'Grade level this year', optional: true, hint: 'Their grade in the active school year.',
-                options: [['', 'Any grade'], ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])] },
+              //
+              // Managers only, and not because the API needs the help: an
+              // adviser already reads only the learners in the classes they
+              // advise, so the filter could only narrow their own class, and
+              // offering grades they do not teach invites the reading that the
+              // registry is withholding learners from them. Row security is
+              // what enforces the scope — `can_read_learner` — and
+              // `tests/registry-grade-filter.test.ts` proves a teacher cannot
+              // widen it with this parameter.
+              ...(manager ? [{ key: 'grade_level', label: 'Grade level this year', optional: true, hint: 'Their grade in the active school year.',
+                options: [['', 'Any grade'] as [string, string], ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])] }] satisfies Field[] : []),
             ]}
           />
           {manager ? (
@@ -211,12 +220,6 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
                   yearLabel={yearLabel} sectionLabel={sectionLabel}
                   onView={enrollment => setViewing({ learner: row, enrollment })}
                   onSf9={enrollment => setForm({ kind: 'sf9', learner: row, enrollment })} />
-                {/* The years before EDUNEXUS are not enrollments, so they are
-                    not in the list above. Advisers reach this too: they encode
-                    their own current learners (0.87.0). */}
-                <p className="card-note">
-                  <a href={`#/prior-records?learner=${id}`}>Academic history before EDUNEXUS</a> — the previous school years typed in from the school’s own documents, which print on this learner’s SF10 alongside the years above.
-                </p>
                 {manager ? (
                   <>
                     <Task title="Correct the details" note="Spelling, birth date, name extension">

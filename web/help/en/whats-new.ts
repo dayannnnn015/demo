@@ -8,6 +8,15 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.2', date: '2026-11-05',
+    items: [
+      'Advisers: your {learners} now opens on your own learners, and the grade-level filter is gone from it. You were only ever shown the learners in the classes you advise, so choosing a grade could only narrow your own class — and a grade you do not teach would have come back empty.',
+      'Nothing changed about who you can see. Searching by name or LRN, and by sex, works exactly as before.',
+      'Principals and administrative officers keep the grade-level filter and the whole school, unchanged.',
+      'The link to the years before EDUNEXUS has been taken off the learner’s panel, because {prior-records} is in the sidebar and holds the same thing. The records and the typing-in are untouched — open that screen and find the learner there.',
+    ],
+  },
+  {
     version: '0.90.1', date: '2026-11-05',
     items: [
       'Every button now tells you when it is working. A button you have pressed says *Working…*, *Saving…* or *Recording…* while it waits, and stays dark rather than greying out — a greyed button looked switched off, and there was nothing to tell you the school’s connection was simply taking a moment.',

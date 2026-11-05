@@ -102,3 +102,60 @@ describe('the registry grade filter', () => {
     expect(mine.map(r => r.id)).toEqual([promoted]);
   });
 });
+
+/**
+ * The scope an adviser cannot widen, whatever they put in the query.
+ *
+ * The grade filter was taken off the adviser's registry on 2026-11-05, because
+ * an adviser reads only the learners in the classes they advise and the filter
+ * could only narrow their own class. Hiding a control is not a permission, so
+ * what matters is that the parameter is powerless in their hands — the list is
+ * scoped by `can_read_learner` in row security, not by the absence of a select
+ * box. These cases hold that, and would hold it if the box came back.
+ */
+describe('the scope an adviser cannot widen with the filter', () => {
+  /** A second Grade 4 class, advised by somebody else. */
+  const theirs = '00000000-0000-4000-9000-00000000c004';
+  const notMine = '00000000-0000-4000-9001-0000000000a3';
+
+  beforeAll(async () => {
+    await db.pg.query(`insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,4,'Lapu-Lapu',$3)`,
+      [theirs, thisYear, ids.otherTeacher]);
+    await db.pg.query(`insert into edunexus.learners(id,first_name,last_name,sex,birth_date,lrn) values($1,'Nina','Notmine','female','2016-03-03','136170000203')`,
+      [notMine]);
+    await db.pg.query(`insert into edunexus.enrollments(id,learner_id,academic_year_id,grade_level,section_id,enrolled_on,effective_on,last_reason) values
+      ('00000000-0000-4000-9002-0000000000a4',$1,$2,4,$3,'2026-06-01','2026-06-01','regular')`, [notMine, thisYear, theirs]);
+  });
+
+  it('shows a manager every Grade 4 learner in the school', async () => {
+    const rows = await found('?grade_level=4&limit=50');
+    expect(rows.map(r => r.id).sort()).toEqual([promoted, notMine].sort());
+  });
+
+  it('gives an adviser asking for Grade 4 only the Grade 4 learner they advise', async () => {
+    // The parameter is the attack: Nina is at exactly the grade asked for, and
+    // is in another adviser's class. She must not come back.
+    const rows = await found('?grade_level=4&limit=50', tokens.teacher);
+    expect(rows.map(r => r.id)).toEqual([promoted]);
+    expect(rows.map(r => r.id)).not.toContain(notMine);
+  });
+
+  it('gives an adviser with no filter at all exactly their own learners', async () => {
+    // What the registry now does for a teacher on opening: no grade asked for,
+    // and the answer is already their own classes.
+    const rows = await found('?limit=50', tokens.teacher);
+    expect(rows.map(r => r.id).sort()).toEqual([promoted, current].sort());
+  });
+
+  it('gives the other adviser only theirs, from the same request', async () => {
+    const rows = await found('?grade_level=4&limit=50', tokens.otherTeacher);
+    expect(rows.map(r => r.id)).toEqual([notMine]);
+  });
+
+  it('does not let a name search reach outside the class either', async () => {
+    // The same scope, through a different parameter: searching for her by name
+    // finds her for a manager and nobody for the adviser who does not teach her.
+    expect((await found('?search=Notmine&limit=50')).map(r => r.id)).toEqual([notMine]);
+    expect(await found('?search=Notmine&limit=50', tokens.teacher)).toEqual([]);
+  });
+});

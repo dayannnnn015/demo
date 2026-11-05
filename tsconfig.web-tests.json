@@ -56,6 +56,7 @@
     "tests/web-prior-records-server.test.ts",
     "tests/registry-address.test.ts",
     "tests/web-teacher-roster.test.ts",
-    "tests/web-buttons.test.ts"
+    "tests/web-buttons.test.ts",
+    "tests/web-registry-scope.test.ts"
   ]
 }

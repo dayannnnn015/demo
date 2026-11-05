@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.2.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** as `e0ab9a3`, with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
 and not pushed, by instruction** — the user merges. The commit bundles
@@ -14,7 +14,7 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Apply migrations 0053 and 0054, then deploy 0.90.1.** Both are the user's.
+**Apply migrations 0053 and 0054, then deploy 0.90.2.** Both are the user's.
 The tree is committed (`e0ab9a3`); merging and pushing are not done, by
 instruction.
 
@@ -31,6 +31,42 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.2 — the registry asks an adviser nothing it already knows
+
+Two interface changes, both asked for, and **no permission changed** — because
+the access control the request described was already in force.
+
+**The grade-level filter is now a manager's control.** An adviser reads only
+the learners in the classes they advise, so the filter could only ever narrow a
+list that is already their own class; offering grades they do not teach invites
+the reading that the registry is withholding learners from them. Their registry
+opens on their own learners with nothing to choose first. Principals and
+administrative officers keep the filter and the whole school, untouched.
+
+**The scope is enforced where it always was.** `can_read_learner` requires,
+for a teacher, an enrolment in a section whose `adviser_user_id` is theirs
+(`0004`, teacher branch replaced in `0008`). Hiding a select box is not a
+permission, so what mattered was proving the parameter is powerless in their
+hands: `tests/registry-grade-filter.test.ts` now sends `grade_level` for a
+grade they do not advise and gets back only their own learner, and does the
+same through a name search.
+
+**The shortcut *Academic history before EDUNEXUS* is gone from the learner's
+panel**, since the rail already carries that screen. The screen, its route, the
+records and every encoding capability are untouched — only the second door is.
+
+**A role note:** the request names Principal, AO and **Admin** as three roles.
+EDUNEXUS has three in total — `principal`, `administrative_officer`,
+`teacher` — and `is_manager()` is the first two. There is no separate admin
+role, so "unrestricted admin access" is the principal's and nothing needed
+adding.
+
+**The gate lesson repeated.** The DOM gate for the removed shortcut was
+**vacuous on its first run**: it asserted on the closed learner list, and the
+shortcut lived inside the learner's own panel, which is not rendered until a row
+is opened — so it passed with the shortcut still in the file. It now opens the
+row first, and both gates were then confirmed by putting each change back.
 
 ### The SF10 and all six elementary grades (2026-11-05) — no code changed
 
@@ -196,7 +232,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **206 passed**, 20 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **217 passed**, 21 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |
@@ -215,7 +251,7 @@ both screens in a real DOM against the real API.
 
 **Blocking**
 
-1. **Apply 0053 and 0054, then deploy 0.90.1.** **Next year's classes must not
+1. **Apply 0053 and 0054, then deploy 0.90.2.** **Next year's classes must not
    be opened on live** until it ships. Merging `branch-out` anywhere is the
    user's, and was explicitly withheld on 2026-11-05.
 
