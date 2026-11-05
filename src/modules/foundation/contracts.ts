@@ -24,7 +24,8 @@ export const schemas = {
   sectionCreate: z.strictObject({ academic_year_id: uuid, grade_level: z.number().int().min(0).max(6), name: name(80), adviser_user_id: uuid.nullable().default(null) }),
   sectionUpdate: z.strictObject({ version, name: name(80).optional(), adviser_user_id: uuid.nullable().optional() }).refine(v => Object.keys(v).length > 1, 'Provide a change'),
   sectionQuery: z.strictObject({ ...pagination, academic_year_id: uuid.optional() }),
-  auditQuery: z.strictObject({ limit: pagination.limit, before_id: z.string().regex(/^[1-9][0-9]{0,17}$/).optional() }),
+  auditQuery: z.strictObject({ limit: pagination.limit, before_id: z.string().regex(/^[1-9][0-9]{0,17}$/).optional(),
+    entity_table: z.enum(['school_profile', 'staff', 'academic_years', 'reporting_periods', 'sections']).optional() }),
 };
 
 export const operations = [
@@ -44,7 +45,7 @@ export const operations = [
   { id: 'sectionGet', method: 'get', path: '/api/v1/sections/:id', summary: 'Get a visible section' },
   { id: 'sectionCreate', method: 'post', path: '/api/v1/sections', summary: 'Create a section and optionally assign an adviser', body: schemas.sectionCreate, manager: true },
   { id: 'sectionUpdate', method: 'patch', path: '/api/v1/sections/:id', summary: 'Rename a section or reassign its adviser', body: schemas.sectionUpdate, manager: true },
-  { id: 'auditList', method: 'get', path: '/api/v1/audit-events', summary: 'Read the append-only change audit', query: schemas.auditQuery, manager: true },
+  { id: 'auditList', method: 'get', path: '/api/v1/audit-events', summary: 'Read the append-only change audit, newest first, optionally for one kind of record', query: schemas.auditQuery, manager: true },
 ] as const;
 
 export type OperationId = typeof operations[number]['id'];

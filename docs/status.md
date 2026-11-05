@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.5.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.6.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,41 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.6 — School profile shows what it already knew
+
+Asked to add what is "valid to be added", and **the restraint is the answer**.
+No field was added: a school telephone, email, website or logo would each be a
+requirement nobody has stated — none appears in the headings of the school's own
+SF2, SF4, SF9 or the SF10 workbook — and inventing one is the mistake the
+learner-fields gate exists to prevent. What went in is derivation and
+visibility, so **no migration and no permission changed**.
+
+**How this prints on the forms.** The heading the SF2, SF4, SF9 and SF10 share,
+rendered from the values on file, with the unset lines **named**. It earns a
+card because the forms *omit* what is unset rather than marking it — every line
+is `{s.region ? <p>…</p> : null}` — so a missing schools division simply is
+not there, and the only way to find out was to print an SF9 and look. It also
+says whether the signature line will carry a name. Drawn with `Unrecorded`,
+and built from tokens rather than inside `.paper`, which carries the printed
+sheet's fixed widths and its own light colours.
+
+**Change history**, manager-only. The rows have been written since `0001` —
+`audit_record` is on `school_profile` like every other versioned table — but
+`GET /audit-events` could only be asked for *everything*, so the journal
+existed and no screen could show one record's own history. The read now takes an
+optional `entity_table`: a **closed list** of the five journalled tables,
+never free text, still manager-only, and unfiltered it answers as before. This
+is the one contract change in the release.
+
+Gated by `tests/school-profile.test.ts` (6 cases), mutation-tested by removing
+the filter's `where` clause and the preview card — three cases fail.
+
+**Not done, and recorded:** an uploadable school seal for branding. The content
+policy keeps a closed list of images, the SF9's and SF10's seals are versioned
+files served from this origin, and the staff-photo pattern — bytes through the
+API drawn on a canvas — does not print reliably, which is a seal's whole
+purpose. It needs the school to ask, and a design, not a field.
 
 ### 0.90.5 — Academic history, and the attendance rule's home
 

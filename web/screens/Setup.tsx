@@ -13,6 +13,7 @@ import { AddSections, AssignAdvisers } from './SetupBatch';
 import { deped2026, depedCalendar } from '../deped';
 import { Affects } from '../components/affects';
 import { schoolFields } from '../record-fields';
+import { FormHeadingPreview, SchoolHistory } from './SchoolDetails';
 
 type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -58,6 +59,9 @@ export function School({ api, me, manager, setStatus, reload, token, route }: Pr
         </div>
       </div>
 
+
+      {school ? <FormHeadingPreview school={school} /> : null}
+      {manager ? <SchoolHistory api={api} token={token} /> : null}
 
       {editing && school ? (
         <FormSheet

@@ -2555,3 +2555,25 @@ a.btn { text-decoration: none; }
 .grid-form td.grade-cell { width: 4.5rem; }
 .grid-form td.grade-cell input { text-align: center; }
 .grid-form .field-error { font-size: var(--t-11); }
+
+/*
+  The official heading as School profile previews it. Not `.paper`: that carries
+  the printed sheet's fixed widths and its own light colours, and this is a
+  panel on a screen with a dark theme, so it is built from tokens. It is a
+  preview of a centred block, so it stays centred and narrow rather than
+  stretching to the card.
+*/
+.heading-preview {
+  margin: 0 auto var(--s4);
+  padding: var(--s4);
+  max-width: 28rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--sunk);
+  text-align: center;
+  font-size: var(--t-12);
+  line-height: 1.45;
+}
+.heading-preview p { margin: 0; }
+.heading-preview .heading-school { margin-top: var(--s2); font-weight: 700; font-size: var(--t-13); }
+.heading-preview .unrecorded { font-size: var(--t-11); }

@@ -8,6 +8,14 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.6', date: '2026-11-05',
+    items: [
+      '{school} now shows **How this prints on the forms**: the heading the SF2, SF4, SF9 and SF10 all carry, exactly as it will print. Anything not filled in is named there — the forms leave a missing line out rather than printing it blank, so this is the way to see it without printing one.',
+      'It also says whether the school head’s name will appear over the signature line on those forms.',
+      'Principals and administrative officers get **Change history** there too: who changed the school’s details and when. These changes were always recorded; now they can be read.',
+    ],
+  },
+  {
     version: '0.90.5', date: '2026-11-05',
     items: [
       'Advisers: {prior-records} now opens on your own learners, and there is no grade level to choose. You were only ever shown the learners in the classes you advise.',
