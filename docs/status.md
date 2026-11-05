@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.2.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.3.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** as `e0ab9a3`, with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
 and not pushed, by instruction** — the user merges. The commit bundles
@@ -14,7 +14,7 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Apply migrations 0053 and 0054, then deploy 0.90.2.** Both are the user's.
+**Apply migrations 0053 and 0054, then deploy 0.90.3.** Both are the user's.
 The tree is committed (`e0ab9a3`); merging and pushing are not done, by
 instruction.
 
@@ -31,6 +31,14 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.3 — SF9 previews keep a fixed A4 page
+
+The SF9 preview now uses the same fixed paper dimensions as its print contract:
+Grade 1 is A4 portrait and Grades 2–6 are A4 landscape. Grade 1 term cards
+reserve space rather than shrinking around their content, while long text wraps
+inside the reserved area. Print output keeps its existing `@page` rules. No
+endpoint, schema, permission or error code changed.
 
 ### 0.90.2 — the registry asks an adviser nothing it already knows
 

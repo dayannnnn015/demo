@@ -325,7 +325,7 @@ function Card1({ form }: { form: Sf9Form }) {
 
 export function Sf9Sheet({ form, footer }: { form: Sf9Form; footer?: ReactNode }) {
   return (
-    <div className="paper sf9">
+    <div className={`paper sf9 sf9-${form.layout}`}>
       {form.layout === 'grade1' ? <Card1 form={form} /> : form.layout === 'grades2_3' ? <Card23 form={form} /> : <Card46 form={form} />}
       {footer ? <p className="print-foot">{footer}</p> : null}
     </div>

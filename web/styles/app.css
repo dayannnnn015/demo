@@ -1646,6 +1646,12 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 .card-comment p { margin: 2px 0 0; white-space: pre-wrap; }
 .card-columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
 .card-term { margin-bottom: var(--s3); }
+.paper.sf9 { width: 210mm; min-height: 297mm; padding: 6mm; }
+.paper.sf9.sf9-grades2_3 { width: 297mm; min-height: 210mm; }
+.paper.sf9.sf9-grades4_6 { width: 297mm; min-height: 210mm; padding: 12.7mm; }
+.paper.sf9-grade1 .card-term { min-height: 44mm; }
+.paper.sf9-grade1 .card-comment { min-height: 18mm; }
+.paper.sf9-grade1 .card-comment p { overflow-wrap: anywhere; }
 /*
   The SF10-ES, on screen and on paper alike.
 
@@ -1869,6 +1875,7 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
   .print-root.sf9-g23 { page: sf9-g23; }
   .print-root.sf9-g46 { page: sf9-g46; }
   .print-root .paper { padding: 0; min-width: 0; font-size: 7pt; }
+  .print-root .paper.sf9 { width: auto; min-height: 0; }
   .print-root .sf2-foot { font-size: 6pt; line-height: 1.2; gap: 10pt; }
   .print-root .paper .print-foot { margin-top: 3pt; font-size: 6.5pt; }
   .print-root .paper h2 { margin: 0; }
