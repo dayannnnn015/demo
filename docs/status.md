@@ -1,16 +1,22 @@
 # Where things stand
 
 **Version 0.90.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
-**Committed on this branch only. Not merged anywhere, by instruction** — the
-user merges.
+**Committed on this branch only** as `e0ab9a3`, with the local `user.name` and
+`user.email` set to match the branch's existing history. **Not merged anywhere
+and not pushed, by instruction** — the user merges. The commit bundles
+0.87.0–0.90.1 in one, which the working contract would normally not allow: the
+increments were built on the recovered 0.86.1 without ever being committed and
+overlap in the same files, so they cannot be separated retroactively without
+inventing hunks that were never a working state. Its message says so.
 
 [docs/constraints.md](constraints.md) is the authority. The decisions table this
 file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Commit this tree, then apply migrations 0053 and 0054 and deploy 0.90.0.**
-Both are the user's.
+**Apply migrations 0053 and 0054, then deploy 0.90.1.** Both are the user's.
+The tree is committed (`e0ab9a3`); merging and pushing are not done, by
+instruction.
 
 The live database is at **0052** and the deployed app is still **0.86.1**, so
 nothing from 0.87.0 onwards is on live. **Apply both migrations before
@@ -180,8 +186,9 @@ both screens in a real DOM against the real API.
 
 **Blocking**
 
-1. **Commit, then apply 0053 and 0054 and deploy 0.90.0.** **Next year's classes
-   must not be opened on live** until it ships.
+1. **Apply 0053 and 0054, then deploy 0.90.1.** **Next year's classes must not
+   be opened on live** until it ships. Merging `branch-out` anywhere is the
+   user's, and was explicitly withheld on 2026-11-05.
 
 **Not finished**
 
