@@ -16,7 +16,9 @@ import { seedSiteContent } from './seed/school.js';
 export async function demoSchool() {
   if (process.env.NODE_ENV === 'production') throw new Error('The demo refuses to run with NODE_ENV=production.');
   const db = await testDatabase();
-  const known = new Set(Object.values(ids));
+  // Widened to string: a bearer token arrives as one, and `Set<literal>.has`
+  // will not take it. The membership check is the point, not the type.
+  const known = new Set<string>(Object.values(ids));
   // The browser sends this page's origin on every write, and Vite's proxy passes
   // it through; with no origin allowed, every save in the demo was refused. It
   // is the loopback page below, on a port `strictPort` pins, and nothing else.
@@ -53,7 +55,7 @@ export async function demoSchool() {
   await db.pg.query("update edunexus.staff set display_name=$2 where user_id=$1", [ids.principal, 'Demo Principal']);
   await db.pg.query("update edunexus.staff set display_name=$2 where user_id=$1", [ids.officer, 'Demo Administrative Officer']);
   for (const [first, last, id] of names) await db.pg.query("update edunexus.staff set display_name=$2 where user_id=$1", [id, `${first} ${last}`]);
-  await db.pg.query("update edunexus.school_profile set name='Demo Elementary School (synthetic records)', address='Nowhere Road, Demo Town'");
+  await db.pg.query("insert into edunexus.school_profile(name,address) values('Demo Elementary School (synthetic records)','Nowhere Road, Demo Town') on conflict (id) do update set name=excluded.name,address=excluded.address");
   await db.pg.query('insert into edunexus.academic_years(id,start_year,starts_on,ends_on) values($1,$2,$3,$4)', [year, startYear, yearStart, yearEnd]);
   const periods: string[] = [];
   for (const [n, from, to] of [[1, yearStart, `${startYear}-09-15`], [2, `${startYear}-09-16`, `${startYear}-12-18`], [3, `${startYear + 1}-01-04`, yearEnd]] as const) {

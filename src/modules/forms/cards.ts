@@ -32,6 +32,13 @@ export function ageOn(birth:string|null,on:string){
 }
 
 const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/** "5, 12 and 19 October": the dates of one month, as many of them as are worth reading. */
+function datesIn(dates:string[]){
+  const most=dates.slice(0,6),more=dates.length-most.length,nums=most.map(d=>String(Number(d.slice(8,10))));
+  const listed=more?`${nums.join(', ')} and ${more} more`:nums.length>1?`${nums.slice(0,-1).join(', ')} and ${nums[nums.length-1]}`:nums[0]!;
+  return `${listed} ${monthNames[Number(dates[0]!.slice(5,7))-1]}`;
+}
 const monthsBetween=(from:string,to:string)=>{
   const out:{key:string;label:string;from:string;to:string}[]=[];
   for(let y=Number(from.slice(0,4)),m=Number(from.slice(5,7));`${y}-${String(m).padStart(2,'0')}`<=to.slice(0,7);m===12?(y++,m=1):m++){
@@ -41,7 +48,11 @@ const monthsBetween=(from:string,to:string)=>{
   return out;
 };
 
-export type AttendanceRow={label:string;term:string|null;from:string;to:string;class_days:number|null;present:number|null;absent:number|null;tardy:number|null;known:boolean;to_date?:string};
+export type AttendanceRow={label:string;term:string|null;from:string;to:string;class_days:number|null;present:number|null;absent:number|null;tardy:number|null;known:boolean;to_date?:string;
+  /** The dates of this month holding a classroom session nobody marked, which is what leaves it empty. */
+  unmarked:string[];
+  /** The dates the calendar has not set, or that hold an alternative-delivery session: the school's rule decides neither. */
+  unset:string[]};
 type Counted=Omit<AttendanceRow,'label'|'term'|'from'|'to'>&{started:boolean};
 
 /**
@@ -57,20 +68,23 @@ type Counted=Omit<AttendanceRow,'label'|'term'|'from'|'to'>&{started:boolean};
  */
 export function attendanceFor(days:Sf9Source['days'],rule:DayRule|null,from:string,to:string,today:string):Counted{
   const inRange=days.filter(d=>d.day_on>=from&&d.day_on<=to);
-  if(!rule||inRange.some(d=>!d.configured||d.am==='alternative_delivery'||d.pm==='alternative_delivery'))return {class_days:null,present:null,absent:null,tardy:null,known:false,started:from<=today};
-  let classDays=0,held=0,present=0,absent=0,tardy=0,unmarked=false,pending=false,last='';
+  // The two reasons a month that has run is left empty, kept as dates rather than as a fact.
+  // On the card an empty month looks the same whatever emptied it, and nobody can act on that.
+  const unset=inRange.filter(d=>!d.configured||d.am==='alternative_delivery'||d.pm==='alternative_delivery').map(d=>d.day_on);
+  if(!rule||unset.length)return {class_days:null,present:null,absent:null,tardy:null,known:false,started:from<=today,unmarked:[],unset};
+  let classDays=0,held=0,present=0,absent=0,tardy=0,pending=false,last='';const unmarked:string[]=[];
   for(const d of inRange){
     if(dayKind(d,rule)!=='class')continue;
     classDays+=1;
     if(d.day_on>=today&&d.mark_am===null&&d.mark_pm===null){pending=true;continue;}
     const v=dayValue(d,d.mark_am,d.mark_pm,rule);
-    if(v.mark==='unmarked'){unmarked=true;continue;}
+    if(v.mark==='unmarked'){unmarked.push(d.day_on);continue;}
     held+=1;last=d.day_on;present+=v.present;absent+=v.absent;tardy+=v.tardy;
   }
-  if(unmarked)return {class_days:classDays,present:null,absent:null,tardy:null,known:false,started:true};
-  if(!pending)return {class_days:classDays,present,absent,tardy,known:true,started:true};
-  if(held>0)return {class_days:held,present,absent,tardy,known:true,to_date:last,started:true};
-  return {class_days:classDays,present:null,absent:null,tardy:null,known:false,started:false};
+  if(unmarked.length)return {class_days:classDays,present:null,absent:null,tardy:null,known:false,started:true,unmarked,unset};
+  if(!pending)return {class_days:classDays,present,absent,tardy,known:true,started:true,unmarked,unset};
+  if(held>0)return {class_days:held,present,absent,tardy,known:true,to_date:last,started:true,unmarked,unset};
+  return {class_days:classDays,present:null,absent:null,tardy:null,known:false,started:false,unmarked,unset};
 }
 
 /**
@@ -119,10 +133,15 @@ export function computeSf9(source:Sf9Source,rule:DayRule|null){
   const ended=source.periods.filter(p=>p.ends_on<source.today);
   // The Grade 1 card prints narratives, not grades, so a grade it has no box for is not missing.
   const missing=layout==='grade1'?0:subjects.reduce((n,s)=>n+ended.filter(p=>s.terms[p.id]===null).length,0);
+  // A month left empty says which dates emptied it, so the gap can be closed on the
+  // register instead of hunted for. A month wholly to come is not a gap and says nothing.
+  const blanked=rule?counted.filter(r=>!r.known&&r.started&&(r.unmarked.length||r.unset.length)):[];
   const warnings=[
     !rule&&'The school’s attendance rule is not recorded, so no attendance figure is filled in.',
     missing&&`${missing} grade${missing===1?' is':'s are'} not recorded for terms that have ended.`,
-    rule&&rows.some(r=>!r.known&&r.to<source.today)&&'Some months that have passed still have unmarked days, so their attendance is left empty.',
+    ...blanked.map(r=>r.unset.length
+      ?`${r.label} is empty because ${r.unset.length===1?'one date is':`${r.unset.length} dates are`} not set on the calendar or hold an alternative-delivery session (${datesIn(r.unset)}), which the school’s rule does not decide.`
+      :`${r.label} is empty because ${r.unmarked.length===1?'one day has':`${r.unmarked.length} days have`} a session nobody marked (${datesIn(r.unmarked)}). A missing mark is never counted as present, so mark it on the register and this month fills in.`),
   ].filter((w):w is string=>!!w);
   return {
     form:'sf9' as const,layout,school:source.school,
@@ -144,27 +163,104 @@ export function computeSf9(source:Sf9Source,rule:DayRule|null){
   };
 }
 
+export type Eligibility = {
+  credential:'kinder_progress_report'|'eccd_checklist'|'kindergarten_certificate'|'pept'|'others';
+  credential_other:string|null;school_name:string|null;school_code:string|null;school_address:string|null;
+  pept_rating:string|null;examined_on:string|null;testing_center:string|null;remark:string|null;
+};
+/** One transcribed school year, as `learner_prior_years` holds it. Four quarters, because that is what the SF10-ES rules. */
+export type PriorYear = {
+  id:string;start_year:number;grade_level:number;school_name:string;school_code:string|null;school_address:string|null;
+  section_name:string|null;adviser_name:string|null;general_average:number|null;remark:'passed'|'failed'|null;
+  subjects:{subject_id:string|null;code:string|null;name:string;display_order:number;
+    q1:number|null;q2:number|null;q3:number|null;q4:number|null;final:number|null;remark:'passed'|'failed'|null}[];
+};
 export type Sf10Source = {
   school:Record<string,string|null>;learner:Learner;
-  enrollments:{id:string;grade_level:number;status:string;section_name:string;adviser_name:string|null;
+  // `section_name` is null for a learner enrolled at a grade but not yet placed
+  // in a class, which 0048 made possible and 0051's outward join finally lets
+  // onto their own permanent record.
+  enrollments:{id:string;grade_level:number;status:string;section_name:string|null;adviser_name:string|null;
     school_year:{id:string;start_year:number;starts_on:string;ends_on:string};periods:Period[];offerings:Offering[];grades:Grade[];summary:Summary;
     promotion?:{action:'promoted'|'conditionally_promoted'|'retained'|'remedial'}|null}[];
+  /** Since 0051: the credential presented for Grade 1, which is where a Kindergarten record lives. */
+  eligibility?:Eligibility|null;
+  /** Since 0051: the years transcribed from the school's own documents. */
+  prior_years?:PriorYear[];
 };
 export type Sf10=ReturnType<typeof computeSf10>;
+export type Sf10Block=Sf10['blocks'][number];
 
-/** The permanent record: one scholastic block per graded school year. Kindergarten is the credential for Grade 1, not a block. */
+/** The quarters a transcribed year is read in. The SF10-ES rules four columns, so four it is, numbered as the form numbers them. */
+const priorPeriods=[1,2,3,4].map(n=>({id:String(n),ordinal:n,name:String(n)}));
+
+/**
+ * The permanent record: one scholastic block per school year, in year order,
+ * whichever of the two places it came from.
+ *
+ * A block is either a year EDUNEXUS recorded itself, from an enrollment and the
+ * grades entered from the ECR, or a year transcribed from the school's own
+ * documents when it started using EDUNEXUS (0051). They print identically and
+ * sort together, because the SF10 is one continuous record and a learner's
+ * Grade 2 does not become a different kind of fact for having been typed from a
+ * spreadsheet. `origin` exists so a screen can say which is which, and so that
+ * nothing derived from a transcription is mistaken for a decision EDUNEXUS
+ * made: the certification below reads only the recorded years.
+ *
+ * Kindergarten is never a block. The SF10-ES has no scholastic block for it: it
+ * is the credential that makes a learner eligible for Grade 1, and that is what
+ * `eligibility` carries. A Kinder enrollment EDUNEXUS holds is reported as
+ * `kindergarten_here`, and no grade is read from it.
+ */
 export function computeSf10(source:Sf10Source){
-  const blocks=source.enrollments.filter(e=>e.grade_level>0).map(e=>({
-    enrollment_id:e.id,grade_level:e.grade_level,section_name:e.section_name,adviser_name:e.adviser_name,
-    school_year:{id:e.school_year.id,start_year:e.school_year.start_year},periods:e.periods.map(p=>({id:p.id,ordinal:p.ordinal,name:p.name})),
-    subjects:gradeTable(e.periods,e.offerings,e.grades),general_average:{value:e.summary?.general_average??null,remark:e.summary?.remark??null},
+  const school=source.school;
+  // A transcribed year names its own school, because a transferee's earlier year
+  // was taught elsewhere and the form's block heading has those fields for it.
+  // District, division and region are filled only when the code says this is
+  // this school; for another school EDUNEXUS does not know them, and the form is
+  // left blank rather than filled in with Balili's.
+  const headingFor=(y:PriorYear)=>{
+    const here=y.school_code!==null&&y.school_code===school.school_code;
+    return {name:y.school_name,school_code:y.school_code,address:y.school_address,
+      region:here?school.region??null:null,division:here?school.division??null:null,district:here?school.district??null:null};
+  };
+  const recorded=source.enrollments.filter(e=>e.grade_level>0).map(e=>({
+    key:`e:${e.id}`,origin:'register' as const,enrollment_id:e.id as string|null,prior_year_id:null as string|null,
+    grade_level:e.grade_level,section_name:e.section_name,adviser_name:e.adviser_name,
+    school:{name:school.name??'',school_code:school.school_code??null,address:school.address??null,
+      region:school.region??null,division:school.division??null,district:school.district??null},
+    school_year:{id:e.school_year.id as string|null,start_year:e.school_year.start_year},
+    periods:e.periods.map(p=>({id:p.id,ordinal:p.ordinal,name:p.name})),
+    subjects:gradeTable(e.periods,e.offerings,e.grades).map(s=>({
+      key:`o:${s.offering_id}`,offering_id:s.offering_id as string|null,code:s.code as string|null,name:s.name,
+      terms:s.terms,final:s.final,remark:s.remark,
+    })),
+    general_average:{value:e.summary?.general_average??null,remark:e.summary?.remark??null},
     outcome:{action:e.promotion?.action??null,eligible_grade:eligibleFor(e.grade_level,e.promotion)},
   }));
+  const encoded=(source.prior_years??[]).map(y=>({
+    key:`p:${y.id}`,origin:'encoded' as const,enrollment_id:null as string|null,prior_year_id:y.id as string|null,
+    grade_level:y.grade_level,section_name:y.section_name,adviser_name:y.adviser_name,
+    school:headingFor(y),school_year:{id:null as string|null,start_year:y.start_year},periods:priorPeriods,
+    subjects:[...y.subjects].sort((a,b)=>a.display_order-b.display_order).map(s=>({
+      key:`p:${y.id}:${s.display_order}`,offering_id:null as string|null,code:s.code,name:s.name,
+      terms:{'1':s.q1,'2':s.q2,'3':s.q3,'4':s.q4} as Record<string,number|null>,final:s.final,remark:s.remark,
+    })),
+    general_average:{value:y.general_average,remark:y.remark},
+    // A transcription carries no promotion decision: EDUNEXUS approved none, and
+    // the document's own remark already sits on the General Average line.
+    outcome:{action:null,eligible_grade:null},
+  }));
+  const blocks=[...encoded,...recorded].sort((a,b)=>a.school_year.start_year-b.school_year.start_year||a.grade_level-b.grade_level);
+  // The certification names the grade an approved outcome makes the learner
+  // eligible for. Only a year EDUNEXUS recorded carries one, so a transcription
+  // can never manufacture a promotion that nobody approved.
   const last=[...source.enrollments].sort((a,b)=>b.school_year.start_year-a.school_year.start_year)[0];
+  const latest=blocks[blocks.length-1];
   return {
     form:'sf10' as const,school:source.school,learner:source.learner,blocks,
-    last_school_year:last?last.school_year.start_year:null,
-    // The certification names the grade the latest year's approved outcome makes the learner eligible for.
+    eligibility:source.eligibility??null,
+    last_school_year:latest?latest.school_year.start_year:null,
     eligible_grade:last?eligibleFor(last.grade_level,last.promotion):null,
     kindergarten_here:source.enrollments.some(e=>e.grade_level===0),
   };

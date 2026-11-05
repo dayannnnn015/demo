@@ -175,7 +175,7 @@ function RecordSheet({ api, task, entries, onClose, onDone, onConflict }: {
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy || !entries.length}>{busy ? 'Recording…' : 'Record these marks'}</button>
+          <button type="submit" className="btn" disabled={busy || !entries.length} aria-busy={busy}>{busy ? 'Recording…' : 'Record these marks'}</button>
           <button type="button" className="btn ghost" onClick={onClose}>Keep editing</button>
         </div>
       </form>

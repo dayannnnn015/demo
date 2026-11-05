@@ -28,7 +28,25 @@ async function sf9(tx:Query,enrollment:string){
 }
 async function sf10(tx:Query,learner:string){
   const [row]=await tx.query<{r:Sf10Source}>('select edunexus.read_sf10_source($1) r',[learner]);
-  return computeSf10(row!.r);
+  const form=computeSf10(row!.r);
+  /*
+   * The SF10-ES begins when a learner enters Grade 1.
+   *
+   * The form has no scholastic block for Kindergarten: Kinder is the credential
+   * that admits a learner to Grade 1, which is what its eligibility block
+   * carries. So a learner with no Grade 1-to-6 year at all -- none recorded and
+   * none transcribed -- has no permanent academic record yet, and a Kindergarten
+   * learner is not supposed to have one.
+   *
+   * This used to answer 200 with a blank form. Issuing was already refused, but
+   * reading it printed an empty SF10-ES for a Kinder learner, which is the one
+   * thing their records must not be replaced by: theirs are the SF5-K and the
+   * ECCD checklist, which EDUNEXUS does not hold and does not supersede.
+   */
+  if(!form.blocks.length)throw new AppError(409,'SF10_NOT_YET',form.kindergarten_here
+    ?'The SF10 begins when a learner enters Grade 1, so this Kindergarten learner does not have one yet. Their Kindergarten records are the SF5-K and the ECCD checklist, which EDUNEXUS does not hold. The credential they present for Grade 1 is recorded on Academic history, once they are enrolled in it.'
+    :'This learner has no Grade 1 to Grade 6 school year on record, so there is no permanent academic record to lay out yet. Enrol them, or encode the previous years the school still holds a document for on Academic history.');
+  return form;
 }
 async function issue(tx:Query,form:'sf2'|'sf4',scope:{year:string;section:string|null;month:string},model:unknown,ruleVersion:number|null,reason:string|undefined){
   const [row]=await tx.query<{r:Record<string,unknown>}>('select edunexus.record_form_issuance($1,$2,$3,null,null,$4,$5,$6,$7) r',
@@ -55,6 +73,16 @@ async function sf4(tx:Query,year:string,month:string){
 }
 // The SF2 names every learner on it, so its reads are logged like the register's.
 async function logged(tx:Query,resource:string,ids:string[]){if(ids.length)await tx.query('select edunexus.record_access($1,$2::uuid[])',[resource,ids]);}
+/**
+ * What an SF10 read returned, for the privacy log: the learner, and every
+ * enrollment whose grades are on it. A block transcribed from the school's own
+ * documents (0051) has no enrollment, so the learner is named too -- the form
+ * carries their name, LRN and birth date whether or not a block came from an
+ * enrollment, and an audit that named nothing for an all-transcribed record
+ * would be the one gap in it.
+ */
+const sf10Records=(form:{learner:{id:string};blocks:{enrollment_id:string|null}[]})=>
+  [...new Set([form.learner.id,...form.blocks.map(b=>b.enrollment_id).filter((id):id is string=>id!==null)])];
 
 export async function executeForm(id:FormOperationId,ctx:Context,input:{body:unknown;query:unknown;id?:string}){
   const {tx}=ctx;
@@ -87,6 +115,17 @@ export async function executeForm(id:FormOperationId,ctx:Context,input:{body:unk
     case 'sf4Issue':{
       const b=input.body as z.infer<typeof s.issue>;
       const form=await sf4(tx,input.id!,b.month_on);
+      // Before the submission gate, because it is the earlier step in the work:
+      // every figure on the SF4 is grouped by section, so a registered learner
+      // with no class is on no row and in no total, and issuing would report the
+      // school short by exactly that many with nothing on the form saying so.
+      // Putting them in a class changes that section's register for the month,
+      // which a submitted month would then have to be returned and re-submitted
+      // for -- so it is worth saying first rather than after.
+      if(form.completeness.unplaced_learners)throw new AppError(409,'FORM_UNPLACED_LEARNERS',
+        `${form.completeness.unplaced_learners} registered learner${form.completeness.unplaced_learners===1?' is':'s are'} not in a class at the end of this month`
+        +` (${form.unplaced.map(u=>`${u.total} at ${u.grade_level===0?'Kinder':`Grade ${u.grade_level}`}`).join(', ')}).`
+        +' The SF4 counts every figure by section, so they would be left off the form and out of its totals. Put them in a class, then issue it.');
       // The SF4 is compiled from submitted SF2s, so every section's month must have been submitted first.
       if(form.completeness.not_submitted)throw new AppError(409,'FORM_NOT_SUBMITTED',`${form.completeness.not_submitted} section${form.completeness.not_submitted===1?' has':'s have'} not submitted this month. Submit every section's month on Monthly consolidation first.`);
       if(!form.completeness.complete)throw new AppError(409,'FORM_INCOMPLETE',form.completeness.rule_recorded
@@ -109,16 +148,17 @@ export async function executeForm(id:FormOperationId,ctx:Context,input:{body:unk
     }
     case 'sf10Get':{
       const form=await sf10(tx,input.id!);
-      await logged(tx,'sf10Get',form.blocks.map(b=>b.enrollment_id));
+      await logged(tx,'sf10Get',sf10Records(form));
       return {...form,last_issuance:await lastIssuance(tx,'sf10',{learner:form.learner.id})};
     }
     case 'sf10Issue':{
       const b=input.body as z.infer<typeof s.reissue>;
+      // No empty-record check here: sf10() refuses a learner who has no Grade 1
+      // to 6 year before it gets this far, with the reason.
       const form=await sf10(tx,input.id!);
-      if(!form.blocks.length)throw new AppError(409,'FORM_INCOMPLETE','This learner has no graded school year on record to put on an SF10.');
       const [row]=await tx.query<{r:Record<string,unknown>}>('select edunexus.record_form_issuance($1,null,null,null,$2,null,$3,null,$4) r',
         ['sf10',form.learner.id,fingerprint(form),b.reason??null]);
-      await logged(tx,'sf10Issue',form.blocks.map(x=>x.enrollment_id));
+      await logged(tx,'sf10Issue',sf10Records(form));
       return {form,issuance:row!.r};
     }
     case 'formIssuanceList':{

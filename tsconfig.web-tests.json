@@ -1,7 +1,10 @@
 {
   "extends": "./tsconfig.web.json",
   "compilerOptions": {
-    "types": ["vite/client", "node"]
+    "types": [
+      "vite/client",
+      "node"
+    ]
   },
   "include": [
     "web/**/*.ts",
@@ -47,6 +50,12 @@
     "tests/web-school-setup.test.ts",
     "tests/web-register.test.ts",
     "tests/web-register-adviser.test.ts",
-    "tests/web-report-cards-adviser.test.ts"
+    "tests/web-report-cards-adviser.test.ts",
+    "tests/web-prior-records.test.ts",
+    "tests/web-dom-harness.test.ts",
+    "tests/web-prior-records-server.test.ts",
+    "tests/registry-address.test.ts",
+    "tests/web-teacher-roster.test.ts",
+    "tests/web-buttons.test.ts"
   ]
 }

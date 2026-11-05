@@ -183,7 +183,7 @@ export const tours: Tour[] = [
       },
       {
         title: 'The card itself',
-        body: 'In the Learner registry, **SF9** on a learner’s row opens their card as it prints, and **Type on the card** lets you fill its boxes there. Its attendance is counted from your register, never typed.',
+        body: 'In the Learner registry, **SF9** on a learner’s row opens their card as it prints. It only shows what is recorded: grades are entered on **Promotion** → **Report card**, and attendance is counted from your register, never typed.',
       },
     ],
   },

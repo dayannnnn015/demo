@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, createApi, message, type Page, type Row } from './api';
+import { ApiError, createApi, message, rememberMe, sessionStore, type Page, type Row } from './api';
 import { Account, PasswordChange } from './Account';
 import { AppShell } from './components/AppShell';
 import { BrandMark } from './components/brand';
@@ -32,10 +32,11 @@ export function App() {
         const config = await response.json() as { url: string; publishableKey: string };
         setClient(createClient(config.url, config.publishableKey, {
           auth: {
-            // sessionStorage survives a refresh but dies with the tab, so a shared
-            // staffroom browser does not leave a session behind after closing it.
+            // The tab's own store by default, so a shared staffroom browser leaves no
+            // session behind; "Keep me signed in" on the sign-in page is what moves it
+            // somewhere that outlives the tab. See `sessionStore` in web/api.ts.
             persistSession: true,
-            storage: window.sessionStorage,
+            storage: sessionStore,
             storageKey: 'edunexus-session',
             detectSessionInUrl: true,
             autoRefreshToken: true,
@@ -147,7 +148,9 @@ export function App() {
       contextTone={year ? 'active' : 'none'}
       onNavigate={navigate}
       // Signing out leaves the workspace for the school's front page; the session is ended first, so the way back is a fresh sign-in.
-      onSignOut={() => { void client.auth.signOut().finally(() => location.assign('/')); }}
+      // Signing out forgets the choice too, so the next person at this computer starts
+      // with the box unticked rather than inheriting somebody else's.
+      onSignOut={() => { rememberMe(false); void client.auth.signOut().finally(() => location.assign('/')); }}
       onChangePassword={() => setChangingPassword(true)}
     >
       {route.ownHeader ? null : <PageHeader route={route} />}

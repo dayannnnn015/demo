@@ -24,6 +24,9 @@ export const reaches = {
   remarks: ['The remarks column of this month’s SF2'],
   subjects: ['The learning areas printed on the SF9 of every section that offers it', 'Grade entry and the class summary for those sections'],
   movement: ['The learner’s rows on the register from that date', 'The SF2’s remarks and counts, and the SF4’s movement columns, for that month and after'],
+  history: ['The learner’s SF10, as a scholastic block in the school year it belongs to',
+    'Nothing else. An encoded school year is a copy of a document, not an enrolment: it reaches no register, no SF2, no SF4 and no SF9, and it changes nobody’s current grade or section'],
+  eligibility: ['The Eligibility for Elementary School Enrollment block on the learner’s SF10, including the school that issued the credential'],
 } as const;
 export type Reach = keyof typeof reaches;
 

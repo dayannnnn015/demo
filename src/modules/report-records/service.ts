@@ -78,8 +78,13 @@ export async function executeReport(id:ReportOperationId,ctx:Context,input:{body
     case 'reportRecordHistory':{
       const q=input.query as z.infer<typeof s.history>;
       // Row policy limits the journal to managers and the section's current adviser.
+      // Qualified, like the audit, access and score journals: `id::text` takes
+      // the output name `id`, and a bare `id` in ORDER BY binds to that output
+      // column, sorting the identity column as text. Row 9 then outranks row 10
+      // and the newest entries fall off the first page. Found while building the
+      // encoded-history journal, which had the same fault.
       const rows=await tx.query<{id:string}>(`select id::text,kind,scope,entries,reason,actor_user_id,recorded_at from edunexus.report_record_events
-        where section_id=$1 and ($2::bigint is null or id<$2) order by id desc limit $3`,[input.id,q.before_id??null,q.limit+1]);
+        where section_id=$1 and ($2::bigint is null or id<$2) order by edunexus.report_record_events.id desc limit $3`,[input.id,q.before_id??null,q.limit+1]);
       const items=rows.slice(0,q.limit);
       // The journal's entries carry each learner's grades, so reading it is a read
       // of their report-card records. A page can name more enrollments than one

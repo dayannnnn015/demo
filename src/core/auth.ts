@@ -38,14 +38,14 @@ export function createAuthenticator(options: {
       } catch { throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.'); }
       if (response.status === 429 || response.status >= 500) throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.');
       if (!response.ok) throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
-      let user: { id: string; factors?: { status?: unknown }[] | null | undefined };
-      try { user = z.object({id:z.uuid(),factors:z.array(z.object({status:z.unknown()}).loose()).nullish()}).parse(await response.json()); }
+      let user: { id: string };
+      try { user = z.object({id:z.uuid()}).loose().parse(await response.json()); }
       catch { throw new AppError(503, 'AUTH_UNAVAILABLE', 'Authentication is temporarily unavailable.'); }
       if (user.id !== payload.sub) throw new AppError(401, 'INVALID_TOKEN', 'A valid staff access token is required.');
+      // Sign-in is an email and a password (decided 2026-09-18, restored 2026-11-03). The token's
+      // assurance is still read and kept with the session, because a factor enrolled before the
+      // authenticator was taken out still raises it and the sessions list says what it says.
       const assurance = payload.aal === 'aal2' ? 'aal2' : payload.aal === 'aal1' ? 'aal1' : undefined;
-      // An account that turned on two-step sign-in is held to it here, not only by the sign-in form:
-      // a token from the password alone is refused, so skipping the form gets nobody in.
-      if (user.factors?.some(f => f.status === 'verified') && assurance !== 'aal2') throw new AppError(403, 'TWO_STEP_REQUIRED', 'Enter the code from your authenticator app to finish signing in.');
       const session = z.uuid().safeParse(payload.session_id);
       return { userId: payload.sub!, ...(session.success ? { sessionId: session.data } : {}), ...(assurance ? { assurance } : {}) };
     },

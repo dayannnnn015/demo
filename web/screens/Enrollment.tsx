@@ -95,7 +95,7 @@ function MovementForm({ api, enrollment, sections, setStatus, reload }: {
         )}
       </div>
       <div className="form-actions">
-        <button type="submit" className="btn" disabled={busy}>{busy ? 'Recording…' : 'Record movement'}</button>
+        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Recording…' : 'Record movement'}</button>
       </div>
     </form>
   );
@@ -364,8 +364,14 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
         />
       </div>
 
-      <Callout tone="info" title="Not built">
-        Promotion to the next grade does not exist yet. Correcting a grade here fixes a year recorded under the wrong grade; it never moves a learner up.
+      {/* This read "Not built — promotion does not exist yet" until 0.87.0. It
+          had been untrue since 0033/0034: promotion and next year's classes are
+          both built. The distinction it was drawing is the part that still
+          matters, so that is what it says now. */}
+      <Callout tone="info" title="This is a correction, not a promotion">
+        Correcting a grade here fixes a year recorded under the wrong grade; it never moves a learner up.
+        Moving a learner into the next grade is an end-of-year outcome, recommended and approved on <a href="#/report-cards">Promotion</a>,
+        and then enrolled on <a href="#/next-year">Next year’s classes</a>.
       </Callout>
 
       {enrolling && section ? (

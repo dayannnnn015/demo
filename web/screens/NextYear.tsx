@@ -13,22 +13,21 @@ import { hashParams } from './OutcomeQueue';
 type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 type Learner = {
   enrollment_id: string; learner_id: string; first_name: string; middle_name: string | null; last_name: string; name_extension: string | null;
-  sex: 'male' | 'female'; from_grade: number; from_section: string; action: 'promoted' | 'conditionally_promoted' | 'retained' | 'remedial' | null; outcome_status: string | null;
+  sex: 'male' | 'female'; from_grade: number; from_section: string | null; action: 'promoted' | 'conditionally_promoted' | 'retained' | 'remedial' | null; outcome_status: string | null;
 };
-type Reason = 'left' | 'no_outcome' | 'not_approved' | 'remedial' | 'completer' | 'already_enrolled' | 'no_section';
+type Reason = 'left' | 'no_outcome' | 'not_approved' | 'remedial' | 'completer' | 'already_enrolled';
 type Preview = {
   source_year: { id: string; start_year: number; status: string };
   target_year: { id: string; start_year: number; starts_on: string; status: string };
-  seed: number; grade_level: number | null; review_hash: string;
-  sections: { id: string; grade_level: number; name: string; adviser_name: string | null; enrolled: { male: number; female: number }; placed: { male: number; female: number } }[];
-  placements: (Learner & { to_grade: number; section_id: string })[];
+  grade_level: number | null; review_hash: string;
+  grades: { grade_level: number; carried: { male: number; female: number } }[];
+  placements: (Learner & { to_grade: number })[];
   unplaced: (Learner & { to_grade: number | null; reason: Reason })[];
   runs: { id: string; grade_level: number | null; seed: number; placed: number; reason: string; actor_name: string | null; recorded_at: string }[];
 };
 
 const idle: Status = { kind: 'idle', text: '' };
 const yearLabel = (start: number) => `${start}–${start + 1}`;
-const freshSeed = () => Math.floor(Math.random() * 1_000_000);
 const outcomeWord = { promoted: 'Promoted', conditionally_promoted: 'Conditionally promoted', retained: 'Retained', remedial: 'Remedial' } as const;
 const why = (u: Preview['unplaced'][number]) => ({
   left: 'Left during the year',
@@ -37,20 +36,19 @@ const why = (u: Preview['unplaced'][number]) => ({
   remedial: 'Remedial: placed after the remedial class',
   completer: 'Completed Grade 6',
   already_enrolled: 'Already enrolled next year',
-  no_section: `No ${gradeName(u.to_grade)} section next year`,
 })[u.reason];
+/** This year's class, or a plain statement that they were never given one. */
+const fromClass = (l: Learner) => `${gradeName(l.from_grade)}${l.from_section ? ` · ${l.from_section}` : ' · no section'}`;
 
 /**
  * Next year's classes, prepared from this year's approved outcomes. Who moves
- * up is the school's decision, recorded on Report cards; this screen only
- * draws which section of the grade each learner joins, from a seed anyone can
- * repeat, balanced by sex and size, and enrols the whole draw at once.
+ * up is the school's decision, recorded on Report cards; this screen carries
+ * them into the grade that decision leads to and enrols them all at once. It
+ * assigns no section: a class is given to a learner separately, afterwards.
  */
 export function NextYear({ api, me, setStatus, token, route }: Props) {
   const [years, setYears] = useState<Row[] | null>(null);
   const [sourceId, setSourceId] = useState('');
-  const [seed, setSeed] = useState(freshSeed);
-  const [seedText, setSeedText] = useState(String(seed));
   // Opened from the Overview for one grade, as `#/next-year?grade=3`.
   const [grade, setGrade] = useState(() => { const g = hashParams().get('grade'); return g && /^[0-6]$/.test(g) ? g : ''; });
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -58,7 +56,6 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
   const [tick, setTick] = useState(0);
   // Set when an enrolment was refused because the preview went stale, until the fresh draw says why.
   const [stale, setStale] = useState(false);
-  const [section, setSection] = useState('');
   const [enrolling, setEnrolling] = useState(false);
   const [printing, setPrinting] = useState(false);
   const id = useId();
@@ -76,9 +73,9 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
   useEffect(() => {
     if (!source || !target) { setPreview(null); return; }
     setPreview(null); setFailed(null);
-    void api<Preview>(`/academic-years/${source.id}/next-year-classes${query({ target_year_id: String(target.id), seed, grade_level: grade || undefined })}`)
+    void api<Preview>(`/academic-years/${source.id}/next-year-classes${query({ target_year_id: String(target.id), grade_level: grade || undefined })}`)
       .then(setPreview).catch(error => setFailed(message(error)));
-  }, [api, source?.id, target?.id, seed, grade, tick, token]);
+  }, [api, source?.id, target?.id, grade, tick, token]);
 
   // A refused enrolment is told apart from one that already happened: in another tab, or by a colleague,
   // the same classes may have been enrolled a moment ago, and "nobody was enrolled" would read as a loss.
@@ -94,11 +91,8 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
   if (years === null) return <><PageHeader route={route} /><div className="card"><TableSkeleton columns={5} /></div></>;
   if (!source) return <><PageHeader route={route} /><div className="card"><EmptyState title="No school year yet" body="Next year’s classes come from a school year’s approved outcomes. Create the year first." /></div></>;
 
-  const commitSeed = () => { const n = Number(seedText); if (Number.isInteger(n) && n >= 0 && n <= 2147483647) setSeed(n); else setSeedText(String(seed)); };
-  const redraw = () => { const n = freshSeed(); setSeed(n); setSeedText(String(n)); };
   const count = (...reasons: Reason[]) => preview?.unplaced.filter(u => reasons.includes(u.reason)).length ?? 0;
-  const sectionOf = new Map(preview?.sections.map(s => [s.id, s]) ?? []);
-  const shown = preview?.placements.filter(p => !section || p.section_id === section) ?? [];
+  const shown = preview?.placements ?? [];
 
   return (
     <>
@@ -110,26 +104,20 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
           <div className="toolbar">
             <div className="field">
               <label className="label" htmlFor={`${id}-year`}>From the school year</label>
-              <Select id={`${id}-year`} value={sourceId} onChange={e => { setSourceId(e.target.value); setSection(''); }}>
+              <Select id={`${id}-year`} value={sourceId} onChange={e => setSourceId(e.target.value)}>
                 {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearLabel(Number(y.start_year))}</option>)}
               </Select>
             </div>
             <div className="field">
               <label className="label" htmlFor={`${id}-grade`}>Grade next year</label>
-              <Select id={`${id}-grade`} value={grade} onChange={e => { setGrade(e.target.value); setSection(''); }}>
+              <Select id={`${id}-grade`} value={grade} onChange={e => setGrade(e.target.value)}>
                 <option value="">Every grade</option>
                 {[0, 1, 2, 3, 4, 5, 6].map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
               </Select>
             </div>
-            <div className="field">
-              <label className="label" htmlFor={`${id}-seed`}>Draw number</label>
-              <input id={`${id}-seed`} inputMode="numeric" className="mono" value={seedText} onChange={e => setSeedText(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-                onBlur={commitSeed} onKeyDown={e => { if (e.key === 'Enter') commitSeed(); }} />
-            </div>
-            <button type="button" className="btn secondary" onClick={redraw}>Draw again</button>
-            {preview?.placements.length ? <button type="button" className="btn ghost" onClick={() => setPrinting(true)}><Icon name="print" size={15} />Print the class lists</button> : null}
+            {preview?.placements.length ? <button type="button" className="btn ghost" onClick={() => setPrinting(true)}><Icon name="print" size={15} />Print the list</button> : null}
           </div>
-          <p className="card-note">Each learner goes where their approved outcome on <b>Report cards → Promotion</b> leads: promoted or conditionally promoted up a grade, retained in the same one. The draw only chooses the section, balancing boys and girls and class sizes. The same draw number over the same records always gives the same classes, so it can be repeated and checked.</p>
+          <p className="card-note">Each learner goes where their approved outcome on <b>Report cards → Promotion</b> leads: promoted or conditionally promoted up a grade, retained in the same one. Nobody is given a section here — a learner is taken into a class afterwards, and until then they sit in the registry at their new grade with no section.</p>
         </div>
         {!target ? (
           <div className="card-body"><Callout tone="attention" title={`No ${yearLabel(Number(source.start_year) + 1)} school year yet`}>Create the {yearLabel(Number(source.start_year) + 1)} school year and its sections on <b>School years &amp; sections</b>, then come back here.</Callout></div>
@@ -147,31 +135,26 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
               <StatTile label="Waiting on an outcome" value={count('no_outcome', 'not_approved', 'remedial')} meta="Remedial, or not approved yet" accent={2} />
               <StatTile label="Already enrolled" value={count('already_enrolled')} meta={`in ${yearLabel(preview.target_year.start_year)}`} accent={3} />
             </div>
-            {count('no_section') ? <Callout tone="attention" title="Some grades have no section next year">{count('no_section')} {count('no_section') === 1 ? 'learner has' : 'learners have'} nowhere to go yet. Add the missing sections for {yearLabel(preview.target_year.start_year)} and they are drawn in.</Callout> : null}
+            {/* What each grade receives. Sections are not shown because none is
+                chosen here: a learner is taken into a class afterwards. */}
             <div className="card">
-            <div className="card-head"><h2>Sections next year</h2></div>
+            <div className="card-head"><h2>Grades next year</h2></div>
             <Table
-              rows={preview.sections}
-              rowKey={s => s.id}
-              empty={<EmptyState title="No sections next year" body={`Add the ${yearLabel(preview.target_year.start_year)} sections on School years & sections.`} />}
+              rows={preview.grades}
+              rowKey={g => String(g.grade_level)}
+              empty={<EmptyState title="Nobody to carry forward" body="No approved outcome in this school year leads into the next one yet." />}
               columns={[
-                { header: 'Section', cell: s => <Cell title={`${gradeName(s.grade_level)} · ${s.name}`} meta={s.adviser_name ?? 'No adviser yet'} /> },
-                { header: 'Already in it', cell: s => <span className="mono">{s.enrolled.male} M · {s.enrolled.female} F</span> },
-                { header: 'Drawn into it', cell: s => <span className="mono">{s.placed.male} M · {s.placed.female} F</span> },
-                { header: 'Total', cell: s => <b className="mono">{s.enrolled.male + s.enrolled.female + s.placed.male + s.placed.female}</b> },
+                { header: 'Grade', cell: g => gradeName(g.grade_level) },
+                { header: 'Carried into it', cell: g => <span className="mono">{g.carried.male} M · {g.carried.female} F</span> },
+                { header: 'Total', cell: g => <b className="mono">{g.carried.male + g.carried.female}</b> },
               ]}
             />
             </div>
             {preview.placements.length ? (
               <div className="card">
                 <div className="card-head">
-                  <h2>Learners drawn</h2>
+                  <h2>Learners carried forward</h2>
                   <div className="card-head-actions field">
-                    <label className="label" htmlFor={`${id}-section`}>Section</label>
-                    <Select id={`${id}-section`} value={section} onChange={e => setSection(e.target.value)}>
-                      <option value="">Every section</option>
-                      {preview.sections.filter(s => s.placed.male + s.placed.female).map(s => <option key={s.id} value={s.id}>{gradeName(s.grade_level)} · {s.name}</option>)}
-                    </Select>
                   </div>
                 </div>
                 <Table
@@ -179,9 +162,10 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
                   rowKey={p => p.enrollment_id}
                   columns={[
                     { header: 'Learner', cell: p => <Cell title={learnerName(p)} meta={p.sex === 'male' ? 'Male' : 'Female'} /> },
-                    { header: 'This year', cell: p => `${gradeName(p.from_grade)} · ${p.from_section}` },
+                    { header: 'This year', cell: p => fromClass(p) },
                     { header: 'Outcome', cell: p => (p.action ? <Badge tone={p.action === 'retained' ? 'info' : 'good'}>{outcomeWord[p.action]}</Badge> : null) },
-                    { header: 'Next year', cell: p => { const s = sectionOf.get(p.section_id); return s ? `${gradeName(s.grade_level)} · ${s.name}` : ''; } },
+                    { header: 'Next year', cell: p => gradeName(p.to_grade) },
+                    { header: 'Section', cell: () => <Badge tone="attention">Assigned later</Badge> },
                   ]}
                 />
               </div>
@@ -194,7 +178,7 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
                   rowKey={u => u.enrollment_id}
                   columns={[
                     { header: 'Learner', cell: u => <Cell title={learnerName(u)} meta={u.sex === 'male' ? 'Male' : 'Female'} /> },
-                    { header: 'This year', cell: u => `${gradeName(u.from_grade)} · ${u.from_section}` },
+                    { header: 'This year', cell: u => fromClass(u) },
                     { header: 'Why', cell: u => <span className={u.reason === 'completer' || u.reason === 'already_enrolled' ? 'muted' : ''}>{why(u)}</span> },
                   ]}
                 />
@@ -209,7 +193,6 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
                   columns={[
                     { header: 'When', cell: r => <Cell title={new Date(r.recorded_at).toLocaleString()} meta={r.actor_name ?? undefined} /> },
                     { header: 'Grade', cell: r => (r.grade_level === null ? 'Every grade' : gradeName(r.grade_level)) },
-                    { header: 'Draw number', cell: r => <span className="mono">{r.seed}</span> },
                     { header: 'Enrolled', cell: r => r.placed },
                     { header: 'Reason', cell: r => <span className="note-text">{r.reason}</span> },
                   ]}
@@ -224,20 +207,20 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
       {preview ? (
         <PrintCopy printing={printing} onPrinted={() => setPrinting(false)} long>
           <SeededNotice me={me} />
-          {preview.sections.filter(s => s.placed.male + s.placed.female).map(s => {
-            const list = preview.placements.filter(p => p.section_id === s.id);
+          {preview.grades.map(g => {
+            const list = preview.placements.filter(p => p.to_grade === g.grade_level);
             return (
-              <div className="paper" key={s.id}>
-                <h2>{gradeName(s.grade_level)} · {s.name}</h2>
-                <p className="paper-sub">School Year {yearLabel(preview.target_year.start_year)} · Adviser {s.adviser_name ?? ''} · Draw number {preview.seed}</p>
+              <div className="paper" key={g.grade_level}>
+                <h2>{gradeName(g.grade_level)}</h2>
+                <p className="paper-sub">School Year {yearLabel(preview.target_year.start_year)} · Carried forward, not yet in a class</p>
                 <table className="paper-grid card-table">
                   <thead><tr><th>No.</th><th>Learner</th><th>Sex</th><th>{yearLabel(preview.source_year.start_year)}</th><th>Outcome</th></tr></thead>
                   <tbody>{list.map((p, i) => (
                     <tr key={p.enrollment_id}><td className="numeric">{i + 1}</td><td>{learnerName(p)}</td><td>{p.sex === 'male' ? 'M' : 'F'}</td>
-                      <td>{gradeName(p.from_grade)} · {p.from_section}</td><td>{p.action ? outcomeWord[p.action] : ''}</td></tr>
+                      <td>{fromClass(p)}</td><td>{p.action ? outcomeWord[p.action] : ''}</td></tr>
                   ))}</tbody>
                 </table>
-                <p className="print-foot">{s.enrolled.male + s.enrolled.female ? `Also in this section already: ${s.enrolled.male} male, ${s.enrolled.female} female. ` : ''}Printed {localToday()} from EDUNEXUS, before enrolment. Sections drawn at random from the approved outcomes; the draw decides no outcome.</p>
+                <p className="print-foot">{g.carried.male} male, {g.carried.female} female. Printed {localToday()} from EDUNEXUS, before enrolment. Carried forward from approved outcomes; no section is assigned here.</p>
               </div>
             );
           })}
@@ -249,7 +232,7 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
 
 /** The one write: every learner drawn, enrolled together, with a reason, from exactly the preview on screen. */
 function EnrolSheet({ api, preview, onClose, onChanged, onDone }: { api: Api; preview: Preview; onClose: () => void; onChanged: () => void; onDone: (placed: number) => void }) {
-  const [reason, setReason] = useState(`Next year’s classes from the approved ${yearLabel(preview.source_year.start_year)} outcomes, draw number ${preview.seed}.`);
+  const [reason, setReason] = useState(`Carried into ${yearLabel(preview.target_year.start_year)} from the approved ${yearLabel(preview.source_year.start_year)} outcomes.`);
   const [status, setLocal] = useState<Status>(idle);
   const [busy, setBusy] = useState(false);
   const id = useId();
@@ -260,23 +243,23 @@ function EnrolSheet({ api, preview, onClose, onChanged, onDone }: { api: Api; pr
     setBusy(true);
     try {
       const done = await api<{ placed: number }>(`/academic-years/${preview.source_year.id}/next-year-classes`, 'POST',
-        { target_year_id: preview.target_year.id, seed: preview.seed, grade_level: preview.grade_level, review_hash: preview.review_hash, reason: text });
+        { target_year_id: preview.target_year.id, grade_level: preview.grade_level, review_hash: preview.review_hash, reason: text });
       onDone(done.placed);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PLACEMENT_CHANGED') { onChanged(); onClose(); return; }
       setLocal({ kind: 'error', text: message(error) });
     } finally { setBusy(false); }
   };
-  const into = preview.sections.filter(s => s.placed.male + s.placed.female);
+
   return (
     <Sheet title={`Enrol ${preview.placements.length} ${preview.placements.length === 1 ? 'learner' : 'learners'} in ${yearLabel(preview.target_year.start_year)}`}
-      note={`All of them or none, from ${preview.target_year.starts_on}, into the sections drawn with number ${preview.seed}.`} onClose={onClose}>
+      note={`All of them or none, from ${preview.target_year.starts_on}, each at the grade their outcome leads to and none in a section.`} onClose={onClose}>
       <StatusLine status={status} />
-      <Callout tone="info">A learner can be moved to another section afterwards on <b>Enrollment</b>, like any section change. If anything changed since this preview was drawn, nothing is enrolled and the preview is drawn again.</Callout>
+      <Callout tone="info">Nobody is given a section here. Each learner is enrolled at their next grade and waits in the registry until they are taken into a class. If anything changed since this preview was read, nothing is enrolled and it is read again.</Callout>
       <form onSubmit={go}>
-        <Table rows={into} rowKey={s => s.id} columns={[
-          { header: 'Section', cell: s => `${gradeName(s.grade_level)} · ${s.name}` },
-          { header: 'Enrolled into it', cell: s => <span className="mono">{s.placed.male} M · {s.placed.female} F</span> },
+        <Table rows={preview.grades} rowKey={g => String(g.grade_level)} columns={[
+          { header: 'Grade next year', cell: g => gradeName(g.grade_level) },
+          { header: 'Carried into it', cell: g => <span className="mono">{g.carried.male} M · {g.carried.female} F</span> },
         ]} />
         <div className="form-grid">
           <div className="field wide">
@@ -285,7 +268,7 @@ function EnrolSheet({ api, preview, onClose, onChanged, onDone }: { api: Api; pr
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy}>{busy ? 'Enrolling…' : `Enrol ${preview.placements.length}`}</button>
+          <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Enrolling…' : `Enrol ${preview.placements.length}`}</button>
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
         </div>
       </form>

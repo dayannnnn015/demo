@@ -140,7 +140,7 @@ export function Confirm({ title, body, confirmLabel, tone = 'danger', busy, onCo
         </div>
         <div className="dialog-foot">
           <button type="button" className="btn secondary" onClick={onClose} disabled={busy}>Keep as it is</button>
-          <button type="button" className={tone === 'danger' ? 'btn danger' : 'btn'} onClick={onConfirm} disabled={busy}>
+          <button type="button" className={tone === 'danger' ? 'btn danger' : 'btn'} onClick={onConfirm} disabled={busy} aria-busy={busy}>
             {busy ? 'Working…' : confirmLabel}
           </button>
         </div>

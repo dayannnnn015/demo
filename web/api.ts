@@ -1,6 +1,42 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type Row = Record<string, unknown>;
+
+/** What My profile needs of the sign-in service: ending the other sessions. */
+export type SessionAuth = Pick<SupabaseClient['auth'], 'signOut'>;
+
+/**
+ * Where the session is kept, and the one choice that moves it.
+ *
+ * The default is `sessionStorage`: it survives a refresh but dies with the tab,
+ * so a shared staffroom browser leaves no session behind. Ticking "Keep me
+ * signed in" on the sign-in page moves it to `localStorage`, where it survives
+ * closing the browser, and that is the only thing that does (decided
+ * 2026-11-03, replacing the flat rule that a session may never be kept).
+ *
+ * Every access is wrapped: a private window throws on the first touch of either
+ * store, and signing in must not fail because of it.
+ */
+const REMEMBER = 'edunexus-remember';
+export const remembered = () => { try { return localStorage.getItem(REMEMBER) === 'yes'; } catch { return false; } };
+/** Chosen before the sign-in call, so the session lands in the store the person picked. */
+export function rememberMe(on: boolean) {
+  try {
+    if (on) localStorage.setItem(REMEMBER, 'yes'); else localStorage.removeItem(REMEMBER);
+  } catch { /* a private window remembers nothing, which is the safe way round */ }
+}
+/** Both stores are cleared on the way out, whichever one held it. */
+export const sessionStore = {
+  getItem(key: string) { try { return (remembered() ? localStorage : sessionStorage).getItem(key); } catch { return null; } },
+  setItem(key: string, value: string) { try { (remembered() ? localStorage : sessionStorage).setItem(key, value); } catch { /* nothing kept */ } },
+  // Each store in its own `try`. One around the pair would let a browser that refuses
+  // `localStorage`, as a private window does, throw before the tab's own copy was
+  // cleared — leaving the signed-out session sitting there (found by its test).
+  removeItem(key: string) {
+    try { localStorage.removeItem(key); } catch { /* nothing kept */ }
+    try { sessionStorage.removeItem(key); } catch { /* nothing kept */ }
+  },
+};
 export type Page<T = Row> = { items: T[]; pagination?: { has_more?: boolean; next_after_id?: string | null; next_before_id?: string | null; next_before_version?: number | null } };
 
 /** An API error carrying the server's own code, so screens can react to specific ones. */
@@ -15,6 +51,40 @@ export class ApiError extends Error {
 export type Api = <T>(path: string, method?: string, body?: unknown) => Promise<T>;
 
 /**
+ * Whether anything is waiting on the server right now.
+ *
+ * Every request in the workspace goes through `createApi`, so counting here is
+ * the one place that knows the system is working. Screens say so themselves
+ * where they can — a button that reads "Saving…" is better than a notice
+ * somewhere else — but a great many clicks open a sheet, refetch a list or
+ * reload a screen, and those showed nothing at all while the server thought.
+ * To a teacher that is indistinguishable from a button that did not work, and
+ * the second click is the one that does harm.
+ *
+ * A count, not a flag: several requests overlap on most screens, and the last
+ * one to finish is what ends the wait.
+ */
+let waiting = 0;
+const watchers = new Set<(working: boolean) => void>();
+
+/** Subscribe to it. Returns the unsubscribe, for an effect's cleanup. */
+export function onApiBusy(watch: (working: boolean) => void) {
+  watchers.add(watch);
+  watch(waiting > 0);
+  return () => { watchers.delete(watch); };
+}
+
+const counted = async <T>(run: () => Promise<T>): Promise<T> => {
+  waiting++;
+  if (waiting === 1) for (const watch of watchers) watch(true);
+  try { return await run(); }
+  finally {
+    waiting--;
+    if (waiting === 0) for (const watch of watchers) watch(false);
+  }
+};
+
+/**
  * Whether a failed request may be sent again unchanged. Only a read, and only
  * when the server said the database was busy: `RETRY_REQUIRED` means a lock or
  * serialization wait ran out, the transaction rolled back, and nothing was
@@ -26,7 +96,8 @@ export const retryable = (method: string, error: unknown) =>
 
 export function createApi(client: SupabaseClient, onSessionLost: () => void, wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))): Api {
   const send = createRequest(client, onSessionLost);
-  return async <T>(path: string, method = 'GET', body?: unknown): Promise<T> => {
+  // The whole span, retries included: a retried read is still one wait.
+  return <T>(path: string, method = 'GET', body?: unknown): Promise<T> => counted(async () => {
     for (let attempt = 0; ; attempt++) {
       try { return await send<T>(path, method, body); }
       catch (error) {
@@ -35,7 +106,7 @@ export function createApi(client: SupabaseClient, onSessionLost: () => void, wai
         await wait(250 + Math.random() * 500 * (attempt + 1));
       }
     }
-  };
+  });
 }
 
 function createRequest(client: SupabaseClient, onSessionLost: () => void) {
@@ -52,8 +123,7 @@ function createRequest(client: SupabaseClient, onSessionLost: () => void) {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       const error = payload.error ?? {};
-      // A session that still owes its second step goes back to the sign-in form, which asks for the code.
-      if (response.status === 401 || error.code === 'STAFF_ACCESS_REQUIRED' || error.code === 'TWO_STEP_REQUIRED') onSessionLost();
+      if (response.status === 401 || error.code === 'STAFF_ACCESS_REQUIRED') onSessionLost();
       throw new ApiError(response.status, error.code ?? 'REQUEST_FAILED', error.message ?? 'The request failed.', error.fields ?? []);
     }
     return payload.data as T;

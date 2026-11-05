@@ -18,10 +18,14 @@ import { lrnDigits } from '../record-fields';
  */
 export type Profile = { lrn: string | null; first_name: string; middle_name: string | null; last_name: string; name_extension: string | null; birth_date: string; sex: 'male' | 'female' };
 
-const blank = { lrn: '', first_name: '', middle_name: '', last_name: '', name_extension: '', birth_date: '', sex: '' };
-type Draft = typeof blank;
+// Shared with MyClass.tsx, where an adviser registers a learner into their own
+// class: the same fields, the same checks and the same shape of profile, so the
+// two forms cannot drift into asking for different things about one child.
+export const blankLearner = { lrn: '', first_name: '', middle_name: '', last_name: '', name_extension: '', birth_date: '', sex: '' };
+export type LearnerDraft = typeof blankLearner;
+type Draft = LearnerDraft;
 
-function problems(d: Draft) {
+export function learnerProblems(d: Draft) {
   const out: [keyof Draft, string][] = [];
   if (!d.last_name.trim()) out.push(['last_name', 'Give the last name.']);
   if (!d.first_name.trim()) out.push(['first_name', 'Give the first name.']);
@@ -31,7 +35,7 @@ function problems(d: Draft) {
   return out;
 }
 
-const toProfile = (d: Draft): Profile => ({
+export const toLearnerProfile = (d: Draft): Profile => ({
   lrn: lrnDigits(d.lrn) || null, first_name: d.first_name.trim(), middle_name: d.middle_name.trim() || null, last_name: d.last_name.trim(),
   name_extension: d.name_extension.trim() || null, birth_date: d.birth_date, sex: d.sex as Profile['sex'],
 });
@@ -40,7 +44,7 @@ const toProfile = (d: Draft): Profile => ({
 const cell = (v: string | null) => (v === null ? '' : /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 export const csvRow = (p: Profile) => [p.lrn, p.first_name, p.middle_name, p.last_name, p.name_extension, p.birth_date, p.sex].map(cell).join(',');
 
-function LearnerFields({ draft, set, bad }: { draft: Draft; set: (d: Draft) => void; bad: [keyof Draft, string][] }) {
+export function LearnerFields({ draft, set, bad }: { draft: Draft; set: (d: Draft) => void; bad: [keyof Draft, string][] }) {
   const id = useId();
   const error = (key: keyof Draft) => bad.find(b => b[0] === key)?.[1];
   const text = (key: keyof Draft, label: string, optional = false, extra: Record<string, unknown> = {}) => (
@@ -72,13 +76,13 @@ function LearnerFields({ draft, set, bad }: { draft: Draft; set: (d: Draft) => v
 
 /** The adviser's version: one row added to the class list they are about to check and submit. */
 export function LateRowSheet({ onAdd, onClose }: { onAdd: (row: Profile) => void; onClose: () => void }) {
-  const [draft, setDraft] = useState<Draft>(blank);
+  const [draft, setDraft] = useState<Draft>(blankLearner);
   const [bad, setBad] = useState<[keyof Draft, string][]>([]);
   const add = (event: FormEvent) => {
     event.preventDefault();
-    const found = problems(draft);
+    const found = learnerProblems(draft);
     setBad(found);
-    if (!found.length) onAdd(toProfile(draft));
+    if (!found.length) onAdd(toLearnerProfile(draft));
   };
   return (
     <Sheet title="Add one late learner" note="The learner is added as one row of your class list. Check and submit the list as usual; the office enrols them." onClose={onClose}>
@@ -99,7 +103,7 @@ export function EnlistSheet({ api, year, sections, onClose, onDone }: {
 }) {
   const id = useId();
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
-  const [draft, setDraft] = useState<Draft>(blank);
+  const [draft, setDraft] = useState<Draft>(blankLearner);
   const [bad, setBad] = useState<[keyof Draft, string][]>([]);
   const [sectionId, setSectionId] = useState(String(sections[0]?.id ?? ''));
   const [enrolledOn, setEnrolledOn] = useState(today < String(year.starts_on) ? String(year.starts_on) : today > String(year.ends_on) ? String(year.ends_on) : today);
@@ -125,12 +129,12 @@ export function EnlistSheet({ api, year, sections, onClose, onDone }: {
 
   const search = (event: FormEvent) => {
     event.preventDefault();
-    const found = problems(draft);
+    const found = learnerProblems(draft);
     setBad(found);
     if (found.length || !sectionId) { setStatus(found.length ? { kind: 'error', text: 'Fix the fields marked below.' } : { kind: 'error', text: 'Choose a section.' }); return; }
     void run(async () => {
       setStatus({ kind: 'busy', text: 'Looking for a record already on file…' });
-      const p = toProfile(draft);
+      const p = toLearnerProfile(draft);
       // Same surname and birth date: the registry's own search, recorded in the access log like any other.
       const page = await api<Page>(`/learners${query({ search: p.last_name, birth_date: p.birth_date, limit: 20 })}`);
       const same = page.items.filter(r => String(r.first_name).trim().toLowerCase() === p.first_name.toLowerCase() || (p.lrn && r.lrn === p.lrn));
@@ -141,7 +145,7 @@ export function EnlistSheet({ api, year, sections, onClose, onDone }: {
   };
   const createAndEnrol = async () => {
     setStatus({ kind: 'busy', text: 'Creating the record…' });
-    const learner = created ?? await api<Row>('/learners', 'POST', toProfile(draft));
+    const learner = created ?? await api<Row>('/learners', 'POST', toLearnerProfile(draft));
     setCreated(learner);
     setStatus({ kind: 'busy', text: 'Enrolling…' });
     await enrol(learner);
@@ -187,7 +191,7 @@ export function EnlistSheet({ api, year, sections, onClose, onDone }: {
           </div>
           <LearnerFields draft={draft} set={setDraft} bad={bad} />
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Working…' : created ? 'Enrol again' : 'Check the registry and enrol'}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Working…' : created ? 'Enrol again' : 'Check the registry and enrol'}</button>
             <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           </div>
         </form>

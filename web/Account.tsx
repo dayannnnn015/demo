@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { message } from './api';
+import { message, rememberMe, remembered } from './api';
 import { BrandMark } from './components/brand';
 import { Icon } from './components/icons';
 import { StatusLine, type Status, idle } from './components/primitives';
-import { TwoStepSignIn, owesSecondStep } from './two-step';
 
-type Stage = 'loading' | 'signin' | 'two-step' | 'set-password' | 'ready';
+type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
 
 /**
  * A password field that can be read back.
@@ -80,6 +79,9 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Ticked already for someone who chose it on this computer before, so their own
+  // device does not quietly forget them after the session finally expires.
+  const [keepSignedIn, setKeepSignedIn] = useState(remembered);
   const [newPassword, setNewPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
 
@@ -109,8 +111,6 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
             setStatus(idle);
             return;
           }
-          // A refresh, or the API's TWO_STEP_REQUIRED, with only the password given so far: ask for the code.
-          if (await owesSecondStep(client.auth)) { if (!cancelled) { setStage('two-step'); setStatus(idle); } return; }
           finish();
           return;
         }
@@ -152,12 +152,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
           </span>
         </div>
 
-        {stage === 'two-step' ? (
-          <>
-            <h1>Enter your code</h1>
-            <p className="auth-lede">Your account uses two-step sign-in. Open the authenticator app on your phone and type the code it shows for EDUNEXUS.</p>
-          </>
-        ) : stage === 'set-password' ? (
+        {stage === 'set-password' ? (
           <>
             <h1>Choose a password</h1>
             <p className="auth-lede">This finishes setting up your account. You will use it to sign in from now on.</p>
@@ -174,12 +169,13 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
         {stage === 'signin' ? (
           <form method="post" onSubmit={submit(async () => {
             const address = email.trim();
+            // Chosen before the sign-in call, because the session is written as it returns
+            // and it has to land in the store this person picked.
+            rememberMe(keepSignedIn);
             const { error } = await client.auth.signInWithPassword({ email: address, password });
             if (error) { setPassword(''); throw error; }
-            // The password was right, so the browser may keep it, even before a two-step code is asked for.
             offerToSave(address, password);
             setPassword('');
-            if (await owesSecondStep(client.auth)) { setStage('two-step'); setStatus(idle); return; }
             finish();
           })}>
             <div className="field">
@@ -187,8 +183,17 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               <input id="email" name="email" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <Password id="password" label="Password" autoComplete="current-password" value={password} onChange={setPassword} />
+            {/* Off unless this person turned it on before: the staffroom machine is the
+                default case, and the one that must not keep anybody signed in. */}
+            <label className="auth-keep" htmlFor="keep-signed-in">
+              <input id="keep-signed-in" name="keep-signed-in" type="checkbox" checked={keepSignedIn} onChange={e => setKeepSignedIn(e.target.checked)} />
+              <span>
+                <b>Keep me signed in on this computer</b>
+                <small>Only on a computer that is yours. On a shared staffroom computer leave this off, and signing out ends it everywhere either way.</small>
+              </span>
+            </label>
             <div className="form-actions">
-              <button type="submit" className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+              <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
               <button type="button" className="btn ghost" disabled={busy} onClick={async () => {
                 const address = email.trim();
                 if (!address) { setStatus({ text: 'Enter your school email first.', kind: 'error' }); return; }
@@ -214,15 +219,10 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               }}>Email a recovery link</button>
             </div>
             <div className="auth-foot">
-              <p>Your browser can save your password. You stay signed in until this tab is closed, so on a shared computer, close the tab when you are done.</p>
+              <p>Your browser can save your password. Unless you tick the box above, you stay signed in only until this tab is closed, so on a shared computer close the tab when you are done.</p>
               <p>Accounts are created by the school, not self-registered.</p>
             </div>
           </form>
-        ) : null}
-
-        {stage === 'two-step' ? (
-          <TwoStepSignIn auth={client.auth} onDone={finish}
-            onCancel={() => { void client.auth.signOut().finally(() => { setStage('signin'); setStatus(idle); }); }} />
         ) : null}
 
         {stage === 'set-password' ? (
@@ -239,7 +239,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
             <Password id="new-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={newPassword} onChange={setNewPassword} />
             <Password id="confirm-password" label="Confirm password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
             <div className="form-actions">
-              <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save password'}</button>
+              <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : 'Save password'}</button>
             </div>
             <div className="auth-foot">
               <p>Your password is held by the sign-in service, never by EDUNEXUS. Nobody at the school can read it back to you.</p>
@@ -315,7 +315,7 @@ export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (
       <Password id="changed-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={next} onChange={setNext} />
       <Password id="changed-confirmation" label="Confirm new password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
       <div className="form-actions">
-        <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : 'Change password'}</button>
+        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : 'Change password'}</button>
       </div>
       <p className="muted">Your password is held by the sign-in service, never by EDUNEXUS. Other devices stay signed in until their session ends.</p>
     </form>

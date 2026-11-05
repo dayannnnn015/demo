@@ -204,7 +204,7 @@ export function BatchSheet({ title, note, intro, headers, candidates, empty, pro
           ) : null}
           <div className="form-actions">
             {reread && failed.length && !busy ? <button type="button" className="btn" onClick={() => void readAgain()}>Read again and retry {failed.length === 1 ? '1 row' : `${failed.length} rows`}</button> : null}
-            {candidates?.length && !finished ? <button type="submit" className={reread && failed.length ? 'btn secondary' : 'btn'} disabled={busy || !queue.length}>{busy ? 'Working…' : queue.length ? verb(queue.length) : 'Nothing chosen'}</button> : null}
+            {candidates?.length && !finished ? <button type="submit" className={reread && failed.length ? 'btn secondary' : 'btn'} disabled={busy || !queue.length} aria-busy={busy}>{busy ? 'Working…' : queue.length ? verb(queue.length) : 'Nothing chosen'}</button> : null}
             <button type="button" className={finished ? 'btn' : 'btn secondary'} disabled={busy} onClick={close}>{written.current ? 'Done' : 'Cancel'}</button>
           </div>
         </form>

@@ -231,7 +231,7 @@ function DraftSheet({ api, draft, onClose, onDone }: { api: Api; draft: Draft | 
           ) : null}
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
         </div>
-        <div className="form-actions"><button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : draft ? 'Save this revision' : 'Record the draft'}</button></div>
+        <div className="form-actions"><button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : draft ? 'Save this revision' : 'Record the draft'}</button></div>
       </form>
     </Sheet>
   );
@@ -296,7 +296,7 @@ function AdoptSheet({ api, drafts, years, onClose, onDone }: { api: Api; drafts:
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
         </div>
         {draft ? <><h3>Components being adopted</h3><Components components={draft.components} /></> : null}
-        <div className="form-actions"><button type="submit" className="btn" disabled={busy || !draft}>{busy ? 'Recording…' : 'Record the adoption'}</button></div>
+        <div className="form-actions"><button type="submit" className="btn" disabled={busy || !draft} aria-busy={busy}>{busy ? 'Recording…' : 'Record the adoption'}</button></div>
       </form>
     </Sheet>
   );
@@ -322,7 +322,7 @@ function ReasonSheet({ title, note, label, run, onClose, onDone }: {
         finally { setBusy(false); }
       }}>
         <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
-        <div className="form-actions"><button type="submit" className="btn danger" disabled={busy}>{busy ? 'Recording…' : label}</button></div>
+        <div className="form-actions"><button type="submit" className="btn danger" disabled={busy} aria-busy={busy}>{busy ? 'Recording…' : label}</button></div>
       </form>
     </Sheet>
   );
@@ -370,7 +370,7 @@ function BindSheet({ api, offering, adoptions, section, onClose, onDone }: {
             <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
           </div>
           {adoption ? <Components components={adoption.policy_snapshot.components} /> : null}
-          <div className="form-actions"><button type="submit" className="btn" disabled={busy}>{busy ? 'Recording…' : 'Record the binding'}</button></div>
+          <div className="form-actions"><button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Recording…' : 'Record the binding'}</button></div>
         </form>
       )}
     </Sheet>

@@ -205,7 +205,7 @@ function ReviewSheet({ api, yearId, version, scope, dates, mode, sections, onClo
           />
 
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} onClick={() => void confirm()}>
+            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} aria-busy={busy} onClick={() => void confirm()}>
               {busy ? 'Recording…' : 'Confirm this review'}
             </button>
             <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setPlan(null); setSent(null); setStatus(idle); }}>
@@ -260,7 +260,7 @@ function ReviewSheet({ api, yearId, version, scope, dates, mode, sections, onClo
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Reviewing…' : `Review ${count}`}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Reviewing…' : `Review ${count}`}</button>
           </div>
         </form>
       )}
@@ -393,7 +393,7 @@ function FillRange({ api, year, onClose, onDone }: { api: Api; year: Row; onClos
           ) : <p className="muted">No holiday or break falls on a date being set.</p>}
           {applied ? <p className="card-note">{applied} of {plan.changes.length} dates recorded.</p> : null}
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !plan.changes.length} onClick={() => void apply()}>{busy ? 'Recording…' : plan.changes.length ? `Set ${plan.changes.length} dates` : 'Nothing to set'}</button>
+            <button type="button" className="btn" disabled={busy || !plan.changes.length} aria-busy={busy} onClick={() => void apply()}>{busy ? 'Recording…' : plan.changes.length ? `Set ${plan.changes.length} dates` : 'Nothing to set'}</button>
             <button type="button" className="btn ghost small" disabled={busy || applied > 0} onClick={() => { setPlan(null); setStatus(idle); }}>Change something</button>
           </div>
         </>
@@ -454,7 +454,7 @@ function FillRange({ api, year, onClose, onDone }: { api: Api; year: Row; onClos
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Reading…' : 'Review the range'}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Reading…' : 'Review the range'}</button>
           </div>
         </form>
       )}

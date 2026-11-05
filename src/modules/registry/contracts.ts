@@ -7,14 +7,33 @@ const date = z.iso.date();
 const lrn = z.string().overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.');
 const birthDate = date.refine(value => value >= '1900-01-01' && value <= new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), 'Birth date must be a past or current date from 1900 onward.');
 const page = { limit: z.coerce.number().int().min(1).max(100).default(50), offset: z.coerce.number().int().min(0).max(100000).default(0) };
-const profile = { first_name: text(100), middle_name: text(100).nullable(), last_name: text(100), name_extension: text(20).nullable(), birth_date: birthDate, sex: z.enum(['male', 'female']) };
+// `address` is one nullable line, which is the whole of what migration 0053
+// opened of the learner-fields gate: a learner whose address the school has not
+// written down is unrecorded, never blank, and nothing else about a child or
+// their family is held until the school supplies its reviewed field list.
+const profile = { first_name: text(100), middle_name: text(100).nullable(), last_name: text(100), name_extension: text(20).nullable(), birth_date: birthDate, sex: z.enum(['male', 'female']), address: text(300).nullable() };
 export const registrySchemas = {
   // Every new learner carries an LRN (the user's decision of 14 October). A record from before, without one, is still read and completed through learnerLrn.
-  learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), lrn: z.string({ error: 'The LRN is required: all twelve digits.' }).overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.') }),
+  learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), address: profile.address.default(null), lrn: z.string({ error: 'The LRN is required: all twelve digits.' }).overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.') }),
   learnerUpdate: z.strictObject({ ...profile, version }),
   learnerLrn: z.strictObject({ version, lrn }),
-  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), include_linked: z.enum(['true','false']).default('false') }),
-  enrollmentCreate: z.strictObject({ learner_id: uuid, section_id: uuid, enrolled_on: date, entry_kind: z.enum(['regular', 'transfer_in']).default('regular') }),
+  // grade_level narrows to learners holding a valid enrolment at that grade in
+  // the *active* school year, which is the year each row's placement reports.
+  // Matching any year made the filter and the row disagree for a promoted learner.
+  // It is a property of an enrolment, not of a learner, so it is matched with a
+  // subquery rather than a column; row security on enrollments still applies,
+  // which is what keeps a teacher filtering by grade to their own learners.
+  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), grade_level: z.coerce.number().int().min(0).max(6).optional(), include_linked: z.enum(['true','false']).default('false') }),
+  // A section, or a year and a grade. Giving a section is the older, shorter
+  // way of saying all three, since a section has only one year and one grade;
+  // giving the year and grade without one enrols a learner who has no class
+  // yet. Assigning that class later is a movement, not another enrolment.
+  enrollmentCreate: z.strictObject({
+    learner_id: uuid, section_id: uuid.nullable().default(null),
+    academic_year_id: uuid.optional(), grade_level: z.coerce.number().int().min(0).max(6).optional(),
+    enrolled_on: date, entry_kind: z.enum(['regular', 'transfer_in']).default('regular'),
+  }).refine(v => v.section_id !== null || (v.academic_year_id !== undefined && v.grade_level !== undefined),
+    'Give a section_id, or an academic_year_id and grade_level to enrol without one.'),
   enrollmentQuery: z.strictObject({ ...page, academic_year_id: uuid.optional(), section_id: uuid.optional(), learner_id: uuid.optional(), status: z.enum(['enrolled', 'withdrawn']).optional(), record_state: z.enum(['valid', 'voided', 'all']).default('valid') }),
   movement: z.strictObject({ version, action: z.enum(['reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid.nullable().default(null), exit_reason: z.enum(['transfer_out', 'withdrawal', 'dropout', 'death']).nullable().default(null) }).refine(v => v.action === 'withdrawn' ? v.section_id === null && v.exit_reason !== null : v.section_id !== null && v.exit_reason === null, 'Withdrawals require exit_reason and no section; reassignment/reentry require section_id and no exit_reason.'),
   historyQuery: z.strictObject(page),
@@ -39,12 +58,32 @@ export type RegistryOperationId = typeof registryOperations[number]['id'];
 
 const timestamps = { version: z.number().int(), created_at: z.iso.datetime(), updated_at: z.iso.datetime() };
 // Response schemas describe persisted values, without date-relative input refinements.
-const learner = z.object({ id: uuid, lrn: lrn.nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: date, sex: z.enum(['male', 'female']), merged_into: uuid.nullable(), identity_revision:z.number().int(), ...timestamps });
-const enrollment = z.object({ id: uuid, learner_id: uuid, recorded_learner_id:uuid, record_state: z.enum(['valid', 'voided']), academic_year_id: uuid, grade_level: z.number().int(), section_id: uuid, enrolled_on: date, effective_on: date, status: z.enum(['enrolled', 'withdrawn']), last_reason: z.string(), ...timestamps });
+const learner = z.object({ id: uuid, lrn: lrn.nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: date, sex: z.enum(['male', 'female']), address: z.string().nullable().describe('One line, as the school\'s own learner information carries it. Null where the school has not recorded one, which is unrecorded rather than blank'), merged_into: uuid.nullable(), identity_revision:z.number().int(), ...timestamps });
+// section_id is nullable from 0048: a learner is enrolled in a year at a grade,
+// and which class they join is decided separately and later. The year and the
+// grade are what make the enrolment valid.
+const enrollment = z.object({ id: uuid, learner_id: uuid, recorded_learner_id:uuid, record_state: z.enum(['valid', 'voided']), academic_year_id: uuid, grade_level: z.number().int(), section_id: uuid.nullable(), enrolled_on: date, effective_on: date, status: z.enum(['enrolled', 'withdrawn']), last_reason: z.string(), ...timestamps });
 const event = z.object({ id: uuid, enrollment_id: uuid, enrollment_version: z.number().int(), event_type: z.enum(['enrolled', 'reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid, reason: z.string(), actor_user_id: uuid, request_id: uuid.nullable(), recorded_at: z.iso.datetime() });
 const paginated = (schema: z.ZodType) => z.object({ items: z.array(schema), pagination: z.object({ limit: z.number(), offset: z.number(), has_more: z.boolean() }) });
+/**
+ * Where a learner sits in the active school year, for the registry's own list.
+ *
+ * A grade is a property of an enrolment, never of a learner, so the registry
+ * had no way to show one and a reader could not tell which grade a row was in.
+ * It is null when the learner holds no valid enrolment in the active year, and
+ * also when the caller may not read the one they hold: row security on
+ * enrollments and sections decides that, not this schema.
+ */
+const placement = z.object({
+  enrollment_id: uuid, academic_year_id: uuid, grade_level: z.number().int(),
+  // Null from 0048: enrolled at a grade, not yet in a class. A learner in that
+  // state has a grade to show, so the section joins outward, never inward —
+  // an inner join here would hide them from the registry entirely.
+  section_id: uuid.nullable(), section_name: z.string().nullable(),
+  status: z.enum(['enrolled', 'withdrawn']),
+}).nullable().describe('The learner’s valid enrolment in the active school year, or null when they hold none the caller may read');
 export const registryResponses: Record<string, z.ZodType> = {
-  learnerList: paginated(learner), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
+  learnerList: paginated(learner.extend({ placement })), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
   enrollmentList: paginated(enrollment.extend({ learner: z.object({ id: uuid, last_name: z.string(), first_name: z.string(), middle_name: z.string().nullable(), name_extension: z.string().nullable(), lrn: z.string().nullable() }).nullable().describe('The learner this enrollment belongs to, or null when the caller may not read them') })), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
   enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean(), current_grade_level: z.number().int(), academic_year_id: uuid }),
   enrollmentCounts: z.object({ academic_year_id: uuid, scope: z.enum(['school', 'current_access']), record_state: z.literal('valid'), enrolled: z.number().int(), withdrawn: z.number().int(),

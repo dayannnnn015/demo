@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Row } from '../api';
+import { onApiBusy } from '../api';
 import { groups, routes, type Route, available } from '../routes';
 import { BrandMark } from './brand';
 import { Icon } from './icons';
@@ -15,6 +16,28 @@ import { UpdateNotice } from './update';
 import { Avatar, type Look } from './avatar';
 export { SeededNotice } from './seeded';
 
+
+/**
+ * Says so, in words, while the workspace is waiting on the server.
+ *
+ * Held back for a moment first. Most requests answer faster than the eye, and a
+ * notice that flashes on every click is read as a fault rather than as
+ * progress — so nothing is said until the wait is long enough to be noticed,
+ * and then it is said plainly. It clears the instant the last request lands.
+ */
+function useWorking(after = 300) {
+  const [working, setWorking] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stop = onApiBusy(busy => {
+      clearTimeout(timer);
+      if (busy) timer = setTimeout(() => setWorking(true), after);
+      else setWorking(false);
+    });
+    return () => { clearTimeout(timer); stop(); };
+  }, [after]);
+  return working;
+}
 
 /**
  * Interface preferences live in sessionStorage, alongside the session itself.
@@ -155,6 +178,7 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
   const [shut, setShut] = useState(() => remembered<string[]>('nav-shut', []));
   const manager = me.role !== 'teacher';
   const visible = routes.filter(route => available(route, me.role));
+  const working = useWorking();
 
   const setRail = (next: boolean) => { setCollapsed(next); remember('rail-collapsed', next); };
   const toggleGroup = (group: string) => setShut(open => {
@@ -274,6 +298,15 @@ export function AppShell({ me, school, current, context, contextTone, onNavigate
             <h1>{current.title}</h1>
           </div>
           <div className="topbar-right">
+            {/* Said in words, not only as a moving bar: "Working…" is what a
+                person waiting on a slow click needs to be told. `role="status"`
+                announces it once to a screen reader without stealing focus. */}
+            {working ? (
+              <span className="working" role="status">
+                <span className="working-mark" aria-hidden="true" />
+                Working…
+              </span>
+            ) : null}
             {/* The scope every record on screen is filed under. A statement,
                 not a control: a year is activated on the School years screen,
                 where what that means is spelled out. */}

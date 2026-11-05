@@ -28,6 +28,9 @@
     "tests/web-calendar.test.ts",
     "tests/web-deped.test.ts",
     "tests/web-screens.test.ts",
-    "tests/web-shell.test.ts"
+    "tests/web-shell.test.ts",
+    "tests/web-session-store.test.ts",
+    "tests/web-roster-template.test.ts",
+    "tests/web-help.test.ts"
   ]
 }

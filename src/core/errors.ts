@@ -28,6 +28,9 @@ const duplicates: Record<string, { field?: string; message: string }> = {
   attendance_followup_open_idx: { message: 'This learner already has an open follow-up case.' },
   roster_submission_waiting_idx: { message: 'This section already has a class list waiting for review.' },
   staff_name_request_open_idx: { message: 'You already have a correction waiting. Withdraw it on My profile to ask for a different one.' },
+  learner_prior_year_idx: { field: 'year.start_year', message: 'This school year is already encoded for this learner. Open that year and correct it instead of adding it again.' },
+  learner_prior_grade_name_idx: { message: 'The same learning area is listed twice in this school year. Each one is listed once, as the document prints it.' },
+  learner_eligibility_learner_id_key: { message: 'This learner already has a credential recorded for Grade 1. Correct the one on file instead.' },
 };
 const constraintOf = (error: unknown) => { const e = error as { constraint?: unknown; constraint_name?: unknown } | null; const name = e?.constraint ?? e?.constraint_name; return typeof name === 'string' ? name : undefined; };
 
@@ -51,6 +54,7 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P0300') return new AppError(409, 'ENROLLMENT_RECORD_CONFLICT', 'Resolve the conflicts shown in the enrollment record preview before confirming.');
   if (code === 'P0301') return new AppError(409, 'VOIDED_ENROLLMENT_READ_ONLY', 'This enrollment was voided. Review restoration before editing its timeline or recording movements.');
   if (code === 'P0302') return new AppError(409, 'ENROLLMENT_RECORD_REVIEW_CHANGED', 'The enrollment, related records, or review changed. Preview and review again.');
+  if (code === 'P0303') return new AppError(409, 'LRN_REQUIRED', 'This learner has no LRN on file. Record it on the Learner registry before enrolling them.', [{ path: 'learner_id', message: 'No LRN on file. Fill the official LRN on this learner’s record first.' }]);
   if (code === 'P0400') return new AppError(409, 'PLACEMENT_UNCHANGED', 'The grade is unchanged. Use timeline review for a correction within the same grade.');
   if (code === 'P0401') return new AppError(409, 'PLACEMENT_HISTORY_CHANGED', 'Grade-placement corrections preserve every date, movement type, and reason. Review only the grade and replacement sections.');
   if (code === 'P0500') return new AppError(409, 'CALENDAR_DATES', 'Use distinct dates inside the school year and read at most 62 dates at a time.');
@@ -85,6 +89,29 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P2403') return new AppError(409, 'OWN_NAME_REQUEST', 'Nobody decides their own correction. Another principal or administrative officer decides it.');
   if (code === 'P2401') return new AppError(409, 'SESSION_UNKNOWN', 'This sign-in cannot be told apart from your others. Sign out, sign in again, then try once more.');
   if (code === 'P2400') return new AppError(409, 'PHOTO_MISSING', 'There is no photo on this profile. Upload one first, or choose initials or an icon.');
+  if (code === 'P2500') return new AppError(403, 'PRIOR_RECORD_FORBIDDEN', 'Encode previous school years only for the learners currently in the sections you advise. A principal or administrative officer may encode for anyone.');
+  if (code === 'P2501') return new AppError(409, 'PRIOR_LEARNER_LINKED', 'This profile was linked into another as the same child. Encode the history on the record that is kept.');
+  if (code === 'P2502') {
+    return new AppError(409, 'PRIOR_YEAR_IN_SYSTEM', 'EDUNEXUS already holds this school year for this learner, so it is already a block on their SF10. Enter its grades on Promotion → Report card instead.',
+      [{ path: 'year.start_year', message: 'This school year is already recorded in EDUNEXUS. Its grades are entered on Promotion, not here.' }]);
+  }
+  if (code === 'P2503') {
+    return new AppError(422, 'PRIOR_YEAR_RANGE', 'Encode a school year that has already begun.',
+      [{ path: 'year.start_year', message: 'A school year from 1990 up to this one. A year still to come has no record to copy.' }]);
+  }
+  if (code === 'P2504') {
+    return new AppError(422, 'PRIOR_GRADE_RANGE', 'A scholastic block is Grade 1 to Grade 6. A Kindergarten record is the credential presented for Grade 1: record it under Eligibility for Grade 1, which carries no grade.',
+      [{ path: 'year.grade_level', message: 'Grade 1 to Grade 6. Kindergarten goes under Eligibility for Grade 1.' }]);
+  }
+  if (code === 'P2505') return new AppError(409, 'PRIOR_SUBJECT_DUPLICATE', 'The same learning area appears twice in this school year. Each one is listed once, as the document prints it.');
+  if (code === 'P2506') return new AppError(409, 'PRIOR_NO_CHANGES', 'Nothing has changed.');
+  if (code === 'P2507') return new AppError(422, 'PRIOR_SUBJECTS_REQUIRED', 'A school year needs at least one learning area. A year with no grades at all is not encoded: leave it out, and the SF10 prints it blank.');
+  if (code === 'P2602') return new AppError(409, 'LEARNER_IN_CLASS', 'This learner is already in a class this school year. A principal or administrative officer moves a learner between classes.');
+  if (code === 'P2603') return new AppError(409, 'LEARNER_OTHER_GRADE', 'This learner is registered at another grade this school year. A principal or administrative officer corrects a grade placement.');
+  if (code === 'P2604') return new AppError(409, 'VERSION_CONFLICT', 'This learner was taken in or changed while the list was open. Read the list again and take them in from it.');
+  if (code === 'P2600') return new AppError(403, 'NOT_YOUR_CLASS', 'Take learners only into a class you advise. A principal or administrative officer can place a learner in any class.');
+  if (code === 'P2601') return new AppError(409, 'LEARNER_ALREADY_ON_REGISTRY', 'A learner with this name and birth date is already on the school registry. Take that learner into your class instead of making a second record for the same child; the office can help if it is a different child with the same name.');
+  if (code === 'P2508') return new AppError(422, 'PRIOR_CREDENTIAL_FIELDS', 'Name the credential presented for Grade 1, and only the fields that credential has: a rating belongs to a PEPT, and words in the box belong to an "other" credential.');
   if (code === 'P2300') return new AppError(409, 'FAQ_ARCHIVED', 'An archived question is kept as it was. Write a new one instead.');
   if (code === 'P2301') return new AppError(409, 'FAQ_STATE', 'The question is not in a state that allows this. Read it again.');
   if (code === 'P2100') return new AppError(409, 'NEXT_YEAR_INVALID', 'Next year’s classes go into the school year right after this one, while it is a draft or active.');

@@ -44,13 +44,13 @@ export const faq: Faq[] = [
     ],
   },
   {
-    id: 'two-step', group: 'account', routes: ['profile'],
-    question: 'How do I make my account safer with a code from my phone?',
+    id: 'stay-signed-in', group: 'account', routes: ['profile'],
+    question: 'Do I have to sign in every time?',
     answer: [
-      'Open {profile} from your name at the top right and choose **Turn on two-step sign-in**. Scan the code with an authenticator app such as Google Authenticator or Microsoft Authenticator, then type the six digits it shows. From then on, signing in asks for a fresh code after your password, so a password someone else learns is not enough.',
-      'If you lose your phone or delete the app, the system operator can reset it so you can sign in with your password and set it up again. EDUNEXUS cannot do this itself.',
+      'Only if you want to. On the sign-in page, tick **Keep me signed in on this computer** and EDUNEXUS stays signed in after you close the browser, until you sign out.',
+      'Leave it off on a shared staffroom computer. With it off — which is how it starts — you stay signed in only until the tab is closed, so the next person who opens the browser is not holding your account.',
+      'Signing out always ends it, and forgets the choice, so the next person at that computer starts with the box empty. **Sign out everywhere else** under *Where you are signed in* on {profile} ends every other browser too, if one was left signed in.',
     ],
-    codes: ['TWO_STEP_REQUIRED'],
   },
   {
     id: 'left-signed-in', group: 'account', routes: ['profile'],
@@ -249,9 +249,53 @@ export const faq: Faq[] = [
   {
     id: 'kinder-card', group: 'cards',
     question: 'Where is the Kindergarten report card?',
-    answer: ['Not in EDUNEXUS yet. The school has not supplied its Kindergarten card or assessment policy, and EDUNEXUS does not grade Kindergarten numerically without one.'],
-    routes: ['report-cards'],
-    codes: ['NO_KINDERGARTEN_CARD'],
+    answer: [
+      'Not in EDUNEXUS yet. The school has not supplied its Kindergarten card or assessment policy, and EDUNEXUS does not grade Kindergarten numerically without one.',
+      'A learner’s Kindergarten record still reaches their SF10, as the *credential presented for Grade 1*. Record it under *Eligibility for Grade 1* on {prior-records}. That box carries the credential and the school that issued it, and no grade — which is what the form itself asks for.',
+    ],
+    routes: ['report-cards', 'prior-records'],
+    codes: ['NO_KINDERGARTEN_CARD', 'PRIOR_GRADE_RANGE'],
+  },
+  {
+    id: 'history-one-sf10', group: 'cards',
+    question: 'Do I make a new SF10 each school year?',
+    answer: [
+      'No. A learner has one SF10 for their whole time in elementary school, and EDUNEXUS adds a block to it each year. There is no per-year SF10 to create, and none to carry forward.',
+      'When the school started using EDUNEXUS, the years before it were typed in once on {prior-records}. After that, each new year reaches the same SF10 by itself: enrol the learner, and enter the year’s grades on {report-cards}.',
+    ],
+    routes: ['prior-records', 'learners', 'report-cards'],
+  },
+  {
+    id: 'history-encode', group: 'cards',
+    question: 'Which learners’ old records do we have to type in?',
+    answer: [
+      'Every learner the school already has, from Kindergarten to Grade 6 — not Grade 6 alone. A learner in Grade 1 gets their Kindergarten credential; a learner in Grade 3 gets Kinder to Grade 2; a learner in Grade 6 gets everything the school still holds a document for.',
+      'It is done once per learner. Type in only the years EDUNEXUS does not already hold: a year it holds is refused rather than printed twice, because its grades are entered on {report-cards}.',
+      'A year with no surviving document is left out. EDUNEXUS invents no grade, no school year and no general average, and the SF10 prints that year blank.',
+    ],
+    routes: ['prior-records'],
+    codes: ['PRIOR_YEAR_IN_SYSTEM'],
+  },
+  {
+    id: 'kinder-no-sf10', group: 'cards',
+    question: 'Why has my Kindergarten learner no SF10?',
+    answer: [
+      'Because the SF10 begins when a learner enters Grade 1. The form has no grades box for Kindergarten at all: Kinder is the *credential* that admits a learner to Grade 1, which is what the SF10’s eligibility block carries.',
+      'A Kindergarten learner’s records are the SF5-K and the ECCD checklist, which the school keeps. EDUNEXUS neither holds them nor replaces them, and it will not print a blank SF10 in their place. The registry says *SF10 begins at Grade 1* instead of offering the button.',
+      'Once they are enrolled in Grade 1, record the credential they presented under *Eligibility for Grade 1* on {prior-records}, and their SF10 starts from that year.',
+    ],
+    routes: ['learners', 'prior-records'],
+    codes: ['SF10_NOT_YET'],
+  },
+  {
+    id: 'history-who', group: 'cards',
+    question: 'Whose old records may I type in?',
+    answer: [
+      'If you are an adviser, the learners currently in the sections you advise — because the spreadsheets and class records the history is copied from are yours. A principal or administrative officer may type in any learner’s.',
+      'Nothing typed there changes a learner’s current grade, section or register. A typed year is a copy of a document, not an enrolment: it reaches the SF10 and nothing else.',
+    ],
+    routes: ['prior-records'],
+    codes: ['PRIOR_RECORD_FORBIDDEN'],
   },
   {
     id: 'sf9-attendance', group: 'cards',
@@ -275,7 +319,7 @@ export const faq: Faq[] = [
   {
     id: 'find-sf9', group: 'cards',
     question: 'Where do I find a learner’s SF9 or SF10?',
-    answer: ['On the learner’s row in the {learners}: **SF9** and **Permanent record (SF10)**. A whole section’s cards print together with **Print the section’s SF9s** on {report-cards}.'],
+    answer: ['On the learner’s row in the {learners}: **SF9** and **SF10**. A whole section’s cards print together with **Print the section’s SF9s** on {report-cards}.'],
     routes: ['learners', 'report-cards'],
   },
 

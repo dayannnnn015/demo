@@ -13,14 +13,29 @@ import type { Workbook } from 'exceljs';
 
 export type XStyle = {
   bold?: boolean; italic?: boolean; size?: number; border?: boolean; fill?: string;
-  /** Half a cell shaded, as the SF2 marks a tardy day: the top half for a late comer, the bottom half for cutting classes. */
+  /** Half a cell shaded in `fill`, as the SF2 marks a tardy day: the top half for a late comer, the bottom half for cutting classes. */
   half?: 'top' | 'bottom';
+  /** `fill` drawn as thin diagonal lines rather than solid, the way the screen hatches a day still to come. */
+  hatch?: boolean;
+  /** The ink, where the screen says something in colour: an unmarked session is red on the SF2. */
+  color?: string;
+  /** The border's colour, where it carries meaning rather than ruling the grid. */
+  borderColor?: string;
   align?: 'left' | 'center' | 'right'; valign?: 'top' | 'center' | 'bottom'; wrap?: boolean;
   /** A whole number, two decimals, a two-decimal percentage of a fraction, or text kept exactly as typed (an LRN, a date). */
   format?: '0' | '0.00' | '0.00%' | '@'; rotate?: 90;
 };
 /** Runs of text in one cell, such as a form's label beside its bold value. */
 export type XRich = { rich: { text: string; bold?: boolean }[] };
+/**
+ * What Excel itself will refuse in a cell of a template someone fills in. Only
+ * the three shapes a form actually needs: a short list of words, a rating, and
+ * a count. It is a courtesy and never the authority — the API checks every cell
+ * again, because a file can be filled in anywhere, including in a reader that
+ * ignores validation entirely.
+ */
+export type XRule = { kind: 'list'; values: string[] } | { kind: 'decimal' | 'whole'; min: number; max: number };
+export type XValidation = { r1: number; c1: number; r2: number; c2: number; rule: XRule; title: string; message: string };
 export type XValue = string | number | XRich | null | undefined;
 const plain = (v: XValue) => (v !== null && typeof v === 'object' ? v.rich.map(r => r.text).join('') : v);
 type XCell = { v: XValue; s: XStyle };
@@ -79,6 +94,7 @@ export class XSheet {
   readonly merges: Range[] = [];
   readonly widths = new Map<number, number>();
   readonly heights = new Map<number, number>();
+  readonly validations: XValidation[] = [];
   setup: { landscape: boolean; paper: keyof typeof paper; fitWidth: boolean; freeze?: { rows: number; cols: number };
     /** Rows and columns printed again on every page of a sheet too wide for one, such as `{ rows: '4:4', cols: 'A:B' }`. */
     repeat?: { rows?: string; cols?: string };
@@ -95,6 +111,11 @@ export class XSheet {
   merge(row: number, col: number, toRow: number, toCol: number, v: XValue, style: XStyle = {}) {
     for (let r = row; r <= toRow; r++) for (let c = col; c <= toCol; c++) this.set(r, c, r === row && c === col ? v : null, style);
     if (toRow > row || toCol > col) this.merges.push({ r1: row, c1: col, r2: toRow, c2: toCol });
+    return this;
+  }
+  /** What a reader may type down one column of a template, between two rows. */
+  allow(r1: number, c1: number, r2: number, c2: number, rule: XRule, title: string, message: string) {
+    this.validations.push({ r1, c1, r2, c2, rule, title, message });
     return this;
   }
   width(col: number, width: number) { this.widths.set(col, width); return this; }
@@ -239,19 +260,33 @@ export class XWorkbook {
       for (let r = 1; r <= sheet.lastRow(); r++) ws.getRow(r).height = sheet.rowHeight(r);
       for (const [r, cols] of sheet.cells) for (const [c, { v, s }] of cols) {
         const cell = ws.getCell(r, c);
-        const font = { name: 'Arial', size: s.size ?? 10, ...(s.bold ? { bold: true } : {}), ...(s.italic ? { italic: true } : {}) };
+        const font = { name: 'Arial', size: s.size ?? 10, ...(s.bold ? { bold: true } : {}), ...(s.italic ? { italic: true } : {}), ...(s.color ? { color: { argb: `FF${s.color}` } } : {}) };
         cell.value = typeof v === 'number' ? (Number.isFinite(v) ? v : null) : v === undefined || v === '' ? null
           : typeof v === 'object' && v !== null ? { richText: v.rich.map(r => ({ text: r.text, font: { ...font, ...(r.bold ? { bold: true } : {}) } })) } : v;
         cell.font = font;
         cell.alignment = { horizontal: s.align ?? 'left', vertical: !s.valign || s.valign === 'center' ? 'middle' : s.valign, ...(s.wrap ? { wrapText: true } : {}), ...(s.rotate ? { textRotation: s.rotate } : {}) };
-        if (s.border) { const thin = { style: 'thin' as const }; cell.border = { top: thin, left: thin, bottom: thin, right: thin }; }
-        if (s.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${s.fill}` } };
+        if (s.border) { const thin = { style: 'thin' as const, ...(s.borderColor ? { color: { argb: `FF${s.borderColor}` } } : {}) }; cell.border = { top: thin, left: thin, bottom: thin, right: thin }; }
+        // A hatch is a pattern fill, which every reader draws; the diagonal runs the way the screen's does.
+        if (s.fill) cell.fill = { type: 'pattern', pattern: s.hatch ? 'lightDown' : 'solid', fgColor: { argb: `FF${s.fill}` }, ...(s.hatch ? { bgColor: { argb: 'FFFFFFFF' } } : {}) };
         if (s.half) {
-          // Two stops meeting at the middle draw a hard edge, so exactly one half is shaded.
-          const [first, second] = s.half === 'top' ? ['FF808080', 'FFFFFFFF'] : ['FFFFFFFF', 'FF808080'];
-          cell.fill = { type: 'gradient', gradient: 'angle', degree: 90, stops: [{ position: 0, color: { argb: first } }, { position: 0.5, color: { argb: first } }, { position: 0.5, color: { argb: second } }, { position: 1, color: { argb: second } }] };
+          // Four stops draw the hard edge, and every position must be distinct and
+          // rising: two stops both at 0.5, which is the obvious way to write it, is
+          // invalid OOXML, and Excel answers it by fading across the cell or by
+          // repairing the file (found 2026-11-03, reading the styles.xml it wrote).
+          const shade = `FF${s.fill ?? '6B6B6B'}`, [first, second] = s.half === 'top' ? [shade, 'FFFFFFFF'] : ['FFFFFFFF', shade];
+          cell.fill = { type: 'gradient', gradient: 'angle', degree: 90, stops: [{ position: 0, color: { argb: first } }, { position: 0.499, color: { argb: first } }, { position: 0.5, color: { argb: second } }, { position: 1, color: { argb: second } }] };
         }
         if (s.format) cell.numFmt = s.format;
+      }
+      for (const v of sheet.validations) {
+        // A list is one quoted, comma-separated formula; Excel refuses a bare
+        // list and silently drops the whole validation.
+        const rule = v.rule.kind === 'list'
+          ? { type: 'list' as const, formulae: [`"${v.rule.values.join(',')}"`] }
+          : { type: v.rule.kind, operator: 'between' as const, formulae: [v.rule.min, v.rule.max] };
+        for (let r = v.r1; r <= v.r2; r++) for (let c = v.c1; c <= v.c2; c++) {
+          ws.getCell(r, c).dataValidation = { ...rule, allowBlank: true, showErrorMessage: true, errorStyle: 'warning', errorTitle: v.title, error: v.message } as never;
+        }
       }
       for (const m of sheet.merges) ws.mergeCells(m.r1, m.c1, m.r2, m.c2);
     }
@@ -287,13 +322,18 @@ export function tableWorkbook({ sheet: name, title, note, header, rows, text = [
   return book;
 }
 
-/** Reads an .xlsx file's first sheet as rows of text, the way it shows in Excel. */
-export async function readXlsxRows(data: ArrayBuffer): Promise<string[][]> {
+/**
+ * Reads an .xlsx sheet as rows of text, the way it shows in Excel: the sheet
+ * named, or the first one where a workbook has no sheet by that name — a file
+ * someone has added a sheet of their own notes to still reads.
+ */
+export async function readXlsxRows(data: ArrayBuffer, sheetName?: string): Promise<string[][]> {
   const module = await import('exceljs');
   const ExcelJS = ((module as { default?: unknown }).default ?? module) as typeof import('exceljs');
   const book = new ExcelJS.Workbook();
   await book.xlsx.load(data);
-  const ws = book.worksheets[0];
+  const named = sheetName ? book.worksheets.find(w => w.name.trim().toLowerCase() === sheetName.trim().toLowerCase()) : undefined;
+  const ws = named ?? book.worksheets[0];
   if (!ws) return [];
   const rows: string[][] = [];
   ws.eachRow({ includeEmpty: true }, (row, n) => {

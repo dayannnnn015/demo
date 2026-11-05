@@ -13,7 +13,7 @@ import { Confirm } from '../components/overlay';
 import { PrintCopy } from '../components/print';
 import { SeededNotice } from '../components/seeded';
 import { Icon } from '../components/icons';
-import { Sf9Sheet } from '../forms/sf9';
+import { Sf9Sheet, sf9Page } from '../forms/sf9';
 import { issuedLine } from '../forms/shared';
 import type { Issuance, Sf9Form } from '../forms/types';
 import { localToday } from '../components/primitives';
@@ -181,7 +181,7 @@ function ReviewSheet({ what, suggested, reach, rows, columns, shown, onClose, su
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy}>{busy ? 'Recording…' : 'Record these'}</button>
+          <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Recording…' : 'Record these'}</button>
           <button type="button" className="btn ghost" onClick={onClose}>Keep editing</button>
         </div>
       </form>
@@ -491,13 +491,14 @@ export function SectionCards({ api, me, gradeLevel, learners: all, setStatus }: 
             </div>
             <div className="choice">
               <div><b>Issue them, then print</b><p className="muted">Each card is recorded exactly as it stands, under your name, and printed. Parents keep what is printed, so check the grades against the ECR first. A card that changed since it was last issued is left out and named.</p></div>
-              <button type="button" className="btn" disabled={busy} onClick={() => void gather(true)}>{busy ? 'Preparing…' : 'Issue and print'}</button>
+              <button type="button" className="btn" disabled={busy} aria-busy={busy} onClick={() => void gather(true)}>{busy ? 'Preparing…' : 'Issue and print'}</button>
             </div>
           </div>
         </Sheet>
       ) : null}
+      {/* Every learner in the section shares a grade, so the batch prints on the one page the first card's layout names. */}
       {printing ? (
-        <PrintCopy printing onPrinted={() => setPrinting(null)} landscape={gradeLevel !== 1} long={gradeLevel === 1}>
+        <PrintCopy printing onPrinted={() => setPrinting(null)} page={printing[0] ? sf9Page[printing[0].form.layout] : undefined}>
           <SeededNotice me={me} />
           {printing.map(({ form, issuance }) => <Sf9Sheet key={form.enrollment.id} form={form} footer={issuance ? issuedLine('SF9', issuance) : `Printed ${localToday()} from EDUNEXUS. Not issued.`} />)}
         </PrintCopy>
@@ -657,7 +658,7 @@ function DecideSheet({ api, records, items, onClose, onDone }: { api: Api; recor
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy || !chosen.length}>{busy ? 'Recording…' : `Record ${chosen.length} ${chosen.length === 1 ? 'decision' : 'decisions'}`}</button>
+          <button type="submit" className="btn" disabled={busy || !chosen.length} aria-busy={busy}>{busy ? 'Recording…' : `Record ${chosen.length} ${chosen.length === 1 ? 'decision' : 'decisions'}`}</button>
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
         </div>
       </form>

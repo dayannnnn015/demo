@@ -319,7 +319,7 @@ export function CardReview({ learner, rows, onClose, submit, onDone, onConflict 
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy}>{busy ? 'Recording…' : 'Record this card'}</button>
+          <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Recording…' : 'Record this card'}</button>
           <button type="button" className="btn ghost" onClick={onClose}>Keep editing</button>
         </div>
       </form>

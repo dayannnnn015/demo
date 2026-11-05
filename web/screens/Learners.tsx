@@ -7,25 +7,36 @@ import { IdentityHistory, IdentitySheet, LrnCorrection, LrnHistory, ReviewAction
 import { LearnerRecord } from './LearnerRecord';
 import { Sf10Dialog, Sf9Dialog } from './FormDialogs';
 import {
-  Badge, Button, Callout, Cell, Editor, EmptyState, Finder, FormSheet, PageHeader, Pager, PrintButton,
+  Badge, Callout, Cell, Editor, EmptyState, Finder, FormSheet, PageHeader, Pager, StatusLine, idle, localToday, yearName,
   Table, Task, Unrecorded, gradeName, learnerName, sentence, value, type Field, type Status,
 } from '../components/primitives';
 import { Affects } from '../components/affects';
 import { profileFields } from '../record-fields';
+import { MyClassSheet } from './MyClass';
 
 // The API takes exactly these keys, so the form must not send anything else.
+
+/**
+ * Where a learner sits in the active school year, as `GET /learners` reports it
+ * beside each row. Null when they hold no valid enrolment this year, and also
+ * when the caller may not read the one they hold — row security decides that,
+ * so a teacher sees a placement only for the sections they advise.
+ */
+type Placement = { enrollment_id: string; academic_year_id: string; grade_level: number; section_id: string | null; section_name: string | null; status: string };
+const placementOf = (row: Row): Placement | null => (row.placement as Placement | null) ?? null;
 
 /** Read-only Section 2A registry. The API decides what each staff member may see. */
 export function Learners({ api, me, manager, setStatus, reload, token, route }: {
   api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route;
 }) {
   const [rows, setRows] = useState<Page | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({ search: '', lrn: '', birth_date: '', sex: '' });
+  const [filters, setFilters] = useState<Record<string, string>>({ search: '', birth_date: '', sex: '', grade_level: '' });
   const [offset, setOffset] = useState(0);
   const [years, setYears] = useState<Row[]>([]);
   const [sections, setSections] = useState<Row[]>([]);
-  const [records, setRecords] = useState<Record<string, Row[]>>({});
   const [adding, setAdding] = useState(false);
+  // An adviser takes learners into a class they advise (0.90.0).
+  const [taking, setTaking] = useState(false);
   const [distinct, setDistinct] = useState('');
   const [linked, setLinked] = useState(false);
   const [identity, setIdentity] = useState<{ learner: Row; action: 'link' | 'unlink' } | null>(null);
@@ -65,6 +76,8 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
   };
   const yearLabel = (id: unknown) => { const y = years.find(r => r.id === id); return y ? `${y.start_year}–${Number(y.start_year) + 1}` : 'Unavailable year'; };
   const sectionLabel = (id: unknown) => String(sections.find(r => r.id === id)?.name ?? 'Unavailable section');
+  // The year a registration enrols into. At most one may be active at a time.
+  const activeYear = years.find(y => y.status === 'active');
   const searching = Object.values(filters).some(Boolean);
   const found = rows?.items.length ?? 0;
 
@@ -73,28 +86,44 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
       <PageHeader
         route={route}
         actions={<>
-          {found ? <PrintButton label="Print this page" /> : null}
           {manager
             ? <button type="button" className="btn" onClick={() => setAdding(true)}><Icon name="plus" size={15} />Register a learner</button>
-            : null}
+            : <button type="button" className="btn" onClick={() => setTaking(true)}><Icon name="enter" size={15} />Take learners into my class</button>}
         </>}
       />
 
       {manager
         ? null
-        : <Callout tone="info" title="You see your own learners">Only the learners enrolled in the sections you advise, in an open school year. A principal or administrative officer maintains these records.</Callout>}
+        : <Callout tone="info" title="You see your own learners">
+            Only the learners enrolled in the sections you advise, in an open school year. <b>Take learners into my class</b> adds a learner the office has already
+            registered, or registers a child the school has never held a record for. Correcting a learner’s details stays with a principal or administrative officer.
+          </Callout>}
+
+      {taking ? (
+        <MyClassSheet
+          api={api}
+          onClose={written => { setTaking(false); if (written) reload(); }}
+          onDone={text => { setStatus({ text, kind: 'done' }); reload(); }}
+        />
+      ) : null}
 
       <div className="card">
         <div className="card-tools">
           <Finder
             initial={filters}
             onApply={next => { setFilters(next); setOffset(0); }}
-            onClear={() => { setFilters({ search: '', lrn: '', birth_date: '', sex: '' }); setOffset(0); }}
+            onClear={() => { setFilters({ search: '', birth_date: '', sex: '', grade_level: '' }); setOffset(0); }}
             fields={[
               { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
-              { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9 -]{12,20}', maxLength: 20, hint: 'Twelve digits.' },
               { key: 'birth_date', label: 'Birth date', type: 'date', optional: true },
               { key: 'sex', label: 'Sex', optional: true, options: [['', 'Any'], ['female', 'Female'], ['male', 'Male']] },
+              // Grade is a property of an enrolment, not of a learner, so this
+              // asks for anyone enrolled at that grade *in the active school
+              // year* — the same year the Grade column shows. It used to match
+              // any year, so a promoted learner answered to their old grade
+              // while their row showed the new one.
+              { key: 'grade_level', label: 'Grade level this year', optional: true, hint: 'Their grade in the active school year.',
+                options: [['', 'Any grade'], ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])] },
             ]}
           />
           {manager ? (
@@ -121,6 +150,25 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
                 meta={r.lrn == null ? <Unrecorded label="LRN missing" /> : `LRN ${value(r, 'lrn')}`}
               />,
             },
+            {
+              // Grade and section come from the learner's enrolment in the active
+              // school year, the only place a grade exists. A learner holding none
+              // is not a learner in "Grade nothing": the absence is drawn, not blank.
+              header: 'Grade',
+              cell: r => { const p = placementOf(r); return p ? gradeName(p.grade_level) : <Unrecorded label="Not enrolled this year" />; },
+            },
+            {
+              // Three different things, and the interface says which: in a
+              // class, enrolled at a grade with no class yet, or not enrolled
+              // at all. Only the last is an absent record; the middle one is a
+              // step of the school's own work that has not happened.
+              header: 'Section',
+              cell: r => {
+                const p = placementOf(r);
+                if (!p) return <Unrecorded label="Not enrolled this year" />;
+                return p.section_name ?? <Badge tone="attention">No section yet</Badge>;
+              },
+            },
             { header: 'Birth date', cell: r => <span className="mono">{value(r, 'birth_date')}</span> },
             { header: 'Sex', cell: r => sentence(value(r, 'sex')) },
             {
@@ -129,7 +177,13 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
                 <span className="row-actions">
                   {/* Outlined with a page icon, so they read as something to open at first sight (the group's note, 28 October). */}
                   <button type="button" className="btn secondary small form-open" aria-label={`SF9 report card of ${learnerName(r)}`} onClick={() => void openSf9(r)}><Icon name="form" size={14} />SF9</button>
-                  <button type="button" className="btn secondary small form-open" aria-label={`SF10 permanent record of ${learnerName(r)}`} onClick={() => setForm({ kind: 'sf10', learner: r })}><Icon name="form" size={14} />SF10</button>
+                  {/* The SF10 begins when a learner enters Grade 1: the form has no
+                      scholastic block for Kinder, and a Kinder learner's records are
+                      the SF5-K and the ECCD checklist. The API refuses it either way;
+                      the row says so rather than offering a form that cannot exist. */}
+                  {placementOf(r)?.grade_level === 0
+                    ? <span className="muted">SF10 begins at Grade 1</span>
+                    : <button type="button" className="btn secondary small form-open" aria-label={`SF10 permanent record of ${learnerName(r)}`} onClick={() => setForm({ kind: 'sf10', learner: r })}><Icon name="form" size={14} />SF10</button>}
                 </span>
               )),
             },
@@ -138,7 +192,6 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
           detailLabel="Open"
           detail={row => {
             const id = String(row.id);
-            const loaded = records[id];
             if (manager && row.merged_into) {
               return (
                 <>
@@ -154,6 +207,16 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
             }
             return (
               <>
+                <EnrollmentHistory api={api} learnerId={id} manager={manager}
+                  yearLabel={yearLabel} sectionLabel={sectionLabel}
+                  onView={enrollment => setViewing({ learner: row, enrollment })}
+                  onSf9={enrollment => setForm({ kind: 'sf9', learner: row, enrollment })} />
+                {/* The years before EDUNEXUS are not enrollments, so they are
+                    not in the list above. Advisers reach this too: they encode
+                    their own current learners (0.87.0). */}
+                <p className="card-note">
+                  <a href={`#/prior-records?learner=${id}`}>Academic history before EDUNEXUS</a> — the previous school years typed in from the school’s own documents, which print on this learner’s SF10 alongside the years above.
+                </p>
                 {manager ? (
                   <>
                     <Task title="Correct the details" note="Spelling, birth date, name extension">
@@ -188,39 +251,6 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
                   </>
                 ) : null}
 
-                <Task title="School years" note="Reading these is recorded in the access log">
-                  {!loaded ? (
-                    <>
-                      <p className="muted">Fetched only when you ask. Every enrollment record returned is named in the privacy audit, so the registry does not load them for a list it was not asked for.</p>
-                      <Button label="Load enrollment records" icon="years" setStatus={setStatus} onRun={async () => {
-                        const result = await api<Page>(`/enrollments${query({ learner_id: id, limit: 100, record_state: manager ? 'all' : undefined })}`);
-                        setRecords(current => ({ ...current, [id]: result.items }));
-                      }} />
-                    </>
-                  ) : <Table rows={loaded} rowKey={r => String(r.id)}
-                empty={<p className="muted">This learner has no enrollment records yet.</p>}
-                columns={[
-                  { header: 'School year', cell: r => yearLabel(r.academic_year_id) },
-                  { header: 'Grade', cell: r => gradeName(r.grade_level) },
-                  { header: 'Section', cell: r => sectionLabel(r.section_id) },
-                  { header: 'Status', cell: r => sentence(value(r, 'status')) },
-                  { header: 'Enrolled', cell: r => <span className="mono">{value(r, 'enrolled_on')}</span> },
-                  { header: 'Latest change', cell: r => `${value(r, 'effective_on')} · ${sentence(value(r, 'last_reason'))}` },
-                  { header: 'Record', cell: r => r.record_state === 'voided'
-                    ? <Badge tone="stopped">Voided</Badge>
-                    : <Badge tone="good">Valid</Badge> },
-                  { header: 'Attendance', cell: r => (r.record_state === 'voided' ? <span className="muted">Not shown for a voided record</span>
-                    : <span className="row-actions">
-                        <button type="button" className="btn ghost small" onClick={() => setViewing({ learner: row, enrollment: r })}>View the year</button>
-                        <button type="button" className="btn secondary small form-open" onClick={() => setForm({ kind: 'sf9', learner: row, enrollment: r })}><Icon name="form" size={14} />SF9</button>
-                      </span>) },
-                ]} />}
-                  {loaded ? (
-                    <div className="form-actions sheet-tools">
-                      <button type="button" className="btn secondary form-open" onClick={() => setForm({ kind: 'sf10', learner: row })}><Icon name="form" size={15} />Permanent record (SF10)</button>
-                    </div>
-                  ) : null}
-                </Task>
               </>
             );
           }}
@@ -256,12 +286,37 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
       {adding ? (
         <FormSheet
           title="Register a learner"
-          note="One permanent record per child, carried across every school year. Enrolling them into a section is the next step, on the Enrollment screen."
+          note={activeYear
+            ? `One permanent record per child, carried across every school year. Giving a grade also enrols them for ${yearName(activeYear)} at that grade, with no section: which class they join is assigned afterwards.`
+            : 'One permanent record per child, carried across every school year. No school year is active, so this registers the profile only.'}
           submitLabel="Register learner"
-          fields={[...profileFields, { key: 'lrn', label: 'LRN', pattern: '[0-9 -]{12,20}', maxLength: 20, hint: 'All twelve digits, as the school’s LIS shows it. Every new learner needs one; EDUNEXUS never invents it.' }]}
+          fields={[
+            ...profileFields,
+            { key: 'lrn', label: 'LRN', pattern: '[0-9 -]{12,20}', maxLength: 20, hint: 'All twelve digits, as the school’s LIS shows it. Every new learner needs one; EDUNEXUS never invents it.' },
+            ...(activeYear ? [{
+              key: 'grade_level', label: 'Enrol at grade', optional: true,
+              hint: 'Optional. Leave it unset to record the profile alone and enrol them later.',
+              options: [['', 'Not yet — register the profile only'] as [string, string],
+                ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])],
+            } as Field] : []),
+          ]}
           onSubmit={async data => {
             await possibleDuplicate(api, data, distinct, setDistinct);
-            return api('/learners', 'POST', data);
+            const { grade_level: grade, ...profile } = data;
+            const learner = await api<Row>('/learners', 'POST', profile);
+            // The profile is the record that matters; the enrolment is a second
+            // request so a refusal on it cannot lose the learner just registered.
+            if (grade !== undefined && String(grade) !== '' && activeYear) {
+              // A plain calendar date, never a timestamp: the API answers with
+              // YYYY-MM-DD, and slicing keeps that true even if a caller ever
+              // hands back an ISO instant, which would be refused by the field.
+              const starts = String(activeYear.starts_on).slice(0, 10), today = localToday();
+              await api('/enrollments', 'POST', {
+                learner_id: String(learner.id), academic_year_id: String(activeYear.id),
+                grade_level: Number(grade), enrolled_on: today < starts ? starts : today,
+              });
+            }
+            return learner;
           }}
           onSaved={() => { setAdding(false); reload(); setStatus({ text: 'Learner registered.', kind: 'done' }); }}
           onClose={() => { setAdding(false); setDistinct(''); }}
@@ -288,4 +343,63 @@ export async function possibleDuplicate(api: Api, data: Record<string, unknown>,
   setDistinct(key);
   const names = found.map(row => `${learnerName(row)}${row.lrn ? ` (LRN ${String(row.lrn)})` : ''}`).join('; ');
   throw new ApiError(409, 'POSSIBLE_DUPLICATE', 'This child may already be in the registry.', [{ path: 'last_name', message: `Already in the registry with this surname and birth date: ${names}. Open them from the search instead. If this is a different child, press Register learner again.` }]);
+}
+
+/**
+ * A learner's enrolment history, read when their row is opened.
+ *
+ * It used to sit behind a folded panel and a "Load enrollment records" button:
+ * every enrolment returned is named in the privacy audit, so the registry must
+ * not fetch them for a list nobody asked for. Opening one learner's record *is*
+ * that asking — it is deliberate, it is one learner, and the access row it
+ * writes says exactly that. The list itself still never loads them, which is
+ * the rule that mattered; the two clicks in front of it were not.
+ */
+function EnrollmentHistory({ api, learnerId, manager, yearLabel, sectionLabel, onView, onSf9 }: {
+  api: Api; learnerId: string; manager: boolean;
+  yearLabel: (id: unknown) => string; sectionLabel: (id: unknown) => string;
+  onView: (enrollment: Row) => void; onSf9: (enrollment: Row) => void;
+}) {
+  const [rows, setRows] = useState<Row[] | null>(null);
+  const [status, setStatus] = useState<Status>(idle);
+  useEffect(() => {
+    let live = true;
+    setRows(null);
+    void api<Page>(`/enrollments${query({ learner_id: learnerId, limit: 100, record_state: manager ? 'all' : undefined })}`)
+      .then(result => { if (live) setRows(result.items); })
+      .catch(error => { if (live) { setRows([]); setStatus({ kind: 'error', text: message(error) }); } });
+    return () => { live = false; };
+  }, [api, learnerId, manager]);
+  return (
+    <>
+      <h3>School years</h3>
+      <p className="muted">Every year this learner has been enrolled. Reading them is recorded in the privacy access log.</p>
+      <StatusLine status={status} />
+      <Table
+        loading={rows === null}
+        rows={rows ?? []}
+        rowKey={r => String(r.id)}
+        empty={<p className="muted">This learner has no enrollment records yet.</p>}
+        columns={[
+          { header: 'School year', cell: r => yearLabel(r.academic_year_id) },
+          { header: 'Grade', cell: r => gradeName(r.grade_level) },
+          { header: 'Section', cell: r => sectionLabel(r.section_id) },
+          { header: 'Status', cell: r => sentence(value(r, 'status')) },
+          { header: 'Enrolled', cell: r => <span className="mono">{value(r, 'enrolled_on')}</span> },
+          { header: 'Latest change', cell: r => `${value(r, 'effective_on')} · ${sentence(value(r, 'last_reason'))}` },
+          { header: 'Record', cell: r => (r.record_state === 'voided' ? <Badge tone="stopped">Voided</Badge> : <Badge tone="good">Valid</Badge>) },
+          {
+            header: 'Attendance',
+            // The SF9 here is this year's card, not the current one the registry
+            // row opens, and it is the only way to reach a past year's.
+            cell: r => (r.record_state === 'voided' ? <span className="muted">Not shown for a voided record</span>
+              : <span className="row-actions">
+                  <button type="button" className="btn ghost small" onClick={() => onView(r)}>View the year</button>
+                  <button type="button" className="btn secondary small form-open" onClick={() => onSf9(r)}><Icon name="form" size={14} />SF9</button>
+                </span>),
+          },
+        ]}
+      />
+    </>
+  );
 }

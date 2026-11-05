@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 import type { Api, Row } from './api';
 import type { IconName } from './components/icons';
 import type { Status } from './components/primitives';
-import type { SessionAuth } from './two-step';
+import type { SessionAuth } from './api';
 import { School, SchoolYears } from './screens/Setup';
 import { Activity, Invitations, Staff } from './screens/Staff';
 import { Learners } from './screens/Learners';
+import { PriorRecords } from './screens/PriorRecords';
 import { Upcoming } from './screens/Upcoming';
 import { Enrollment } from './screens/Enrollment';
 import { Calendar } from './screens/Calendar';
@@ -41,7 +42,7 @@ export type AccountTools = {
   /** Merges a change into the shell's own copy of `/me`, so the top bar follows a saved profile at once. */
   updateMe: (patch: Row) => void;
   changePassword?: (() => void) | undefined;
-  /** The sign-in service, for two-step sign-in and signing out elsewhere. */
+  /** The sign-in service, for signing out elsewhere. */
   auth?: SessionAuth | undefined;
 };
 
@@ -148,6 +149,16 @@ export const routes: Route[] = [
     // An adviser submits their section's list; only a manager imports it, and on the school's division of work that is the administrative officer.
     hiddenFor: ['principal'],
     render: p => (p.manager ? <Imports {...p} /> : <RosterSubmit {...p} />),
+  },
+  {
+    // Not manager-only: an adviser encodes the history of the learners currently
+    // in the sections they advise, because that is where the school's own
+    // spreadsheets are (decided 2026-11-03). The API decides it, not this flag.
+    id: 'prior-records', nav: 'Academic history', icon: 'learners', group: 'Learners', built: true, ownHeader: true,
+    title: 'Academic history',
+    lede: 'Type in the previous school years the school still holds on paper, onto the learner’s one permanent record.',
+    record: 'learner_prior_years, learner_prior_grades, learner_eligibility', feeds: 'SF10',
+    render: p => <PriorRecords {...p} />,
   },
   {
     id: 'next-year', nav: 'Next year’s classes', icon: 'forward', group: 'Learners', manager: true, built: true, ownHeader: true,

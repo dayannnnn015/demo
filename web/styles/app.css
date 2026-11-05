@@ -360,6 +360,30 @@ code, .mono {
 .scope b { font-weight: 600; color: var(--ink-900); font-variant-numeric: tabular-nums; }
 .scope-dot { width: 6px; height: 6px; flex: none; background: var(--green-700); }
 .scope.none { background: var(--amber-100); border-color: var(--amber-200); color: var(--amber-700); }
+
+/*
+  Says the workspace is waiting on the server, in the same place on every
+  screen. A screen says it on the control itself where it can, but most clicks
+  open a sheet, refetch a list or reload a screen, and those said nothing at
+  all while the server thought. Held back 300ms by `useWorking`, so it appears
+  only when there is a wait worth explaining, and sized to `.scope` so the top
+  bar does not jump when it comes and goes.
+*/
+.working {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  height: 30px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--accent-200);
+  border-radius: var(--r);
+  background: var(--accent-050);
+  color: var(--accent-800);
+  font-size: var(--t-12);
+  font-weight: 600;
+  white-space: nowrap;
+  animation: fade var(--base) var(--ease);
+}
 .scope.none .ico { color: var(--amber-700); }
 
 /* The keyboard route to all twenty screens. It is a button styled as a
@@ -657,14 +681,43 @@ code, .mono {
 }
 .btn:hover { background: #000; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
+/*
+  A button that is working is not a button that is off.
+  Anything that acts marks itself `aria-busy` while it waits and says so in its
+  own words — "Saving…", "Recording…", "Working…". It stays `disabled`, because
+  a second click would send the request twice, but it must not look switched
+  off: a button greyed to .45 under a not-allowed cursor reads as broken, and
+  what a person does next is click it again, or conclude the system is faulty.
+  That is the whole of the reported delay.
+*/
+.btn[aria-busy='true'] { opacity: 1; cursor: progress; }
+.btn[aria-busy='true']:hover { background: var(--ink-900); }
+.btn.secondary[aria-busy='true']:hover, .btn.ghost[aria-busy='true']:hover { background: var(--white); }
+.btn.danger[aria-busy='true']:hover { background: var(--red-700); }
 .btn.secondary { background: var(--white); color: var(--ink-900); border-color: var(--line); }
 .btn.secondary:hover { background: var(--hover); border-color: var(--line-strong); }
-.btn.ghost { background: none; color: var(--ink-700); border-color: transparent; padding-inline: var(--s3); }
+/*
+  A secondary action still has to look like something you can press. With no
+  edge at all a ghost button reads as a line of text, which only works for
+  someone who already knows where the controls are — so it keeps its
+  transparent background and gains a hairline.
+*/
+.btn.ghost { background: none; color: var(--ink-700); border-color: var(--line); padding-inline: var(--s3); }
 .btn.ghost:hover { background: var(--hover); color: var(--ink-900); }
 .btn.danger { background: var(--red-700); }
 .btn.danger:hover { background: #8a1c1c; }
 .btn.small { min-height: 28px; padding: 0 var(--s3); font-size: var(--t-12); }
 .btn .ico { flex: none; }
+.btn-mark, .working-mark {
+  flex: none;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: turn 700ms linear infinite;
+}
+.btn-mark { width: 13px; height: 13px; }
+.working-mark { width: 11px; height: 11px; border-color: var(--accent-600); border-top-color: transparent; }
+@keyframes turn { to { transform: rotate(1turn); } }
 
 .field { display: block; margin-bottom: var(--s4); }
 .field:last-of-type { margin-bottom: 0; }
@@ -1305,6 +1358,11 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .auth-card form .btn[type='submit'] { min-height: 44px; }
 .auth-foot { display: grid; gap: var(--s2); margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); font-size: var(--t-12); color: var(--ink-500); }
 .auth-foot p { margin: 0; }
+/* Keeping the session past the tab is a choice with a cost, so the box carries its own warning rather than a label alone. */
+.auth-keep { display: flex; align-items: flex-start; gap: var(--s3); margin-top: var(--s4); cursor: pointer; }
+.auth-keep input { margin-top: 2px; flex: none; width: 1rem; height: 1rem; accent-color: var(--accent-700); }
+.auth-keep b { display: block; font-size: var(--t-13); font-weight: 600; color: var(--ink-900); }
+.auth-keep small { display: block; margin-top: 2px; font-size: var(--t-12); line-height: 1.4; color: var(--ink-500); }
 .auth-back { width: min(400px, 100%); font-size: var(--t-13); font-weight: 600; color: var(--accent-700); text-decoration: none; }
 .auth-back:hover { text-decoration: underline; }
 
@@ -1555,7 +1613,13 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 .card-page.portrait { display: block; width: 46rem; }
 .card-half { min-width: 0; }
 .paper.sf9 h4, .paper.sf10 h4 { margin: var(--s3) 0 var(--s1); font-size: var(--t-12); text-transform: uppercase; letter-spacing: .02em; text-align: center; }
-.card-heading { text-align: center; margin-bottom: var(--s3); }
+/* A seal, the heading, a seal. The middle column takes what is left, so the
+   Republic/Department/Division lines stay centred between the two rather than
+   centred on the sheet with the seals laid over them. `minmax(0, 1fr)` and not
+   `1fr`: a long division name would otherwise push the right-hand seal out of
+   the column. */
+.card-heading { display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px; align-items: center; gap: var(--s3); text-align: center; margin-bottom: var(--s3); }
+.card-seal { width: 72px; height: auto; object-fit: contain; }
 .card-heading p { margin: 0; }
 .card-heading h3 { margin: var(--s2) 0 0; font-size: var(--t-15); }
 .card-school { font-weight: 700; font-size: var(--t-13); }
@@ -1581,20 +1645,51 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 .card-comment { border: 1px solid #333; padding: var(--s1) var(--s2); margin-bottom: var(--s2); min-height: 3.2rem; }
 .card-comment p { margin: 2px 0 0; white-space: pre-wrap; }
 .card-columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
-/* Typing the card on the card: each box is its own ruled cell, dashed until it is touched, amber once it differs from what is recorded. */
-.paper .box-input { display: block; width: 100%; min-width: 2.8rem; height: 1.5rem; padding: 0 3px; border: 1px dashed #8a8a8a; border-radius: 0; background: #fffdf7; font: inherit; color: #111; text-align: center; }
-.paper .box-input:focus { outline: 2px solid var(--accent-600); outline-offset: -1px; border-style: solid; }
-.paper .box-input.changed { background: var(--amber-100); border: 1px solid var(--amber-700); }
-.paper .box-input.invalid { background: var(--red-100); border: 1px solid var(--red-600); }
-/* A mark or a remark has a handful of answers; the box is the control, so no chevron image is drawn. */
-.paper select.box-input { appearance: none; cursor: pointer; text-align-last: center; }
-.paper textarea.box-input { height: auto; min-height: 3.4rem; text-align: left; line-height: 1.4; resize: vertical; }
-.paper .card-table td.box-cell { padding: 1px; }
-.card-edit-note { margin: 2px 0 var(--s2); padding: var(--s1) var(--s2); border-left: 3px solid var(--accent-600); background: var(--accent-050); color: var(--ink-700); font-size: var(--t-11); }
-.card-edit-note a { color: var(--accent-700); }
 .card-term { margin-bottom: var(--s3); }
-.sf10-title { text-align: center; position: relative; }
+/*
+  The SF10-ES, on screen and on paper alike.
+
+  These rules sit outside `@media print` on purpose. The form's proportions are
+  the form: a permanent record is checked on screen and signed on paper, and the
+  two have to be the same document, so what is reviewed is what comes out. They
+  are stated in points and inches — the units the page box is in — rather than
+  rem, which is measured against the root font size and so drifts away from the
+  form as soon as either changes. That drift is what made the grade rows half
+  again as tall as they needed to be and pushed the front sheet onto a third
+  page. Only the things that are genuinely about printing — the @page rule, the
+  page breaks, the seeded notice — stay in the print block below.
+
+  The sheet is one long bond page less its 8mm margins, so the screen shows the
+  same column widths, the same wrapping and the same row heights as the printer.
+*/
+.paper.sf10 { font-size: 8pt; }
+.paper.sf10 .card-page.portrait { width: calc(8.5in - 16mm); min-height: 840pt; display: flex; flex-direction: column; }
+.paper.sf10 .sf10-title { grid-template-columns: 54pt minmax(0, 1fr) 80pt; gap: 8pt; }
+.paper.sf10 .sf10-seal { width: 54pt; height: auto; }
+.paper.sf10 .sf10-wordmark { width: 80pt; height: auto; }
+.paper.sf10 .sf10-title h3 { font-size: 11pt; margin: 2pt 0 0; }
+.paper.sf10 .sf10-band { font-size: 8pt; padding: 1pt; margin: 3pt 0 2pt; }
+.paper.sf10 .sf10-eligibility { font-size: 7pt; margin: 1pt 0; }
+.paper.sf10 .sf10-blocks { gap: 6pt; flex: 1 1 auto; grid-auto-rows: 1fr; }
+/* The block heading: small, tight, and allowed to keep its long names on one
+   line each — the school, division and region are the same on every block. */
+.paper.sf10 .sf10-head th { font-size: 5.5pt; padding: 0 2pt; }
+.paper.sf10 .sf10-head td { font-size: 6.5pt; padding: 0 2pt; line-height: 1.15; }
+.paper.sf10 .sf10-grades th, .paper.sf10 .sf10-remedial th { font-size: 6pt; padding: 0 2pt; }
+.paper.sf10 .sf10-grades td, .paper.sf10 .sf10-remedial td { font-size: 7pt; height: 11pt; padding: 0 2pt; }
+.paper.sf10 .sf10-certification { padding: 3pt 5pt; }
+.paper.sf10 .sf10-certification p { font-size: 7.5pt; }
+/* Each block is a column so its grade table can take the slack and spread its
+   rows down the sheet, which is what makes the form occupy the page. */
+.paper.sf10 .sf10-block { display: flex; flex-direction: column; }
+.paper.sf10 .sf10-block > .sf10-grades { flex: 1 1 auto; }
+
+/* Seal, heading, wordmark — the three-part head the SF10-ES workbook prints.
+   The form code keeps its corner, out of the flow, as it does on the workbook. */
+.sf10-title { display: grid; grid-template-columns: 64px minmax(0, 1fr) 96px; align-items: center; gap: var(--s3); text-align: center; position: relative; }
 .sf10-title > .card-small { position: absolute; left: 0; top: 0; font-weight: 700; }
+.sf10-seal { width: 64px; height: auto; object-fit: contain; }
+.sf10-wordmark { width: 96px; height: auto; object-fit: contain; }
 .sf10-title p { margin: 0; }
 .sf10-title h3 { margin: var(--s2) 0 0; font-size: var(--t-14); }
 .sf10-band { background: #d9d9d9; padding: 2px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1714,6 +1809,47 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 /* Long bond paper upright, as the SF10 is printed. */
 @page long { size: 8.5in 13in; margin: 10mm; }
 
+/*
+  The SF9 is three different cards on three different sheets, and each one is
+  printed on the paper the school's own reference form is set to:
+
+    Grade 1     A4 upright    g1_sf9.xlsx, sheet 2: paperSize 9, portrait
+    Grades 2-3  A4 wide       g2_sf9.xlsx / g3_sf9.xlsx: paperSize 9, landscape
+    Grades 4-6  A4 wide       the school prints on A4 (decided 2026-11-02)
+
+  REPORT-CARD_G4,5,6.docx is set to US Letter (pgSz 15840x12240, code 1), but
+  the school's three other SF9 references are A4, the Philippines stocks A4, and
+  the staffroom print dialog defaults to it. Declaring Letter meant that at 100%
+  scale on an A4 tray the last 5.9mm of the card was cut and pushed onto a third
+  sheet. A4 landscape is wider and only slightly shorter, so the card fits with
+  room to spare. The Word file's margins are kept: 0.5in all round.
+
+  Declaring the size matters for more than tidiness. The card used to be laid
+  out on @page landscape (13in, long bond) whatever the grade, so when the sheet
+  in the tray was A4 or Letter the print dialog shrank the whole card to fit —
+  to 89.9% for Grades 1-3 and 84.6% for Grades 4-6. That is what made the text
+  unreadable (the Grades 4-6 descriptors reached the paper at 5.5pt), changed
+  the proportions, and left a third of the sheet empty. With the page box equal
+  to the sheet there is nothing left to shrink, and 100% scale is 100%.
+
+  Margins follow each reference form: 0.5in all round for the Grades 4-6 card,
+  as the Word file sets. The two A4 cards' references use margins below what a
+  laser reliably prints (4.2mm, and 3.7mm at the foot), so they are opened to
+  the smallest safe value instead rather than copied exactly.
+*/
+/*
+  The SF10-ES is printed on long bond upright, as the school's permanent-record
+  workbook is. It has its own page rule rather than sharing @page long, so its
+  margins can be set by what the form needs without changing how Next year's
+  class lists print. 8mm rather than long's 10mm: the form is a dense grid of
+  four scholastic blocks to a sheet, and the 4mm recovered is a row of them.
+*/
+@page sf10 { size: 8.5in 13in; margin: 8mm; }
+
+@page sf9-g1 { size: A4 portrait; margin: 6mm; }
+@page sf9-g23 { size: A4 landscape; margin: 6mm; }
+@page sf9-g46 { size: A4 landscape; margin: 12.7mm; }
+
 @media print {
   .affects { display: none; }
   body { background: #fff; color: #000; font-size: 10pt; }
@@ -1728,6 +1864,10 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
   body.printing-sheet > .print-root { display: block; }
   .print-root.landscape { page: landscape; }
   .print-root.long { page: long; }
+  .print-root.sf10 { page: sf10; }
+  .print-root.sf9-g1 { page: sf9-g1; }
+  .print-root.sf9-g23 { page: sf9-g23; }
+  .print-root.sf9-g46 { page: sf9-g46; }
   .print-root .paper { padding: 0; min-width: 0; font-size: 7pt; }
   .print-root .sf2-foot { font-size: 6pt; line-height: 1.2; gap: 10pt; }
   .print-root .paper .print-foot { margin-top: 3pt; font-size: 6.5pt; }
@@ -1755,6 +1895,148 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
   .print-root .card-table td, .print-root .sf10-grades td, .print-root .sf10-remedial td { font-size: 7.5pt; }
   .print-root .card-signature, .print-root .card-signature b { min-width: 120pt; }
   .print-root .card-heading h3 { font-size: 11pt; }
+
+  /*
+    The SF10-ES. Its front sheet carries four scholastic blocks in a two-by-two
+    grid, and before this it ran about 140px past the bottom of a long bond
+    sheet and started a third one. The height went to two places: each block's
+    heading table, whose cells wrapped the school and region names over two and
+    three lines, and the grade rows, which were set in rem — measured against
+    the root font size rather than the form's, so at 7.5pt text they were half
+    again as tall as they needed to be. Both are stated in points here, as the
+    page box is, and the blocks then fit with room to spare.
+
+    What is left over is given back to the grade tables, so the form fills the
+    sheet the way the workbook does rather than stopping two thirds down.
+  */
+  /* The page is a column so the block grid can take what is left of the sheet,
+     its two rows share that equally, and inside each block the grade table
+     spreads its rows. A min-height alone only stretched the page box: the
+     content stayed at the top and the sheet still read as two-thirds empty. */
+  /* One form sheet is exactly one printed page, never split across two. That is
+     what lets the dialog's page range mean something — "print page 3" gives the
+     third sheet of the record — and what keeps a two-sided print pairing front
+     with back. The measured tallest sheet is 1120px against 1188px of printable
+     height, so nothing is being forced. */
+  .print-root.sf10 .card-page { break-inside: avoid; page-break-inside: avoid; }
+  /* The seals in points, like everything else the card's proportions rest on.
+     The height follows each file's own aspect ratio rather than being set. */
+  .print-root .card-heading { grid-template-columns: 58pt minmax(0, 1fr) 58pt; gap: 8pt; }
+  .print-root .card-seal { width: 58pt; height: auto; }
+  /* The seeded-data notice prints above the card and shares its sheet. At the
+     body's 10pt it costs about 75pt of height, which is enough to push the
+     Grade 1 card — the fullest of the three, at 94% of its page — onto a second
+     sheet. It is a notice about the database, not part of the record, so on a
+     report card it is set small. Scoped to the SF9's own page roots, so the
+     SF2, SF4 and SF10 print it exactly as they did. */
+  .print-root.sf10 > .seeded-banner,
+  .print-root.sf9-g1 > .seeded-banner,
+  .print-root.sf9-g23 > .seeded-banner,
+  .print-root.sf9-g46 > .seeded-banner { font-size: 7pt; padding: 2pt 4pt; margin-bottom: 5pt; }
+
+  /*
+    Each SF9 format from here down, and nothing else: the three cards hold very
+    different amounts on very different sheets, so one set of sizes cannot suit
+    them all, and the rules above still belong to the SF10 and the SF2.
+
+    Everything a card's proportions depend on is stated in points, the same unit
+    the page box is in. A rem here would be measured against the root font size
+    and not the card's, so the boxes and the type would drift apart from each
+    other as soon as either changed — which is why the spacing never quite
+    matched the screen.
+  */
+  /* Grades 4-6: two 4.75in columns and a 0.5in gutter inside a 10in text area,
+     exactly the two-column section the Word reference sets. */
+  .print-root.sf9-g46 .card-page { gap: 36pt; }
+  .print-root.sf9-g46 .paper.sf9 { font-size: 9pt; }
+  .print-root.sf9-g46 .card-table td { font-size: 8.5pt; }
+  .print-root.sf9-g46 .paper-grid th { font-size: 7.5pt; }
+  .print-root.sf9-g46 .card-table.descriptors td { font-size: 7.5pt; }
+  .print-root.sf9-g46 .card-heading h3 { font-size: 12pt; }
+  .print-root.sf9-g46 .paper.sf9 h4 { font-size: 9.5pt; margin: 5pt 0 2pt; }
+  .print-root.sf9-g46 .card-letter { margin: 6pt 0; line-height: 1.45; }
+
+  /*
+    The Grades 4-6 card is a folded sheet, and its four halves hold very
+    different amounts. On the school's own three-term card the inside sheet used
+    barely half its paper (367px of 698px) and the back cover a quarter of it,
+    while the front was full — so most of the card was blank and the blankness
+    all collected at the foot of each page.
+
+    Each half is a column, and the one block in it that can usefully absorb the
+    slack takes it. Nothing is scaled and nothing moves between halves: a table
+    given height distributes it across its own rows, which is what a report card
+    wants anyway — a grade row tall enough to read along, and a signature line
+    tall enough to sign on. The halves are addressed by position because
+    Card46's structure is fixed; if that order ever changes, these follow it.
+
+    A page is given a floor of 470pt rather than the full 523pt of printable
+    height. The difference is the seeded-data notice, which prints above the
+    card on the first sheet; at the full height that notice would push the card
+    onto a third sheet. 470pt fills about 90% of the paper and still leaves room
+    for it.
+  */
+  .print-root.sf9-g46 .card-page { min-height: 470pt; }
+  /* Only the halves that have slack to give away become columns. A flex
+     container stops its children's margins collapsing, which silently adds
+     about 37px to a half, and the front of the card has no room to spare. */
+  .print-root.sf9-g46 .card-page:last-of-type .card-half,
+  .print-root.sf9-g46 .card-page:first-of-type .card-half:first-of-type { display: flex; flex-direction: column; }
+  /* Inside sheet: the grades table and the observed-values table take the slack. */
+  .print-root.sf9-g46 .card-page:last-of-type .card-half > .card-table:first-of-type { flex: 1 1 auto; }
+  /* Back cover: attendance keeps its size, and the signature lines spread into
+     the room below it instead of leaving it empty. */
+  .print-root.sf9-g46 .card-page:first-of-type .card-half:first-of-type h4:last-of-type { margin-top: auto; }
+  .print-root.sf9-g46 .card-page:first-of-type .card-half:first-of-type .card-sign-line { margin: 0; padding: 4pt 0; }
+  /* `:last-of-type`, never `:last-child`: when a card is printed it carries a
+     footer line, so the last child of .paper is that <p> and no card page is
+     ever the last child. */
+
+  /* The inside sheet holds two tables and nothing else, so it can carry larger
+     type than the front, where the heading and the transfer box set the pace. */
+  .print-root.sf9-g46 .card-page:last-of-type .card-table td { font-size: 10pt; }
+  .print-root.sf9-g46 .card-page:last-of-type .paper-grid th { font-size: 9pt; }
+  .print-root.sf9-g46 .card-page:last-of-type .card-table.descriptors td { font-size: 8.5pt; }
+  .print-root.sf9-g46 .card-page:last-of-type .paper.sf9 h4,
+  .print-root.sf9-g46 .card-page:last-of-type h4 { font-size: 10.5pt; }
+  .print-root.sf9-g46 .card-sign-line { margin: 7pt 0; }
+
+  /* Grades 2-3: one A4 sheet, two halves, the fullest of the three cards. */
+  .print-root.sf9-g23 .card-page { gap: 24pt; }
+  .print-root.sf9-g23 .paper.sf9 { font-size: 8.5pt; }
+  .print-root.sf9-g23 .card-table td { font-size: 8pt; }
+  .print-root.sf9-g23 .paper-grid th { font-size: 7pt; }
+  .print-root.sf9-g23 .card-table.descriptors td { font-size: 7.5pt; }
+  .print-root.sf9-g23 .paper.sf9 h4 { font-size: 9pt; margin: 4pt 0 2pt; }
+  .print-root.sf9-g23 .card-letter { margin: 4pt 0; line-height: 1.35; }
+  .print-root.sf9-g23 .card-comment { min-height: 20pt; }
+
+  /* Grade 1 narrates three terms instead of tabulating them, so its sheet is
+     upright and the text, not a grid, is what has to fit. It is also the
+     fullest of the three — the school's own reference workbook prints it at 65%
+     — and on A4 it runs about 70px over one sheet. What gives way is the
+     boilerplate in the right-hand column: the transfer box, the performance
+     levels and the school heading, all fixed text that is read once. The
+     narratives, the attendance figures and the learner's own details keep their
+     size, because they are the part a parent actually reads. */
+  .print-root.sf9-g1 .card-columns { gap: 18pt; }
+  .print-root.sf9-g1 .paper.sf9 { font-size: 8pt; }
+  .print-root.sf9-g1 .card-table td { font-size: 7.5pt; }
+  .print-root.sf9-g1 .paper-grid th { font-size: 6.5pt; }
+  .print-root.sf9-g1 .card-table.descriptors td { font-size: 6pt; padding: .5pt 2pt; }
+  .print-root.sf9-g1 .paper.sf9 h4 { font-size: 8.5pt; margin: 4pt 0 2pt; }
+  .print-root.sf9-g1 .card-letter { margin: 4pt 0; line-height: 1.35; }
+  .print-root.sf9-g1 .card-comment { min-height: 22pt; }
+  .print-root.sf9-g1 .card-term { margin-bottom: 6pt; }
+  .print-root.sf9-g1 .card-heading { margin-bottom: 3pt; }
+  .print-root.sf9-g1 .card-heading p { line-height: 1.2; }
+  .print-root.sf9-g1 .card-box { padding: 2pt 4pt; margin-top: 4pt; }
+  .print-root.sf9-g1 .card-box p { margin: 1pt 0; }
+  .print-root.sf9-g1 .card-small { margin: 1pt 0; }
+  /* Two signatures stand side by side in a column about 260pt wide, so the
+     120pt the other cards give them does not fit here. */
+  .print-root.sf9-g1 .card-signature, .print-root.sf9-g1 .card-signature b { min-width: 84pt; }
+  .print-root.sf9-g1 .card-signatures { margin: 4pt 0 2pt; }
   .print-root h1 { font-size: 16pt; margin: 0 0 2pt; }
   .print-root h3 { margin: 12pt 0 4pt; font-size: 11pt; }
   .print-root .print-foot { margin-top: 14pt; font-size: 8pt; color: #333; }
@@ -2177,3 +2459,27 @@ a.btn { text-decoration: none; }
 .typeface-sample { font-family: 'Atkinson Hyperlegible Next', var(--font-inter); }
 
 .paper { --font-sans: var(--font-inter); font-family: var(--font-inter); letter-spacing: normal; word-spacing: normal; }
+
+/*
+ * A form laid out as a grid, where the column heading is the label.
+ *
+ * Academic history transcribes a document whose learning areas are a table, so
+ * its controls sit in table cells. Each one keeps its own `<label>`, because a
+ * screen reader reading a cell out of its column has nothing else to go on, and
+ * the label is hidden from sight rather than dropped. The hint becomes the
+ * input's placeholder in `compact` mode, so nothing is lost by hiding it here.
+ */
+.grid-form .field { margin-bottom: 0; }
+.grid-form .field > .label,
+.grid-form .field > .hint {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* A grade is two or three characters; the column should not be as wide as a name. */
+.grid-form td.grade-cell { width: 4.5rem; }
+.grid-form td.grade-cell input { text-align: center; }
+.grid-form .field-error { font-size: var(--t-11); }

@@ -1,75 +1,64 @@
-// Next year's classes, drawn from a seed. Who moves up is the school's
-// approved outcome, a promotion or conditional promotion, and nothing here changes it: the draw only decides which
-// section of the grade each learner joins. The same seed over the same records
-// always gives the same classes, and each grade is drawn on its own, so a
-// preview of one grade matches that grade in the whole school's.
+// Who moves up to next year, and into which grade.
+//
+// This used to be a draw: every promoted learner was dealt into a section of
+// their next grade, balanced by sex and size from a seed. Promotion does not
+// choose a class — an adviser takes a learner into one afterwards, which is
+// separate work — so the draw is gone and a carried-forward learner arrives at
+// their grade with no section. What is left is the part that was always the
+// school's decision: who has an approved outcome, and where it leads.
+//
+// Nothing here changes an outcome. It reads them, works out the grade each one
+// leads to, and says plainly who is not coming and why.
 import {createHash} from 'node:crypto';
 
 type Sex='male'|'female';
 export type Source={
   source_year:{id:string;start_year:number;status:string};
   target_year:{id:string;start_year:number;starts_on:string;status:string};
+  // section_id and section_name are null for a learner who is enrolled this
+  // year but not yet in a class. They still have an outcome to carry forward.
   learners:{enrollment_id:string;learner_id:string;first_name:string;middle_name:string|null;last_name:string;name_extension:string|null;sex:Sex;
-    grade_level:number;section_id:string;section_name:string;status:'enrolled'|'withdrawn';action:'promoted'|'conditionally_promoted'|'retained'|'remedial'|null;
+    grade_level:number;section_id:string|null;section_name:string|null;status:'enrolled'|'withdrawn';action:'promoted'|'conditionally_promoted'|'retained'|'remedial'|null;
     outcome_status:'recommended'|'approved'|'returned'|null;already_enrolled:boolean}[];
-  sections:{id:string;grade_level:number;name:string;adviser_name:string|null;male:number;female:number}[];
   runs:unknown[];
 };
-export type Unplaced='left'|'no_outcome'|'not_approved'|'remedial'|'completer'|'already_enrolled'|'no_section';
-
-/** mulberry32: small, fast and the same in every runtime. */
-export function random(seed:number){
-  let a=seed>>>0;
-  return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};
-}
-export function shuffle<T>(items:T[],next:()=>number){
-  const out=[...items];
-  for(let i=out.length-1;i>0;i--){const j=Math.floor(next()*(i+1));[out[i],out[j]]=[out[j]!,out[i]!];}
-  return out;
-}
+/**
+ * Why a learner is not carried forward. `no_section` is deliberately absent:
+ * under the draw, a learner whose next grade had no section yet was left
+ * behind, so the school had to build next year's classes before it could
+ * promote anybody. A grade needs no sections now.
+ */
+export type Unplaced='left'|'no_outcome'|'not_approved'|'remedial'|'completer'|'already_enrolled';
 
 const targetGrade=(l:Source['learners'][number])=>l.action==='promoted'||l.action==='conditionally_promoted'?l.grade_level+1:l.grade_level;
 const why=(l:Source['learners'][number]):Unplaced|null=>
   l.status!=='enrolled'?'left':!l.action?'no_outcome':l.outcome_status!=='approved'?'not_approved':l.action==='remedial'?'remedial':
   targetGrade(l)>6?'completer':l.already_enrolled?'already_enrolled':null;
 
-export function placeNextYear(source:Source,seed:number,grade:number|null){
-  const sections=source.sections.filter(s=>grade===null||s.grade_level===grade);
-  const counts=new Map(sections.map(s=>[s.id,{male:s.male,female:s.female,placed_male:0,placed_female:0}]));
+export function placeNextYear(source:Source,grade:number|null){
   const learner=(l:Source['learners'][number])=>({enrollment_id:l.enrollment_id,learner_id:l.learner_id,first_name:l.first_name,middle_name:l.middle_name,
     last_name:l.last_name,name_extension:l.name_extension,sex:l.sex,from_grade:l.grade_level,from_section:l.section_name,action:l.action,outcome_status:l.outcome_status});
-  const placements:(ReturnType<typeof learner>&{to_grade:number;section_id:string})[]=[];
+  const placements:(ReturnType<typeof learner>&{to_grade:number})[]=[];
   const unplaced:(ReturnType<typeof learner>&{to_grade:number|null;reason:Unplaced})[]=[];
-  const waiting=new Map<number,Source['learners']>();
   for(const l of source.learners){
     const to=targetGrade(l);
     if(grade!==null&&to!==grade)continue;
-    const reason=why(l)??(sections.some(s=>s.grade_level===to)?null:'no_section');
+    const reason=why(l);
     if(reason){unplaced.push({...learner(l),to_grade:reason==='completer'||reason==='left'||reason==='no_outcome'?null:to,reason});continue;}
-    waiting.set(to,[...(waiting.get(to)??[]),l]);
-  }
-  for(const [to,group] of [...waiting].sort((a,b)=>a[0]-b[0])){
-    const choices=sections.filter(s=>s.grade_level===to);
-    // Sorted first, so the order the database returned rows in cannot change the draw.
-    const drawn=shuffle([...group].sort((a,b)=>a.enrollment_id.localeCompare(b.enrollment_id)),random((seed^Math.imul(to+1,0x9E3779B1))>>>0));
-    for(const l of drawn){
-      // The section with the fewest of this learner's sex, then the fewest in all, then the first by name.
-      const size=(id:string)=>{const c=counts.get(id)!;return c.male+c.female+c.placed_male+c.placed_female;};
-      const same=(id:string)=>{const c=counts.get(id)!;return l.sex==='male'?c.male+c.placed_male:c.female+c.placed_female;};
-      const best=choices.reduce((a,b)=>same(b.id)<same(a.id)||(same(b.id)===same(a.id)&&size(b.id)<size(a.id))?b:a);
-      const c=counts.get(best.id)!;
-      if(l.sex==='male')c.placed_male+=1;else c.placed_female+=1;
-      placements.push({...learner(l),to_grade:to,section_id:best.id});
-    }
+    placements.push({...learner(l),to_grade:to});
   }
   const byName=(a:{last_name:string;first_name:string},b:{last_name:string;first_name:string})=>a.last_name.localeCompare(b.last_name)||a.first_name.localeCompare(b.first_name);
   placements.sort(byName);unplaced.sort(byName);
-  const review_hash=createHash('sha256').update(JSON.stringify({source:source.source_year.id,target:source.target_year.id,seed,grade,
-    placements:placements.map(p=>[p.enrollment_id,p.section_id]).sort((a,b)=>a[0]!.localeCompare(b[0]!))})).digest('hex');
+  // The fingerprint of what is about to be committed: who, and into which
+  // grade. The commit recomputes it and refuses if anything moved underneath.
+  const review_hash=createHash('sha256').update(JSON.stringify({source:source.source_year.id,target:source.target_year.id,grade,
+    placements:placements.map(p=>[p.enrollment_id,p.to_grade]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))})).digest('hex');
+  const tally=(list:{sex:Sex}[])=>({male:list.filter(p=>p.sex==='male').length,female:list.filter(p=>p.sex==='female').length});
   return {
-    source_year:source.source_year,target_year:source.target_year,seed,grade_level:grade,review_hash,
-    sections:sections.map(s=>{const c=counts.get(s.id)!;return {id:s.id,grade_level:s.grade_level,name:s.name,adviser_name:s.adviser_name,
-      enrolled:{male:s.male,female:s.female},placed:{male:c.placed_male,female:c.placed_female}};}),
+    source_year:source.source_year,target_year:source.target_year,grade_level:grade,review_hash,
+    // What each grade receives, which is what a principal checks before committing.
+    grades:[...new Set(placements.map(p=>p.to_grade))].sort((a,b)=>a-b)
+      .map(g=>({grade_level:g,carried:tally(placements.filter(p=>p.to_grade===g))})),
     placements,unplaced,runs:source.runs,
   };
 }

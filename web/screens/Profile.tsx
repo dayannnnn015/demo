@@ -5,7 +5,7 @@ import { Avatar, Glyph, avatarIcons, avatarTones, type Look } from '../component
 import { Icon } from '../components/icons';
 import { Confirm, Sheet } from '../components/overlay';
 import { Callout, PageHeader, StatusLine, TableSkeleton, Unrecorded, gradeName, idle, sentence, type Status } from '../components/primitives';
-import { TwoStepSetting, type SessionAuth } from '../two-step';
+import type { SessionAuth } from '../api';
 import { MyActivity, NameCorrection, type NameRequest } from './ProfileRecords';
 import { Accessibility, Preferences } from './ProfilePreferences';
 import { editions } from '../help';
@@ -90,7 +90,6 @@ export function Profile(props: ScreenProps) {
               ? <button type="button" className="btn secondary" onClick={account.changePassword}><Icon name="eye-off" size={15} />Change password</button>
               : <span className="muted">Not available in this view.</span>}
           </div>
-          <TwoStepSetting auth={account?.auth} />
           <Sessions api={api} auth={account?.auth} token={token} />
         </div>
       </div>
@@ -310,7 +309,7 @@ function PictureCard({ api, mine, setStatus, onSaved, onConflict }: {
               </div>
             ) : null}
             <div className="form-actions">
-              <button type="button" className="btn" disabled={!dirty || busy} onClick={() => void save()}>{busy && dirty ? 'Saving…' : 'Save picture'}</button>
+              <button type="button" className="btn" disabled={!dirty || busy} aria-busy={busy && dirty} onClick={() => void save()}>{busy && dirty ? 'Saving…' : 'Save picture'}</button>
               {dirty ? <button type="button" className="btn ghost" disabled={busy} onClick={() => { setDraft(draftOf(mine.profile)); setLocal(idle); }}>Undo changes</button> : null}
               <button type="button" className="btn secondary" disabled={busy} onClick={() => setUploading(true)}><Icon name="imports" size={15} />{hasPhoto ? 'Change photo' : 'Upload a photo'}</button>
               {hasPhoto ? <button type="button" className="btn ghost danger-text" disabled={busy} onClick={() => setRemoving(true)}>Remove photo</button> : null}
@@ -433,7 +432,7 @@ export function PhotoSheet({ api, version, replacing, onSaved, onClose, onConfli
           </div>
           <p className="muted">Where the camera recorded the photo, and on what device, is not kept: only the framed square is sent.</p>
           <div className="form-actions">
-            <button type="button" className="btn" disabled={held} onClick={() => void send()}>{busy ? 'Saving…' : 'Use this photo'}</button>
+            <button type="button" className="btn" disabled={held} aria-busy={busy} onClick={() => void send()}>{busy ? 'Saving…' : 'Use this photo'}</button>
             <button type="button" className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
           </div>
         </>

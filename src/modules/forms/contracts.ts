@@ -21,7 +21,7 @@ export const formOperations=([
   {id:'sf4Issue',method:'post',path:'/api/v1/academic-years/:id/forms/sf4/issuances',summary:'Issue the SF4 once every section\'s month is submitted and every figure is known, recording its fingerprint',body:formSchemas.issue,manager:true},
   {id:'sf9Get',method:'get',path:'/api/v1/enrollments/:id/forms/sf9',summary:'Lay out one enrollment\'s SF9 in its grade\'s card: the grades entered from the ECR, the general average, observed values and comments, and each month\'s attendance days counted by the school\'s rule; nothing is computed into a grade'},
   {id:'sf9Issue',method:'post',path:'/api/v1/enrollments/:id/forms/sf9/issuances',summary:'Issue the SF9, recording a fingerprint of exactly what it said; a different card for the same enrollment is a correction that needs a reason',body:formSchemas.reissue},
-  {id:'sf10Get',method:'get',path:'/api/v1/learners/:id/forms/sf10',summary:'Lay out one learner\'s SF10: a scholastic block for every graded school year the caller may read, with the grades and general average entered from the ECR'},
+  {id:'sf10Get',method:'get',path:'/api/v1/learners/:id/forms/sf10',summary:'Lay out one learner\'s SF10: a scholastic block for every Grade 1 to 6 school year the caller may read, whether EDUNEXUS recorded it or it was transcribed from the school\'s own documents, with the grades and general average entered from the ECR, and the credential presented for Grade 1. Refused for a learner with no Grade 1 to 6 year at all: the SF10 begins at Grade 1, and a Kindergarten learner\'s records are the SF5-K and the ECCD checklist'},
   {id:'sf10Issue',method:'post',path:'/api/v1/learners/:id/forms/sf10/issuances',summary:'Issue the SF10, recording a fingerprint of exactly what it said; a different record for the same learner is a correction that needs a reason',body:formSchemas.reissue},
   {id:'formIssuanceList',method:'get',path:'/api/v1/form-issuances',summary:'List issued forms, newest first: every one for managers, your own for a teacher',query:formSchemas.issuanceQuery},
 ] as const).map(op=>({...op,module:'forms' as const}));
@@ -55,8 +55,11 @@ export const sf4Form=z.object({form:z.literal('sf4'),school,school_year:z.object
     adviser_specialization:z.string().nullable(),month_status:z.enum(['draft','submitted','locked']),days_of_classes:z.number().int().nullable(),...sf4Row,
     completeness:z.object({complete:z.boolean(),unmarked_learner_days:z.number().int(),pending_days:z.number().int(),unconfigured_days:z.number().int(),alternative_delivery_days:z.number().int()})})),
   grades:z.array(z.object({grade_level:z.number().int(),...sf4Row})),school_total:z.object(sf4Row),
+  unplaced:z.array(trio.extend({grade_level:z.number().int()}))
+    .describe('Learners registered at a grade but in no class as of the last day of the month. Every SF4 figure is grouped by section, so these belong to no section row and are never added into a grade or school total; the form cannot be issued while any remain'),
   other_staff:z.array(z.object({name:z.string(),role:z.string(),position:z.string().nullable(),specialization:z.string().nullable()})),
-  completeness:z.object({complete:z.boolean(),rule_recorded:z.boolean(),incomplete_sections:z.number().int(),not_submitted:z.number().int()})});
+  completeness:z.object({complete:z.boolean(),rule_recorded:z.boolean(),incomplete_sections:z.number().int(),not_submitted:z.number().int(),
+    unplaced_learners:z.number().int()})});
 const age=z.object({years:z.number().int(),months:z.number().int()}).nullable();
 const cardLearner=z.object({id:uuid,first_name:z.string(),middle_name:z.string().nullable(),last_name:z.string(),name_extension:z.string().nullable(),
   sex:z.enum(['male','female']),lrn:z.string().nullable(),birth_date:date.nullable()});
@@ -69,15 +72,34 @@ export const sf9Form=z.object({form:z.literal('sf9'),layout:z.enum(['grade1','gr
   school_year:z.object({id:uuid,start_year:z.number().int(),starts_on:date,ends_on:date}),learner:cardLearner.extend({age_at_start:age,age_at_end:age}),
   enrollment:z.object({id:uuid,grade_level:z.number().int(),section_name:z.string(),adviser_name:z.string().nullable()}),periods,rule:rule.nullable(),
   attendance:z.object({rows:z.array(z.object({label:z.string(),term:z.string().nullable(),from:date,to:date,class_days:count,present:count,absent:count,tardy:count,known:z.boolean(),
+      unmarked:z.array(date).describe('The dates of this month holding a classroom session nobody marked, which is what leaves it empty'),
+      unset:z.array(date).describe('The dates the calendar has not set, or that hold an alternative-delivery session'),
       to_date:date.optional().describe('Only for a month under way: its figures are counted to this date, the last day of classes held')})),
     total:z.object({class_days:count,present:count,absent:count,tardy:count,to_date:date.optional().describe('Only while the year is under way: the totals are of the months begun, to this date')})}),
   subjects:subjectRows,general_average:average,outcome:z.object({action:z.enum(['promoted','conditionally_promoted','retained','remedial']).nullable(),eligible_grade:z.number().int().nullable()}),
   values:z.record(z.string(),z.record(z.string(),z.string())),
   notes:z.record(z.string(),z.object({can_do:z.string().nullable(),to_improve:z.string().nullable(),comment:z.string().nullable()})),warnings:z.array(z.string())});
+// The SF10's own block shapes, which are not the SF9's. A transcribed year
+// (0051) has no enrollment, no offering and no reporting period of this school's
+// own, so each of those is nullable and the four quarters are numbered '1' to
+// '4' as the form numbers them. `key` is what the page draws a row by, since a
+// transcribed row has no id of the kind an offering has.
+const sf10Periods=z.array(z.object({id:z.string(),ordinal:z.number().int(),name:z.string()}));
+const sf10Subjects=z.array(z.object({key:z.string(),offering_id:uuid.nullable(),code:z.string().nullable(),name:z.string(),
+  terms:z.record(z.string(),z.number().nullable()),final:z.number().nullable(),remark:z.enum(['passed','failed']).nullable()}));
+const sf10School=z.object({name:z.string(),school_code:z.string().nullable(),address:z.string().nullable(),
+  region:z.string().nullable(),division:z.string().nullable(),district:z.string().nullable()});
+export const eligibility=z.object({credential:z.enum(['kinder_progress_report','eccd_checklist','kindergarten_certificate','pept','others']),
+  credential_other:z.string().nullable(),school_name:z.string().nullable(),school_code:z.string().nullable(),school_address:z.string().nullable(),
+  pept_rating:z.string().nullable(),examined_on:date.nullable(),testing_center:z.string().nullable(),remark:z.string().nullable()});
 export const sf10Form=z.object({form:z.literal('sf10'),school,learner:cardLearner,
-  blocks:z.array(z.object({enrollment_id:uuid,grade_level:z.number().int(),section_name:z.string(),adviser_name:z.string().nullable(),
-    school_year:z.object({id:uuid,start_year:z.number().int()}),periods,subjects:subjectRows,general_average:average,
+  blocks:z.array(z.object({key:z.string(),
+    origin:z.enum(['register','encoded']).describe('`register`: a year EDUNEXUS recorded itself. `encoded`: a year transcribed from the school\'s own documents'),
+    enrollment_id:uuid.nullable(),prior_year_id:uuid.nullable(),
+    grade_level:z.number().int(),section_name:z.string().nullable(),adviser_name:z.string().nullable(),school:sf10School,
+    school_year:z.object({id:uuid.nullable(),start_year:z.number().int()}),periods:sf10Periods,subjects:sf10Subjects,general_average:average,
     outcome:z.object({action:z.enum(['promoted','conditionally_promoted','retained','remedial']).nullable(),eligible_grade:z.number().int().nullable()})})),
+  eligibility:eligibility.nullable().describe('The credential presented for Grade 1, which is where a Kindergarten record lives; the form has no scholastic block for Kinder'),
   last_school_year:z.number().int().nullable(),eligible_grade:z.number().int().nullable(),kindergarten_here:z.boolean()});
 const ruleState=z.object({rule:rule.extend({updated_at:time}).nullable(),history:z.array(z.object({rule_version:z.number().int(),mixed_day:z.string(),single_session_day:z.string(),
   reason:z.string(),recorded_by:z.string().nullable(),recorded_at:time}))});

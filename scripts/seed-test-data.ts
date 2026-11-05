@@ -221,7 +221,10 @@ async function run(op: Operator, database: Database, identities: (op: Operator) 
 if (rehearse) {
   const { testDatabase } = await import('../tests/helpers/database.js');
   const db = await testDatabase();
-  const op: Operator = { async query(text, params) { return (await db.pg.query<Record<string, unknown>>(text, params)).rows; }, close: async () => {} };
+  // `pg.query` answers with the rows themselves, not a result object, so there
+  // is no `.rows` to reach for. It changed when tests/helpers/database.ts was
+  // rebuilt after the recovery, and this was the one caller left behind.
+  const op: Operator = { async query(text, params) { return db.pg.query<Record<string, unknown>>(text, params); }, close: async () => {} };
   // The test fixture's auth.users holds an id and nothing else.
   try {
     // Hosted, auth.users carries the address the fill tells synthetic staff apart by; the fixture's carries an id only.

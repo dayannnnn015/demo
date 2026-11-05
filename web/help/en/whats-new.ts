@@ -8,6 +8,59 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.1', date: '2026-11-05',
+    items: [
+      'Every button now tells you when it is working. A button you have pressed says *Working…*, *Saving…* or *Recording…* while it waits, and stays dark rather than greying out — a greyed button looked switched off, and there was nothing to tell you the school’s connection was simply taking a moment.',
+      'When a click opens a sheet or reloads a list instead, *Working…* appears at the top of the screen beside the school year, so there is always something saying the system is busy rather than stuck. It only appears when the wait is long enough to notice.',
+      'You do not need to press anything twice. If a button looks greyed and says nothing, it is genuinely unavailable — the screen will say what it is waiting for.',
+      'Buttons for the smaller actions now have a visible edge, so it is clearer what can be pressed.',
+    ],
+  },
+  {
+    version: '0.90.0', date: '2026-11-05',
+    items: [
+      'Advisers can now build their own class. On {learners}, **Take learners into my class** lists the learners the office has registered for your grade who are in no class yet, and takes as many as you tick into your class.',
+      'It never makes a second record for a child: it is the record the office already holds, given your class. A learner already in somebody’s class is not offered — a principal or administrative officer moves a learner between classes.',
+      'A search there also finds a learner with no enrolment this school year, such as one returning to the school, so they can be taken in without being keyed again.',
+      '**Register a new learner into my class** is for a child the school has never held a record for. The registry is checked first: a learner with the same name and birth date already on it is refused, and you take that learner in instead.',
+      'You can still only see the learners in the classes you advise, and correcting a learner’s details is still the office’s.',
+      'Principals and administrative officers get **Across the school** at the top of {prior-records}: for every class, how many of its learners have a previous school year or the Grade 1 credential typed in, how many have neither, and who the adviser is — so the classes with work left are visible without opening anybody’s record.',
+      'That view counts only. It names no learner and records no access to anyone’s records, so it can be checked as often as it is useful.',
+    ],
+  },
+  {
+    version: '0.89.0', date: '2026-11-05',
+    items: [
+      'A class list can now be imported **Onto the registry at a grade, with no class yet** — choose that under *Where this file lands* on {imports}. It is how the school puts every learner on the registry first and settles the classes afterwards.',
+      'Those learners are enrolled for the year and count on the totals, but belong to no section. Give them a class later on {enrollment}: that is a change to the enrolment they already have, not a second one.',
+      'They are listed as *not in a class* on the SF4, and the SF4 cannot be issued until every registered learner is in one — so nobody is quietly left off the figure the division reads.',
+      'Importing a class list into a section still works exactly as before, and is what an adviser’s submitted list is imported as. Import the registry list *or* the class lists, not both: a learner already enrolled this year is refused the second time.',
+    ],
+  },
+  {
+    version: '0.88.0', date: '2026-11-04',
+    items: [
+      'A learner’s **Address** can now be recorded, on one line, beside their name, LRN, birth date and sex — on **Register a learner** and on the correction form on {learners}. It is optional: a learner you have no address for is registered without one, and the record says it is not recorded rather than showing an empty box.',
+      'It is the only new learner detail. Anything further about a child or their family waits on the school’s own list of the fields EDUNEXUS should keep.',
+      '{imports} now offers **Download the template (Excel)** as well as the CSV. The Excel file carries the address column, keeps the LRN and birth-date columns as text so no digits are lost, names every column and says which are required on a second sheet, and shows one worked row.',
+      'A class list you already saved from the earlier template still imports. Those learners are simply recorded with no address.',
+      'Registering learners one at a time is unchanged, and so is everything about {prior-records}: a previous school year is typed in there, one year at a time, whenever the school is ready. The school can start using EDUNEXUS with no previous school years recorded at all.',
+    ],
+  },
+  {
+    version: '0.87.0', date: '2026-11-03',
+    items: [
+      'A new screen, {prior-records}, for typing in the school years a learner finished before EDUNEXUS. Search for the learner, **Add a school year**, and copy the grades from the school’s own spreadsheet or form.',
+      'Those years go onto the learner’s existing SF10, in order, beside the years EDUNEXUS recorded itself. A learner has one SF10 for their whole time in elementary school: there is no new one to make each year, and from now on EDUNEXUS adds each year itself.',
+      'It is a one-off, for every learner from Kindergarten to Grade 6. A year EDUNEXUS already holds is refused rather than printed twice — its grades are entered on {report-cards}.',
+      'A Kindergarten record goes under *Eligibility for Grade 1*, as the credential presented when the learner entered Grade 1. That box carries no grade, which is what the SF10 itself asks for.',
+      'A learner still in Kindergarten has no SF10, and no longer gets a blank one: the registry says *SF10 begins at Grade 1*, and their records stay the SF5-K and the ECCD checklist the school keeps.',
+      'An adviser can type in any previous grade level for a learner in the classes they advise, not only the grade they teach.',
+      'Nothing typed there is computed. The general average is the one already written on the document, and a quarter the document leaves empty stays empty.',
+      'A learner enrolled at a grade but not yet in a class now appears on their own SF10. They were being left off it.',
+    ],
+  },
+  {
     version: '0.86.0', date: '2026-10-29',
     items: [
       'Make the screens easier to see, read and press under *Accessibility* on {profile}: higher contrast, links always underlined, a thicker focus outline, larger buttons, more line spacing and a typeface drawn for low vision. **Put these back** undoes them all.',
@@ -42,7 +95,8 @@ export const whatsNew: Release[] = [
   {
     version: '0.79.0', date: '2026-10-28',
     items: [
-      '**Turn on two-step sign-in** on {profile} so that a password someone else learns is not enough to sign in as you.',
+      // Kept rather than deleted: the release happened. The note says it was undone, so nobody hunts for a control that is gone.
+      '*Turn on two-step sign-in* on {profile} so that a password someone else learns is not enough to sign in as you. *(Taken out again on 3 November 2026: signing in is an email and a password.)*',
       'See where you are signed in, and **Sign out everywhere else** if you left yourself signed in on a school computer.',
     ],
   },

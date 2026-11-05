@@ -5,7 +5,7 @@ import type { Route } from '../routes';
 import { clamp, dayAndMonth, firstOf, lastOf, monthName, monthOf, shift, weekday } from '../dates';
 import { classListWorkbook, fileSlug, registerWorkbook, type ClassRow, type RegisterDay } from '../csv';
 import { downloadXlsx } from '../xlsx';
-import { sf2Workbook } from '../forms/sf2';
+import { sf2Workbook, typedPair } from '../forms/sf2';
 import { levelName, type Sf2Form } from '../forms/types';
 import { Icon } from '../components/icons';
 import { Confirm, Sheet } from '../components/overlay';
@@ -50,6 +50,36 @@ type Event = {
 const marks: [Mark, string][] = [['present', 'Present'], ['absent', 'Absent'], [null, 'Not marked']];
 const markName = (mark: Mark) => marks.find(([key]) => key === mark)?.[1] ?? 'Not marked';
 
+/**
+ * What a key typed on a learner marks: the SF2 grid's own letters, taken from
+ * it rather than restated, so the register and the form a teacher corrects it
+ * on cannot drift apart.
+ *
+ * The form's Delete and Backspace are deliberately left out. A blank cell on
+ * the SF2 *is* a presence, so clearing one there means present; here "not
+ * marked" is its own value, and a key that reads as "clear this" must never
+ * record a presence nobody observed.
+ */
+const typedMarks: Record<string, Pair> = { x: typedPair.x!, p: typedPair.p!, m: typedPair.m!, a: typedPair.a! };
+const typedKeys = Object.keys(typedMarks);
+
+/**
+ * The same learner's other session, or the next learner's, the way the SF2's
+ * grid moves: a typed mark carries the register down the class list, which is
+ * the order the paper one is read in. A row with no control in that column —
+ * a session with no class — is skipped rather than landed on.
+ */
+function nextInColumn(from: HTMLElement): HTMLInputElement | null {
+  const td = from.closest('td'), tr = td?.closest('tr');
+  if (!td || !tr) return null;
+  let row: Element | null = tr;
+  while ((row = row.nextElementSibling)) {
+    const radios = (row as HTMLTableRowElement).cells?.[td.cellIndex]?.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+    if (radios?.length) return [...radios].find(radio => radio.checked) ?? radios[0]!;
+  }
+  return null;
+}
+
 /** Why a session cannot take a classroom mark, in the school's own words. */
 export const sessionBlock = (schedule: Schedule, part: Part): string | null => {
   const mode = schedule[part];
@@ -85,13 +115,31 @@ export function PairValue({ value }: { value: Pair }) {
  * one of the three, because a mark recorded by mistake has to be removable
  * without inventing a value in its place — the API clears a mark with an
  * explicit null, and this is where that null comes from.
+ *
+ * A letter typed on it sets the learner's whole day and moves to the next
+ * learner, so a class of thirty can be taken from the keyboard at the speed
+ * the paper list is read. The arrow keys are left to the radio group, which
+ * already moves between the three chips: an adviser using a screen reader
+ * loses nothing to the shortcut.
  */
-function MarkChoice({ name, legend, value, onChange }: {
-  name: string; legend: string; value: Mark; onChange: (mark: Mark) => void;
+function MarkChoice({ name, legend, value, onChange, onType }: {
+  name: string; legend: string; value: Mark; onChange: (mark: Mark) => void; onType?: ((to: Pair) => void) | undefined;
 }) {
   return (
     <>
-      <fieldset className="marks" data-tour="att-mark">
+      <fieldset
+        className="marks"
+        data-tour="att-mark"
+        aria-keyshortcuts={onType ? typedKeys.join(' ') : undefined}
+        onKeyDown={event => {
+          if (!onType || event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) return;
+          const typed = typedMarks[event.key.toLowerCase()];
+          if (!typed) return;
+          event.preventDefault();
+          onType(typed);
+          nextInColumn(event.currentTarget)?.focus();
+        }}
+      >
         <legend className="sr-only">{legend}</legend>
         {marks.map(([key, text]) => (
           <label key={key ?? 'none'} className="mark">
@@ -250,7 +298,7 @@ export function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, 
           />
 
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy} onClick={() => void confirm()}>
+            <button type="button" className="btn" disabled={busy} aria-busy={busy} onClick={() => void confirm()}>
               {busy ? 'Recording…' : 'Confirm this review'}
             </button>
             <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setPlan(null); setSent(null); setStatus(idle); }}>
@@ -268,7 +316,7 @@ export function ReviewSheet({ api, sectionId, dayOn, version, changes, onClose, 
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Reviewing…' : `Review ${count}`}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Reviewing…' : `Review ${count}`}</button>
           </div>
         </form>
       )}
@@ -568,6 +616,16 @@ export function Attendance({ api, me, manager, setStatus, reload, token, route, 
     }
     return next;
   });
+  /**
+   * One key sets the learner's whole day, because that is how a register is
+   * read aloud: a name, then whether they were there. A session with no class
+   * keeps whatever it holds — the other half of the day is not evidence about
+   * it — and like every other mark here, nothing is recorded until the review.
+   */
+  const typeDay = (row: Learner, to: Pair) => setDraft(current => {
+    const now = current[row.enrollment_id] ?? { am: row.am, pm: row.pm };
+    return { ...current, [row.enrollment_id]: { am: sessionOpen('am') ? to.am : now.am, pm: sessionOpen('pm') ? to.pm : now.pm } };
+  });
 
   const overBatch = changes.length > 100;
 
@@ -652,6 +710,11 @@ export function Attendance({ api, me, manager, setStatus, reload, token, route, 
                 {sessionOpen('am') && sessionOpen('pm') ? <button type="button" className="btn small secondary" disabled={!unmarkedIn('am') && !unmarkedIn('pm')} onClick={() => fillPresent(['am', 'pm'])}>Both sessions</button> : null}
               </div>
             ) : null}
+            {editable && items.length && (sessionOpen('am') || sessionOpen('pm')) ? (
+              <p className="card-note">
+                Or take the register from the keyboard, the same letters the SF2 takes: <b>x</b> absent all day, <b>p</b> present all day, <b>m</b> absent in the morning only, <b>a</b> absent in the afternoon only. Each one marks the whole day and moves to the next learner. Nothing is recorded until you review.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -676,7 +739,7 @@ export function Attendance({ api, me, manager, setStatus, reload, token, route, 
                 const stop = schedule ? sessionBlock(schedule, 'am') : 'Not configured';
                 if (stop && row.am === null) return <Unrecorded label={stop} />;
                 if (!editable || stop) return <MarkValue mark={pairOf(row).am} />;
-                return <MarkChoice name={`${group}-am-${row.enrollment_id}`} legend={`Morning, ${learnerName(row)}`} value={pairOf(row).am} onChange={mark => setPart(row, 'am', mark)} />;
+                return <MarkChoice name={`${group}-am-${row.enrollment_id}`} legend={`Morning, ${learnerName(row)}`} value={pairOf(row).am} onChange={mark => setPart(row, 'am', mark)} onType={to => typeDay(row, to)} />;
               },
             },
             {
@@ -685,7 +748,7 @@ export function Attendance({ api, me, manager, setStatus, reload, token, route, 
                 const stop = schedule ? sessionBlock(schedule, 'pm') : 'Not configured';
                 if (stop && row.pm === null) return <Unrecorded label={stop} />;
                 if (!editable || stop) return <MarkValue mark={pairOf(row).pm} />;
-                return <MarkChoice name={`${group}-pm-${row.enrollment_id}`} legend={`Afternoon, ${learnerName(row)}`} value={pairOf(row).pm} onChange={mark => setPart(row, 'pm', mark)} />;
+                return <MarkChoice name={`${group}-pm-${row.enrollment_id}`} legend={`Afternoon, ${learnerName(row)}`} value={pairOf(row).pm} onChange={mark => setPart(row, 'pm', mark)} onType={to => typeDay(row, to)} />;
               },
             },
           ]}

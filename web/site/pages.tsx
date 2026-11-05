@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { monthName, monthOf, weekday } from '../dates';
 import { SiteIcon, Valley, type IconName } from './art';
 import { Link, type Go } from './Site';
@@ -6,6 +6,7 @@ import {
   ahead, daysBetween, eventDates, kindWord, longDate, paragraphs, postedOn, schoolName, shortDate, termName, today, yearProgress,
   currentTerm, type Announcement, type Dated, type Kind, type PublicSite, type Faq,
 } from './data';
+
 
 type Page = { site: PublicSite; go: Go };
 
@@ -58,6 +59,36 @@ function NoticeList({ items, go }: { items: Announcement[]; go: Go }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+function AnnouncementShowcase({ items, go }: { items: Announcement[]; go: Go }) {
+  const featured = items.find(a => a.pinned) ?? items[0]!;
+  const regular = items.filter(a => a.id !== featured.id);
+  return (
+    <div className="announcement-showcase">
+      <article className={`announcement-feature${featured.pinned ? ' announcement-feature-pinned' : ''}`}>
+        <div className="announcement-feature-body">
+          <span className="announcement-label">{featured.pinned ? 'Featured announcement' : 'Latest announcement'}</span>
+          <Meta a={featured} />
+          <h3><Link to={`/announcements/${featured.id}`} go={go}>{featured.title}</Link></h3>
+          <p>{featured.summary}</p>
+          <Link to={`/announcements/${featured.id}`} go={go} className="announcement-read-more">Read more<SiteIcon name="arrow" size={16} /></Link>
+        </div>
+      </article>
+      {regular.length ? (
+        <ol className="announcement-grid">
+          {regular.map(a => (
+            <li key={a.id} className={`announcement-card${a.pinned ? ' announcement-card-pinned' : ''}`}>
+              <Meta a={a} />
+              <h3><Link to={`/announcements/${a.id}`} go={go}>{a.title}</Link></h3>
+              <p>{a.summary}</p>
+              <Link to={`/announcements/${a.id}`} go={go} className="announcement-read-more">Read more<SiteIcon name="arrow" size={16} /></Link>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
   );
 }
 
@@ -183,7 +214,7 @@ function VisitArt() {
   );
 }
 
-export function Home({ site, go }: Page) {
+export function Home({ site, go, selectedId }: Page & { selectedId?: string }) {
   const name = schoolName(site);
   const [lead, sub] = splitName(name);
   const notices = site.announcements.slice(0, 5);
@@ -192,9 +223,10 @@ export function Home({ site, go }: Page) {
   const term = currentTerm(site);
   const place = site.school.address.split(',').map(part => part.trim()).filter(Boolean).slice(-2).join(', ');
   const s = site.site;
+  const selected = selectedId ? site.announcements.find(a => a.id === selectedId) : undefined;
   return (
     <>
-      <section className="hero">
+      <section className="hero home-section" id="home">
         {/* Balili's painted hillside: the StoBoSa homes forming their sunflower, the schoolhouse under the flag.
             It shows no person. A phone gets the right of the hill, so the sunflower stays whole. */}
         <picture className="hero-art">
@@ -237,21 +269,21 @@ export function Home({ site, go }: Page) {
         </div>
       </nav>
 
-      <section className="band band-paper">
-        <div className="wrap split">
-          <SectionHead kicker="From the school office" title="Announcements" note="News, events and advisories, newest first; pinned notices stay on top." link={{ to: '/announcements', label: 'All announcements', go }} />
-          {notices.length ? <NoticeList items={notices} go={go} /> : <Empty title="No announcements yet" body="Notices the principal or the school office posts appear here first." />}
+      <section className="band band-paper home-section" id="announcements">
+        <div className="wrap announcement-section">
+          <SectionHead kicker="From the school office" title="Announcements" note="News, events and advisories, newest first; pinned notices stay on top." link={{ to: '/announcements', label: 'View all announcements', go }} />
+          {notices.length ? <AnnouncementShowcase items={notices} go={go} /> : <Empty title="No announcements yet" body="Notices the principal or the school office posts appear here first." />}
         </div>
       </section>
 
-      <section className="band band-white">
+      <section className="band band-white home-section" id="calendar">
         <div className="wrap split">
           <SectionHead kicker="Coming up" title="Dates for families" note="Events the school has announced and the days without classes on its calendar." link={{ to: '/calendar', label: 'Full school calendar', go }} />
           {dates.length ? <Agenda items={dates} go={go} /> : <Empty title="Nothing scheduled yet" body="Events and days without classes appear here once the school posts them." />}
         </div>
       </section>
 
-      <section className="band band-night">
+      <section className="band band-night home-section" id="about">
         <div className="wrap visit">
           <div className="visit-copy reveal">
             <p className="kicker kicker-light">Our school</p>
@@ -262,6 +294,7 @@ export function Home({ site, go }: Page) {
           <ContactList site={site} tone="light" />
         </div>
       </section>
+      {selected ? <AnnouncementDialog announcement={selected} go={go} closePath="/" /> : null}
     </>
   );
 }
@@ -333,7 +366,7 @@ export function CalendarPage({ site, go }: Page) {
           </div>
         </section>
       ) : null}
-      <section className="band band-paper">
+      <section className="band band-paper page-target" id="calendar-content">
         <div className="wrap">
           {months.length ? months.map(([key, list]) => (
             <div key={key} className="month">
@@ -348,14 +381,53 @@ export function CalendarPage({ site, go }: Page) {
   );
 }
 
-export function AnnouncementsPage({ site, go }: Page) {
+function AnnouncementDialog({ announcement: a, go, closePath }: { announcement: Announcement; go: Go; closePath: string }) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') go(closePath); };
+    document.addEventListener('keydown', closeOnEscape);
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      body.style.overflow = previousOverflow;
+    };
+  }, [go]);
+  const stop = (event: MouseEvent<HTMLDivElement>) => { if (event.target === event.currentTarget) go(closePath); };
+  return (
+    <div className="announcement-dialog-backdrop" onMouseDown={stop}>
+      <div className={`announcement-dialog announcement-dialog-${a.kind}`} role="dialog" aria-modal="true" aria-labelledby="announcement-dialog-title">
+        <button type="button" className="announcement-dialog-close" onClick={() => go(closePath)} aria-label="Close announcement"><SiteIcon name="close" size={20} /></button>
+        <div className="announcement-detail-card">
+          <Meta a={a} />
+          <div className="announcement-detail-copy">
+            <p className="announcement-detail-kicker">{a.kind === 'advisory' ? 'School advisory' : a.kind === 'event' ? 'School event' : 'From the school office'}</p>
+            <h2 id="announcement-dialog-title">{a.title}</h2>
+            <p className="announcement-detail-summary">{a.summary}</p>
+          </div>
+        </div>
+        {a.kind === 'event' ? (
+          <dl className="event-box">
+            <div><dt><SiteIcon name="calendar" size={16} />When</dt><dd>{eventDates(a)}{a.event_time ? `, ${a.event_time}` : ''}</dd></div>
+            {a.venue ? <div><dt><SiteIcon name="place" size={16} />Where</dt><dd>{a.venue}</dd></div> : null}
+          </dl>
+        ) : null}
+        {a.body.trim() ? paragraphs(a.body).map((p, i) => <p key={i} className="announcement-dialog-body">{p}</p>) : null}
+        <p className="posted">Posted {longDate(postedOn(a.published_at))} by the school office.</p>
+      </div>
+    </div>
+  );
+}
+
+export function AnnouncementsPage({ site, go, selectedId }: Page & { selectedId?: string }) {
   const [kind, setKind] = useState<Kind | 'all'>('all');
   const shown = site.announcements.filter(a => kind === 'all' || a.kind === kind);
   const count = (k: Kind) => site.announcements.filter(a => a.kind === k).length;
+  const selected = selectedId ? site.announcements.find(a => a.id === selectedId) : undefined;
   return (
     <>
       <PageHead kicker="From the school office" title="Announcements" lede="News, events and advisories, newest first." />
-      <section className="band band-paper">
+      <section className="band band-paper page-target" id="announcements-content">
         <div className="wrap narrow">
           {site.announcements.length ? (
             <div className="filters" role="group" aria-label="Show">
@@ -367,13 +439,13 @@ export function AnnouncementsPage({ site, go }: Page) {
           {shown.length ? <NoticeList items={shown} go={go} /> : <Empty title={kind === 'all' ? 'No announcements yet' : 'Nothing of this kind yet'} body={kind === 'all' ? 'The school has not posted an announcement yet.' : `No ${kindWord[kind as Kind].toLowerCase()} has been posted.`} />}
         </div>
       </section>
+      {selected ? <AnnouncementDialog announcement={selected} go={go} closePath="/announcements" /> : null}
     </>
   );
 }
 
 export function AnnouncementPage({ site, go, id }: Page & { id: string }) {
   const a = site.announcements.find(x => x.id === id);
-  const others = useMemo(() => site.announcements.filter(x => x.id !== id).slice(0, 3), [site, id]);
   if (!a) {
     return (
       <div className="wrap state-block">
@@ -383,34 +455,7 @@ export function AnnouncementPage({ site, go, id }: Page & { id: string }) {
       </div>
     );
   }
-  return (
-    <>
-      <PageHead kicker={kindWord[a.kind]} title={a.title} lede={a.summary}>
-        <Link to="/announcements" go={go} className="back-link"><SiteIcon name="back" size={16} />All announcements</Link>
-      </PageHead>
-      <section className="band band-white">
-        <div className="wrap narrow article">
-          <Meta a={a} />
-          {a.kind === 'event' ? (
-            <dl className="event-box">
-              <div><dt><SiteIcon name="calendar" size={16} />When</dt><dd>{eventDates(a)}{a.event_time ? `, ${a.event_time}` : ''}</dd></div>
-              {a.venue ? <div><dt><SiteIcon name="place" size={16} />Where</dt><dd>{a.venue}</dd></div> : null}
-            </dl>
-          ) : null}
-          {paragraphs(a.body).map((p, i) => <p key={i}>{p.split('\n').map((line, j) => <span key={j}>{j ? <br /> : null}{line}</span>)}</p>)}
-          <p className="posted">Posted {longDate(postedOn(a.published_at))} by the school office.</p>
-        </div>
-      </section>
-      {others.length ? (
-        <section className="band band-paper">
-          <div className="wrap narrow">
-            <h2 className="h-small">Also posted</h2>
-            <NoticeList items={others} go={go} />
-          </div>
-        </section>
-      ) : null}
-    </>
-  );
+  return <AnnouncementsPage site={site} go={go} selectedId={a.id} />;
 }
 
 export function AboutPage({ site, contact }: Page & { contact: boolean }) {
@@ -428,7 +473,7 @@ export function AboutPage({ site, contact }: Page & { contact: boolean }) {
   return (
     <>
       <PageHead kicker="Our school" title={`About ${name}`} lede={s.tagline ?? `A public elementary school of the Department of Education${site.school.district ? ` in ${site.school.district}` : ''}.`} />
-      <section className="band band-white">
+      <section className="band band-white page-target" id="about-content">
         <div className="wrap about">
           <div className="prose">
             {s.about ? paragraphs(s.about).map((p, i) => <p key={i}>{p}</p>) : <p className="muted">The school has not written its introduction here yet.</p>}

@@ -132,7 +132,7 @@ function TransitionSheet({ api, sectionId, monthOn, version, action, onClose, on
           </p>
 
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} onClick={() => void confirm()}>
+            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} aria-busy={busy} onClick={() => void confirm()}>
               {busy ? 'Recording…' : 'Confirm this review'}
             </button>
             <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setPlan(null); setSent(null); setStatus(idle); }}>
@@ -150,7 +150,7 @@ function TransitionSheet({ api, sectionId, monthOn, version, action, onClose, on
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Reviewing…' : 'Review this change'}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Reviewing…' : 'Review this change'}</button>
           </div>
         </form>
       )}

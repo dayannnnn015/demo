@@ -315,7 +315,7 @@ function OpenSheet({ api, year, sections, owners, nameOf, onClose, onDone }: {
           <PlanSummary plan={plan} nameOf={nameOf} />
           <p className="muted">Reason: {plan.reason}</p>
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} onClick={() => void confirm()}>
+            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} aria-busy={busy} onClick={() => void confirm()}>
               {busy ? 'Opening…' : 'Confirm and open the case'}
             </button>
             <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setPlan(null); setSent(null); setStatus(idle); }}>Change something</button>
@@ -380,7 +380,7 @@ function OpenSheet({ api, year, sections, owners, nameOf, onClose, onDone }: {
             <>
               <Proposal owners={owners} assignee={assignee} setAssignee={setAssignee} due={due} setDue={setDue} reason={reason} setReason={setReason} dueShown today={today} problem={due1} />
               <div className="form-actions">
-                <button type="submit" className="btn" disabled={busy || !enrollmentId}>{busy ? 'Reviewing…' : 'Review this case'}</button>
+                <button type="submit" className="btn" disabled={busy || !enrollmentId} aria-busy={busy}>{busy ? 'Reviewing…' : 'Review this case'}</button>
               </div>
             </>
           ) : null}
@@ -445,7 +445,7 @@ function ActionSheet({ api, detail, action, owners, nameOf, onClose, onDone }: {
           <PlanSummary plan={plan} nameOf={nameOf} />
           <p className="muted">Reason: {plan.reason}</p>
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} onClick={() => void confirm()}>
+            <button type="button" className="btn" disabled={busy || !plan.can_commit || !plan.review_hash} aria-busy={busy} onClick={() => void confirm()}>
               {busy ? 'Recording…' : 'Confirm this review'}
             </button>
             <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setPlan(null); setSent(null); setStatus(idle); }}>Change something</button>
@@ -457,7 +457,7 @@ function ActionSheet({ api, detail, action, owners, nameOf, onClose, onDone }: {
             dueShown={!closes(action)} today={today} problem={problem} />
           {closes(action) ? <p className="muted">Closing a case clears its due date.</p> : null}
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Reviewing…' : 'Review this change'}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Reviewing…' : 'Review this change'}</button>
           </div>
         </form>
       )}

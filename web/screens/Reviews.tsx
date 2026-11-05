@@ -197,7 +197,7 @@ function Confirmation({ busy, ready, label, onConfirm, onBack, lost }: { busy: b
     <>
       <p className="muted">{lost ?? 'If you confirm and never see a response, check the history before trying again rather than confirming twice.'}</p>
       <div className="form-actions">
-        <button type="button" className="btn" disabled={busy || !ready} onClick={onConfirm}>{busy ? 'Recording…' : label}</button>
+        <button type="button" className="btn" disabled={busy || !ready} aria-busy={busy} onClick={onConfirm}>{busy ? 'Recording…' : label}</button>
         <button type="button" className="btn ghost small" disabled={busy} onClick={onBack}>Change something</button>
       </div>
     </>
@@ -353,7 +353,7 @@ export function TimelineSheet({ api, enrollment, sections, sectionName, onClose,
           <p className="muted">Sections are limited to {gradeName(enrollment.grade_level)} in this school year: a correction never changes the grade or the year. The grade is corrected separately.</p>
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
           {tried && problems.length ? <Callout tone="attention" title="Fix the marked entries first">Each problem is shown on its entry.</Callout> : null}
-          <div className="form-actions"><button type="submit" className="btn" disabled={review.busy}>{review.busy ? 'Reviewing…' : 'Review this correction'}</button></div>
+          <div className="form-actions"><button type="submit" className="btn" disabled={review.busy} aria-busy={review.busy}>{review.busy ? 'Reviewing…' : 'Review this correction'}</button></div>
         </form>
       )}
     </Sheet>
@@ -443,7 +443,7 @@ export function PlacementSheet({ api, enrollment, sections, sectionName, onClose
             </div>
           ) : null}
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
-          <div className="form-actions"><button type="submit" className="btn" disabled={review.busy}>{review.busy ? 'Reviewing…' : 'Review this correction'}</button></div>
+          <div className="form-actions"><button type="submit" className="btn" disabled={review.busy} aria-busy={review.busy}>{review.busy ? 'Reviewing…' : 'Review this correction'}</button></div>
         </form>
       )}
     </Sheet>
@@ -596,7 +596,7 @@ export function IdentitySheet({ api, learner, action, onClose, onDone }: {
           )}
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} hint="10–500 characters on one line. Say which school records show these are, or are not, the same child." />
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={review.busy}>{review.busy ? 'Reviewing…' : 'Review'}</button>
+            <button type="submit" className="btn" disabled={review.busy} aria-busy={review.busy}>{review.busy ? 'Reviewing…' : 'Review'}</button>
             {action === 'link' ? <button type="button" className="btn ghost small" onClick={() => setOther(null)}>Choose another record</button> : null}
           </div>
         </form>
@@ -700,7 +700,7 @@ export function RecordSheet({ api, enrollment, action, learnerName: nameOf, onCl
             </>
           ) : null}
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
-          <div className="form-actions"><button type="submit" className="btn" disabled={review.busy}>{review.busy ? 'Reviewing…' : 'Review'}</button></div>
+          <div className="form-actions"><button type="submit" className="btn" disabled={review.busy} aria-busy={review.busy}>{review.busy ? 'Reviewing…' : 'Review'}</button></div>
         </form>
       )}
     </Sheet>
@@ -732,7 +732,7 @@ export function LrnCorrection({ api, learner, setStatus, onDone }: { api: Api; l
         </dl>
         <p className="muted">The old number is kept in the correction history. Check the new one against the school’s own record a digit at a time.</p>
         <div className="form-actions">
-          <button type="button" className="btn" disabled={busy} onClick={async () => {
+          <button type="button" className="btn" disabled={busy} aria-busy={busy} onClick={async () => {
             setBusy(true);
             setStatus({ text: 'Recording…', kind: 'busy' });
             try {

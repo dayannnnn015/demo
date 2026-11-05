@@ -234,7 +234,7 @@ function Advises({ api, teacher, year, sections, setStatus, reload }: { api: Api
           </div>
           {closed ? <p className="muted">{yearName(year)} is closed; its advisers can no longer change.</p> : (
             <div className="form-actions">
-              <button type="button" className="btn" disabled={busy || (!add.length && !release.length)} onClick={() => (taken.length ? setAsking(true) : void save())}>
+              <button type="button" className="btn" disabled={busy || (!add.length && !release.length)} aria-busy={busy} onClick={() => (taken.length ? setAsking(true) : void save())}>
                 {busy ? 'Saving…' : 'Save sections'}
               </button>
               {add.length || release.length ? <button type="button" className="btn ghost" disabled={busy} onClick={() => setChosen(mine)}>Undo changes</button> : null}

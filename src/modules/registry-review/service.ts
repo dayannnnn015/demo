@@ -8,7 +8,16 @@ import { registrySchemas } from '../registry/contracts.js';
 import { executeRegistry } from '../registry/service.js';
 import { candidateSchema, reviewSchemas, type ImportInput, type ReviewOperationId, type issueSchema, type previewRowSchema, type receiptSchema } from './contracts.js';
 
-const columns = ['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex'];
+/**
+ * The template's columns. `address` is last and was added by 0053, which is why
+ * it is read as optional below: a class list saved from the earlier template has
+ * seven columns and still imports, with no address recorded for its learners.
+ * Nothing else about a child or their family is here, because which further
+ * fields the school may keep is behind the learner-fields gate.
+ */
+const columns = ['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address'];
+/** The columns before 0053, still accepted so a file already filled in is not refused. */
+const columnsV1 = columns.slice(0, 7);
 const header = columns.join(',') + '\r\n';
 type Profile = z.infer<typeof registrySchemas.learnerCreate>;
 type Candidate = z.infer<typeof candidateSchema>;
@@ -16,7 +25,10 @@ type Issue = z.infer<typeof issueSchema>;
 type PreviewRow = z.infer<typeof previewRowSchema>;
 type Receipt = z.infer<typeof receiptSchema>;
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const inputDigest = (b: ImportInput) => digest({ format: 'edunexus-roster-v1', section_id: b.section_id, enrolled_on: b.enrolled_on, entry_kind: b.entry_kind, csv: b.csv, resolutions: [...b.resolutions].sort((a, c) => a.row - c.row) });
+// Everything that decides what the import does, including where it lands: a
+// preview reviewed for one section, year or grade cannot be committed against
+// another, and the refusal is PREVIEW_CHANGED rather than a surprise enrolment.
+const inputDigest = (b: ImportInput) => digest({ format: 'edunexus-roster-v2', section_id: b.section_id, academic_year_id: b.academic_year_id ?? null, grade_level: b.grade_level ?? null, enrolled_on: b.enrolled_on, entry_kind: b.entry_kind, csv: b.csv, resolutions: [...b.resolutions].sort((a, c) => a.row - c.row) });
 const missing = () => new AppError(404, 'NOT_FOUND', 'The record was not found.');
 const conflict = () => new AppError(409, 'PREVIEW_CHANGED', 'The roster or school records changed. Create and review a new preview.');
 
@@ -46,21 +58,27 @@ export function readCsv(csv: string): { profiles: (Profile | null)[]; issues: Is
   let records: string[][];
   try { records = parse(csv, { bom: true, skip_empty_lines: true, max_record_size: 2048, cast: false, relax_column_count: true }) as string[][]; }
   catch { throw new AppError(422, 'INVALID_CSV', 'Use a comma-separated UTF-8 file with the template header and correctly quoted fields.'); }
-  // Empty cells past the template's seven columns are a spreadsheet's trailing commas, not data.
+  // Empty cells past the template's last column are a spreadsheet's trailing commas, not data.
   records = records.map(r => { let n = r.length; while (n > columns.length && !(r[n - 1] ?? '').trim()) n--; return r.slice(0, n); });
   const head = (records.shift() ?? []).map(c => c.trim().toLowerCase());
-  if (JSON.stringify(head) !== JSON.stringify(columns)) throw new AppError(422, 'INVALID_CSV_HEADER', `The first row must be the template's header, ${columns.join(',')}, in that order.`);
+  // Either template: the current one, or the one before `address` was added.
+  const shape = JSON.stringify(head) === JSON.stringify(columns) ? columns
+    : JSON.stringify(head) === JSON.stringify(columnsV1) ? columnsV1 : null;
+  if (!shape) throw new AppError(422, 'INVALID_CSV_HEADER', `The first row must be the template's header, ${columns.join(',')}, in that order. A file from the earlier template, without the address column, is read too.`);
   if (records.length < 1 || records.length > 50) throw new AppError(422, 'INVALID_ROW_COUNT', 'Each import must contain 1 to 50 learner rows.');
   const issues: Issue[] = [];
   const profiles = records.map((values, index) => {
     const row = index + 1;
-    if (values.length !== columns.length) {
-      issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: `This row has ${values.length} columns; the template has ${columns.length}. A name holding a comma needs quotes around it.` }); return null;
+    if (values.length !== shape.length) {
+      issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: `This row has ${values.length} columns; the template has ${shape.length}. A name holding a comma needs quotes around it.` }); return null;
     }
     if (values.some(value => /[\u0000-\u001f\u007f\ufffd]/u.test(value))) {
       issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: 'Fields must contain valid single-line text.' }); return null;
     }
-    const fields: Record<string, string | null> = Object.fromEntries(columns.map((key, i) => [key, values[i]!.trim() || (['lrn', 'middle_name', 'name_extension'].includes(key) ? null : '')]));
+    const fields: Record<string, string | null> = Object.fromEntries(shape.map((key, i) => [key, values[i]!.trim() || (['lrn', 'middle_name', 'name_extension', 'address'].includes(key) ? null : '')]));
+    // A file from the earlier template carries no address column at all, which
+    // is unrecorded rather than empty.
+    if (!('address' in fields)) fields.address = null;
     fields.sex = sexes[(fields.sex ?? '').toLowerCase()] ?? fields.sex ?? '';
     const result = registrySchemas.learnerCreate.safeParse(fields);
     if (!result.success) {
@@ -90,11 +108,24 @@ async function planImport(tx: Query, b: ImportInput) {
   // The same lock is taken by all learner writes, enrollment commands, and
   // section/adviser changes. The year row lock additionally blocks year closure.
   await tx.query('select pg_advisory_xact_lock(82412001)');
-  const [section] = await tx.query<{ id: string; name: string; grade_level: number; academic_year_id: string; version: number }>('select id,name,grade_level,academic_year_id,version from edunexus.sections where id=$1', [b.section_id]);
-  if (!section) throw missing();
-  const [year] = await tx.query<{ id: string; version: number; status: string; starts_on: string; ends_on: string }>('select id,version,status,starts_on,ends_on from edunexus.academic_years where id=$1 for update', [section.academic_year_id]);
+  // A section says all three; a year and a grade without one enrol the learners
+  // with no class yet. The year is read from whichever was given, and a caller
+  // who gives both must not contradict itself: a class list landing at a grade
+  // other than the one its section teaches is a mistake worth refusing, not
+  // worth silently resolving one way or the other.
+  const [section] = b.section_id === null ? [undefined] : await tx.query<{ id: string; name: string; grade_level: number; academic_year_id: string; version: number }>('select id,name,grade_level,academic_year_id,version from edunexus.sections where id=$1', [b.section_id]);
+  if (b.section_id !== null && !section) throw missing();
+  if (section && b.academic_year_id !== undefined && b.academic_year_id !== section.academic_year_id) {
+    throw new AppError(422, 'SECTION_MISMATCH', 'This section belongs to another school year than the one given. Send the section alone, or the year and grade without it.');
+  }
+  if (section && b.grade_level !== undefined && b.grade_level !== section.grade_level) {
+    throw new AppError(422, 'SECTION_MISMATCH', 'This section does not teach the grade given. Send the section alone, or the year and grade without it.');
+  }
+  const grade = section ? section.grade_level : b.grade_level!;
+  const [year] = await tx.query<{ id: string; version: number; status: string; starts_on: string; ends_on: string }>('select id,version,status,starts_on,ends_on from edunexus.academic_years where id=$1 for update', [section ? section.academic_year_id : b.academic_year_id]);
   if (!year) throw missing();
-  if (year.status === 'closed') issue(0, 'section_id', 'YEAR_CLOSED', 'Import requires an open school year.');
+  const where = section ? 'section_id' : 'academic_year_id';
+  if (year.status === 'closed') issue(0, where, 'YEAR_CLOSED', 'Import requires an open school year.');
   if (b.enrolled_on < year.starts_on || b.enrolled_on > year.ends_on) issue(0, 'enrolled_on', 'INVALID_ENROLLMENT_DATE', 'Enrollment must fall within the selected school year.');
   const resolutions = new Map<number, ImportInput['resolutions'][number]>();
   for (const resolution of b.resolutions) {
@@ -148,19 +179,23 @@ async function planImport(tx: Query, b: ImportInput) {
     }
     return result;
   });
-  return { section, year, rows, issues, candidateIds, hash: digest({ format: 'edunexus-roster-v1', section, year, rows }) };
+  // The plan hash binds the grade as well as the section, so a preview reviewed
+  // for one grade cannot be committed against another. `section` is undefined
+  // for an import with no class yet, and that is part of what is hashed.
+  return { section: section ?? null, year, grade, rows, issues, candidateIds, hash: digest({ format: 'edunexus-roster-v2', section: section ?? null, year, grade, rows }) };
 }
 
 export async function executeReview(id: ReviewOperationId, ctx: Context, input: { body: unknown; query: unknown; id?: string }) {
   const { tx } = ctx;
   switch (id) {
-    case 'importTemplate': return { format: 'edunexus-roster-v1', csv: header, max_rows: 50, max_csv_bytes: 24000, max_request_bytes: 32768, preview_minutes: 30,
-      instructions: ['Use UTF-8 comma-separated CSV with this exact header. This is an EDUNEXUS template, not a DepEd LIS import format.', 'Preserve LRN as text with all 12 digits; every learner needs one. Dates use YYYY-MM-DD and sex is male or female.', 'One batch enrolls up to 50 learners in one section. Blank middle_name and name_extension are allowed.', 'Preview first. Resolve duplicates explicitly and preview again. Existing profiles are never overwritten.', 'Commit the same CSV, section, date, entry kind, and resolutions with confirmed=true within 30 minutes, using the same manager account.', 'Row numbers identify data records starting at 1, excluding the header. Do not put real learner data in source control or application logs.'] };
+    case 'importTemplate': return { format: 'edunexus-roster-v2', csv: header, max_rows: 50, max_csv_bytes: 24000, max_request_bytes: 32768, preview_minutes: 30,
+      instructions: ['Use UTF-8 comma-separated CSV with this exact header, or the EDUNEXUS Excel template, which carries the same columns. This is an EDUNEXUS template, not a DepEd LIS import format.', 'Preserve LRN as text with all 12 digits; every learner needs one. Dates use YYYY-MM-DD and sex is male or female.', 'One batch enrolls up to 50 learners in one section, which is one class list. Blank middle_name, name_extension and address are allowed: an address nobody has recorded is left empty rather than guessed at.', 'The address is one line, as the school\'s own learner information writes it. It is the only learner field beyond the name, LRN, birth date and sex that EDUNEXUS holds; any further field waits on the school\'s reviewed field list.', 'A file saved from the earlier template, without the address column, is still read; its learners are recorded with no address.', 'Preview first. Resolve duplicates explicitly and preview again. Existing profiles are never overwritten.', 'Commit the same CSV, section, date, entry kind, and resolutions with confirmed=true within 30 minutes, using the same manager account.', 'Row numbers identify data records starting at 1, excluding the header. Do not put real learner data in source control or application logs.'] };
     case 'importPreview': {
       const b = input.body as ImportInput, plan = await planImport(tx, b);
       await record(tx, id, plan.candidateIds);
       const [preview] = plan.issues.length ? [] : await tx.query('select id,expires_at from edunexus.create_import_preview($1,$2,$3)', [inputDigest(b), plan.hash, plan.rows.length]);
-      return { can_commit: plan.issues.length === 0, preview_id: preview?.id ?? null, expires_at: preview?.expires_at ?? null, section: plan.section, rows: plan.rows, issues: plan.issues };
+      return { can_commit: plan.issues.length === 0, preview_id: preview?.id ?? null, expires_at: preview?.expires_at ?? null,
+        section: plan.section, academic_year_id: plan.year.id, grade_level: plan.grade, rows: plan.rows, issues: plan.issues };
     }
     case 'importGet': {
       const [preview] = await tx.query(`select id,row_count,created_at,expires_at,committed_at,receipt,
@@ -184,12 +219,16 @@ export async function executeReview(id: ReviewOperationId, ctx: Context, input: 
           const created = await executeRegistry('learnerCreate', ctx, { body: row.profile, query: undefined });
           learnerId = String((created as Row).id);
         }
-        const [enrollment] = await tx.query('select id from edunexus.enroll_learner($1,$2,$3,$4)', [learnerId, b.section_id, b.enrolled_on, b.entry_kind]);
+        // One writer for both, as `enrollmentCreate` does it for one learner:
+        // the section is the optional argument, and null is a learner enrolled
+        // at a grade with no class yet.
+        const [enrollment] = await tx.query('select id from edunexus.place_enrollment($1,$2,$3::smallint,$4,$5,$6)',
+          [learnerId, plan.year.id, plan.grade, b.section_id, b.enrolled_on, b.entry_kind]);
         if (!enrollment || !learnerId || !row.action) throw new Error('Incomplete import plan');
         const resolution = b.resolutions.find(r => r.row === row.row);
         items.push({ row: row.row, learner_id: learnerId, enrollment_id: String(enrollment.id), action: row.action, resolution_reason: resolution?.action === 'create_distinct' ? resolution.reason : null });
       }
-      const receipt: Receipt = { preview_id: input.id!, section_id: b.section_id, academic_year_id: plan.year.id, items };
+      const receipt: Receipt = { preview_id: input.id!, section_id: b.section_id, academic_year_id: plan.year.id, grade_level: plan.grade, items };
       await tx.query('select edunexus.finish_import($1,$2,$3::jsonb)', [input.id, plan.hash, JSON.stringify(receipt)]);
       await record(tx, id, [...plan.candidateIds, ...items.map(i => i.learner_id)]);
       return receipt;

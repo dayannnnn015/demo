@@ -267,7 +267,7 @@ export function AssignAdvisers({ api, year, onClose }: { api: Api; year: Row; on
           <p className="hint batch-reason">Only active staff with Teacher access can advise a section, so only they are listed. The number beside a name is how many sections that teacher would hold.</p>
           <div className="form-actions">
             {failedRows.length && !busy ? <button type="button" className="btn" onClick={() => void readAgain()}>Read again and retry {failedRows.length === 1 ? '1 row' : `${failedRows.length} rows`}</button> : null}
-            <button type="submit" className={failedRows.length ? 'btn secondary' : 'btn'} disabled={busy || !changed.length}>{busy ? 'Working…' : changed.length ? `Save ${changed.length} change${changed.length === 1 ? '' : 's'}` : 'Nothing changed'}</button>
+            <button type="submit" className={failedRows.length ? 'btn secondary' : 'btn'} disabled={busy || !changed.length} aria-busy={busy}>{busy ? 'Working…' : changed.length ? `Save ${changed.length} change${changed.length === 1 ? '' : 's'}` : 'Nothing changed'}</button>
             <button type="button" className="btn secondary" disabled={busy} onClick={() => onClose(written)}>{written ? 'Done' : 'Cancel'}</button>
           </div>
         </form>

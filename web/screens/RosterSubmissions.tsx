@@ -9,7 +9,7 @@ import { csvProblem, csvStats, rosterFileText, rosterTemplateWorkbook } from '..
 import { downloadXlsx } from '../xlsx';
 import { LateRowSheet, csvRow } from './LateLearner';
 import {
-  Badge, Callout, Cell, Editor, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded,
+  Badge, Button, Callout, Cell, Editor, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded,
   gradeName, idle, learnerName, localToday, sentence, type Status,
 } from '../components/primitives';
 
@@ -140,7 +140,7 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
           {csv ? <p className="card-note">{stats.rows} {stats.rows === 1 ? 'row' : 'rows'}, {stats.bytes.toLocaleString()} bytes{problem ? ` — ${problem}` : ''}</p> : null}
           <StatusLine status={status} />
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !csv || !!problem || !scope.sectionId} onClick={() => void runCheck()} data-tour="roster-check">{busy ? 'Checking…' : 'Check the list'}</button>
+            <button type="button" className="btn" disabled={busy || !csv || !!problem || !scope.sectionId} aria-busy={busy} onClick={() => void runCheck()} data-tour="roster-check">{busy ? 'Checking…' : 'Check the list'}</button>
             <button type="button" className="btn secondary" onClick={() => setLate(true)} data-tour="roster-late">Add one late learner</button>
           </div>
         </div>
@@ -239,9 +239,11 @@ export function AdviserLists({ api, token, onOpen, setStatus }: { api: Api; toke
         detail={s => (s.status !== 'submitted' ? <p className="muted">This list has been {statusBadge[s.status][0].toLowerCase()}.</p> : (
           <>
             <div className="form-actions sheet-tools">
-              <button type="button" className="btn" onClick={async () => {
-                try { onOpen(await api<Submission>(`/roster-submissions/${s.id}`)); } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
-              }}>Open in the import</button>
+              <Button
+                label="Open in the import"
+                setStatus={setStatus}
+                onRun={async () => onOpen(await api<Submission>(`/roster-submissions/${s.id}`))}
+              />
             </div>
             <Task title="Decline this list" note="The adviser sees that it was declined" tone="warn">
               <Editor fields={[reasonField]} submitLabel="Decline" setStatus={setStatus}

@@ -58,6 +58,13 @@ export type Sf2Source = {
   section: { id: string; grade_level: number; name: string; adviser_user_id: string | null; adviser_name: string | null };
   school_year: { id: string; start_year: number; starts_on: string; ends_on: string; status: string };
   month_on: string; from: string; to: string; cutoff: string; month_status: 'draft' | 'submitted' | 'locked';
+  /**
+   * The month's movements in this section, read from the timeline rather than from
+   * the roster below, and shaped as the SF4's are (since 0050). A learner whose
+   * departure took effect on the first day of the month has no day on this month's
+   * register, and counting from the roster lost them — while the SF4 kept them.
+   */
+  movements?: Partial<Record<'transfer_in' | 'transfer_out' | 'dropout' | 'death' | 'withdrawal', Movement>>;
   /** The school's date today, so a day of classes still to come is pending rather than unmarked. */
   today: string;
   days: Schedule[];
@@ -178,9 +185,17 @@ export function computeSf2(source: Sf2Source, rule: DayRule | null) {
   });
 
   const bySex = (test: (l: typeof learners[number]) => boolean) => trio(learners.filter(l => l.sex === 'male' && test(l)).length, learners.filter(l => l.sex === 'female' && test(l)).length);
-  const monthEvents = (reason: string) => trio(
-    source.learners.filter(l => l.sex === 'male').reduce((n, l) => n + l.events.filter(e => e.reason === reason).length, 0),
-    source.learners.filter(l => l.sex === 'female').reduce((n, l) => n + l.events.filter(e => e.reason === reason).length, 0));
+  // Since 0050 the source counts the month's movements from the timeline, the same
+  // way the SF4 does, so the two forms cannot differ over a learner who left on the
+  // first of the month. A database still on 0049 sends none and the roster is read
+  // instead: the old undercount, rather than a form that will not open at all.
+  const monthEvents = (reason: 'transfer_in' | 'transfer_out' | 'dropout' | 'death' | 'withdrawal') => {
+    const seen = source.movements;
+    if (seen) return trio(seen[reason]?.b.male ?? 0, seen[reason]?.b.female ?? 0);
+    return trio(
+      source.learners.filter(l => l.sex === 'male').reduce((n, l) => n + l.events.filter(e => e.reason === reason).length, 0),
+      source.learners.filter(l => l.sex === 'female').reduce((n, l) => n + l.events.filter(e => e.reason === reason).length, 0));
+  };
   const registered = bySex(l => l.registered_at_end);
   const cutoff = trio(source.at_cutoff.male, source.at_cutoff.female);
   const late = trio(
@@ -239,6 +254,14 @@ export type Sf4Source = {
     movement: Partial<Record<'transfer_in' | 'transfer_out' | 'dropout' | 'death' | 'withdrawal', Movement>>;
     days: (Schedule & { groups: ['male' | 'female', Session, Session, number][] })[];
   }[];
+  /**
+   * Registered learners who are in no class as of the last day of the month
+   * (0052). Every figure on the SF4 is grouped by section, so these belong to
+   * no section row and no rollup; they are reported on their own and block the
+   * form rather than being added into a total that would then not match the
+   * rows printed above it.
+   */
+  unplaced?: { grade_level: number; male: number; female: number }[];
   other_staff: { name: string; role: string; position: string | null; specialization: string | null }[];
 };
 
@@ -256,13 +279,18 @@ export function computeSf4(source: Sf4Source, rule: DayRule | null) {
     let unmarked = 0, unconfigured = 0, alternative = 0, pending = 0;
     const total = { male: 0, female: 0 };
     let classDays = 0;
+    // Today is still to come until this section's register is started, exactly as on the
+    // SF2: a consolidation opened at eight in the morning is not missing today's marks,
+    // and counting the class as unmarked would flag every section that is simply not due.
+    const todayStarted = s.days.some(d => d.day_on === source.today && d.groups.some(([, am, pm]) => am !== null || pm !== null));
+    const ahead = (day: string) => day > source.today || (day === source.today && !todayStarted);
     for (const day of s.days) {
       const kind = dayKind(day, rule);
       if (kind === 'unconfigured') { unconfigured += 1; continue; }
       if (kind === 'alternative_delivery') { alternative += 1; continue; }
       if (kind !== 'class' || !rule) continue;
       classDays += 1;
-      if (day.day_on > source.today) { pending += 1; continue; }
+      if (ahead(day.day_on)) { pending += 1; continue; }
       for (const [sex, am, pm, n] of day.groups) {
         const value = dayValue(day, am, pm, rule);
         if (value.mark === 'unmarked') unmarked += n; else total[sex] += value.present * n;
@@ -293,6 +321,11 @@ export function computeSf4(source: Sf4Source, rule: DayRule | null) {
       withdrawal: rows.reduce((t, r) => addSpan(t, r.withdrawal), zero),
     };
   };
+  // A registered learner in no class belongs to no section row, so no rollup
+  // can hold them. Reported beside the form, never folded into it: a grade
+  // subtotal has to equal the section rows printed above it (0052).
+  const unplaced = (source.unplaced ?? []).map(u => ({ grade_level: u.grade_level, ...trio(u.male, u.female) }));
+  const unplacedTotal = unplaced.reduce((n, u) => n + u.total, 0);
   const levels = [...new Set(sections.map(s => s.grade_level))].sort((a, b) => a - b);
   return {
     form: 'sf4' as const,
@@ -302,9 +335,12 @@ export function computeSf4(source: Sf4Source, rule: DayRule | null) {
     sections,
     grades: levels.map(level => ({ grade_level: level, ...rollup(sections.filter(s => s.grade_level === level)) })),
     school_total: rollup(sections),
+    unplaced,
     other_staff: source.other_staff,
-    completeness: { complete: !!rule && sections.every(s => s.completeness.complete), rule_recorded: !!rule, incomplete_sections: sections.filter(s => !s.completeness.complete).length,
-      not_submitted: sections.filter(s => s.month_status === 'draft').length },
+    completeness: { complete: !!rule && sections.every(s => s.completeness.complete) && unplacedTotal === 0, rule_recorded: !!rule,
+      incomplete_sections: sections.filter(s => !s.completeness.complete).length,
+      not_submitted: sections.filter(s => s.month_status === 'draft').length,
+      unplaced_learners: unplacedTotal },
   };
 }
 

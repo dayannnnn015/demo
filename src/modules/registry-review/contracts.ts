@@ -9,18 +9,37 @@ const resolution = z.discriminatedUnion('action', [
   z.strictObject({ row, action: z.literal('use_existing'), learner_id: uuid, version }),
   z.strictObject({ row, action: z.literal('create_distinct'), reason }),
 ]);
+/**
+ * Where an imported class list lands.
+ *
+ * A section is the older, shorter way of saying all three, since a section has
+ * only one year and one grade. Giving the year and the grade **without** a
+ * section registers the learners and enrols them with no class yet, which is how
+ * a school puts every learner on the registry before classes are settled;
+ * assigning a class afterwards is a movement on that enrolment, not a second
+ * enrolment. The same shape, and the same words, as `enrollmentCreate` for one
+ * learner — this is that endpoint in bulk, not a second way of enrolling.
+ */
+const target = {
+  section_id: uuid.nullable().default(null),
+  academic_year_id: uuid.optional(),
+  grade_level: z.coerce.number().int().min(0).max(6).optional(),
+};
+const placed = (v: { section_id: string | null; academic_year_id?: string | undefined; grade_level?: number | undefined }) =>
+  v.section_id !== null || (v.academic_year_id !== undefined && v.grade_level !== undefined);
+const placedMessage = 'Give a section_id, or an academic_year_id and grade_level to import without one.';
 const importBody = {
-  section_id: uuid, enrolled_on: z.iso.date(), entry_kind: z.enum(['regular', 'transfer_in']).default('regular'),
+  ...target, enrolled_on: z.iso.date(), entry_kind: z.enum(['regular', 'transfer_in']).default('regular'),
   csv: z.string().min(1).max(24000), resolutions: z.array(resolution).max(50).default([]),
 };
 export const reviewSchemas = {
-  preview: z.strictObject(importBody),
-  commit: z.strictObject({ ...importBody, confirmed: z.literal(true) }),
+  preview: z.strictObject(importBody).refine(placed, placedMessage),
+  commit: z.strictObject({ ...importBody, confirmed: z.literal(true) }).refine(placed, placedMessage),
   correction: z.strictObject({ version, previous_lrn: registrySchemas.learnerLrn.shape.lrn, corrected_lrn: registrySchemas.learnerLrn.shape.lrn, reason, reviewed: z.literal(true) }),
 };
 export type ImportInput = z.infer<typeof reviewSchemas.preview>;
 export const reviewOperations = ([
-  { id: 'importTemplate', method: 'get', path: '/api/v1/roster-imports/template', summary: 'Get the minimal EDUNEXUS UTF-8 CSV roster template and limits' },
+  { id: 'importTemplate', method: 'get', path: '/api/v1/roster-imports/template', summary: 'Get the EDUNEXUS class-list template\'s own columns, limits and instructions, which both the CSV and the Excel template carry' },
   { id: 'importPreview', method: 'post', path: '/api/v1/roster-imports/preview', summary: 'Validate a class roster and review explicit duplicate resolutions without creating learners', body: reviewSchemas.preview },
   { id: 'importGet', method: 'get', path: '/api/v1/roster-imports/:id', summary: 'Read your preview status or committed import receipt' },
   { id: 'importCommit', method: 'post', path: '/api/v1/roster-imports/:id/commit', summary: 'Confirm the identical reviewed payload; commit all rows atomically or return the original receipt on retry', body: reviewSchemas.commit },
@@ -33,10 +52,14 @@ const profile = z.object({ lrn: z.string().nullable(), first_name: z.string(), m
 export const candidateSchema = profile.extend({ id: uuid, version: z.number().int() });
 export const previewRowSchema = z.object({ row, profile: profile.nullable(), action: z.enum(['create', 'use_existing']).nullable(), learner_id: uuid.nullable(), candidates: z.array(candidateSchema), candidates_truncated: z.boolean() });
 export const issueSchema = z.object({ row: z.number().int().min(0), field: z.string(), code: z.string(), message: z.string() });
-export const receiptSchema = z.object({ preview_id: uuid, section_id: uuid, academic_year_id: uuid, items: z.array(z.object({ row, learner_id: uuid, enrollment_id: uuid, action: z.enum(['create', 'use_existing']), resolution_reason: z.string().nullable() })) });
+export const receiptSchema = z.object({ preview_id: uuid, section_id: uuid.nullable().describe('Null when the learners were enrolled with no class yet; assigning one afterwards is a movement on the enrolment'), academic_year_id: uuid, grade_level: z.number().int(), items: z.array(z.object({ row, learner_id: uuid, enrollment_id: uuid, action: z.enum(['create', 'use_existing']), resolution_reason: z.string().nullable() })) });
 export const reviewResponses: Record<string, z.ZodType> = {
-  importTemplate: z.object({ format: z.literal('edunexus-roster-v1'), csv: z.string(), max_rows: z.literal(50), max_csv_bytes: z.literal(24000), max_request_bytes: z.literal(32768), preview_minutes: z.literal(30), instructions: z.array(z.string()) }),
-  importPreview: z.object({ can_commit: z.boolean(), preview_id: uuid.nullable(), expires_at: z.iso.datetime().nullable(), section: z.object({ id: uuid, name: z.string(), grade_level: z.number(), academic_year_id: uuid, version: z.number() }), rows: z.array(previewRowSchema), issues: z.array(issueSchema) }),
+  importTemplate: z.object({ format: z.literal('edunexus-roster-v2'), csv: z.string(), max_rows: z.literal(50), max_csv_bytes: z.literal(24000), max_request_bytes: z.literal(32768), preview_minutes: z.literal(30), instructions: z.array(z.string()) }),
+  importPreview: z.object({ can_commit: z.boolean(), preview_id: uuid.nullable(), expires_at: z.iso.datetime().nullable(),
+    section: z.object({ id: uuid, name: z.string(), grade_level: z.number(), academic_year_id: uuid, version: z.number() }).nullable()
+      .describe('Null when the import enrols with no class yet'),
+    academic_year_id: uuid, grade_level: z.number().int().describe('The grade the learners are enrolled at, from the section where one was given'),
+    rows: z.array(previewRowSchema), issues: z.array(issueSchema) }),
   importGet: z.object({ id: uuid, row_count: z.number(), created_at: z.iso.datetime(), expires_at: z.iso.datetime(), committed_at: z.iso.datetime().nullable(), status: z.enum(['pending', 'expired', 'committed']), receipt: receiptSchema.nullable() }),
   importCommit: receiptSchema,
   lrnCorrect: registryResponses.learnerGet!,

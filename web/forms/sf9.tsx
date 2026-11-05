@@ -25,40 +25,32 @@ const levels: [string, string, string][] = [
   ['E', 'Emerging (Nagsisimula)', 'Beginning to demonstrate basic skills, understanding, and values; requires close supervision, structured support, and targeted intervention.'],
 ];
 const certify = 'This is to certify that the above-named learner has satisfactorily completed the requirements for the grade level indicated.';
-const short = (month: string) => month.slice(0, 3);
 
 /**
- * The card typed where it prints, from the group leader's note of 12 October:
- * each box the adviser fills is an input in its own cell, keyed as the
- * box-by-box editor keys it (`g:` grades, `r:` remarks, `a:` the general
- * average, `v:` observed values, `n:` narratives). Attendance is never one of
- * them: its boxes are counted from the register by the school's rule.
+ * Which @page rule each card prints on, keyed by the layout the form itself
+ * reports rather than by grade level. The three cards are three different
+ * sheets — Grade 1 A4 upright, Grades 2-3 A4 wide, Grades 4-6 A4 wide at a
+ * wider margin — and app.css records which of the school's reference forms sets
+ * each one. Grades 4-6 is A4, not Letter, decided 2026-11-02: the school's Word
+ * file says Letter, but its three other references are A4, the staffroom dialog
+ * defaults to it, and Letter spilled the card onto a third sheet.
+ * This is not cosmetic: laid out on the wrong page box, the print dialog
+ * shrinks the whole card to fit the paper in the tray, which is what made the
+ * text unreadable and left a third of the sheet empty. Both places that print
+ * an SF9 — the learner's own card and the section's batch — read it from here.
  */
-export type CardEdit = {
-  value: (key: string) => string;
-  set: (key: string, value: string) => void;
-  changed: (key: string) => boolean;
-  invalid: (key: string) => boolean;
-  /** The parts of this grade's card typed here: grades, observed values, and which narratives. */
-  grades: boolean; values: boolean; notes: string[];
-  /** Said beside the attendance record while typing, since its boxes are not typed. */
-  attendance?: ReactNode;
-};
-const boxClass = (edit: CardEdit, key: string) => `box-input${edit.invalid(key) ? ' invalid' : edit.changed(key) ? ' changed' : ''}`;
-const GradeInput = ({ edit, k, label }: { edit: CardEdit; k: string; label: string }) => (
-  <input className={boxClass(edit, k)} inputMode="decimal" aria-label={label} value={edit.value(k)} onChange={e => edit.set(k, e.target.value)} />
-);
-const ChoiceInput = ({ edit, k, label, options }: { edit: CardEdit; k: string; label: string; options: [string, string][] }) => (
-  <select className={boxClass(edit, k)} aria-label={label} value={edit.value(k)} onChange={e => edit.set(k, e.target.value)}>
-    <option value="">·</option>{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
-  </select>
-);
-const remarkOptions: [string, string][] = [['passed', 'Passed'], ['failed', 'Failed']];
-const markOptions: [string, string][] = ['AO', 'SO', 'RO', 'NO'].map(m => [m, m]);
-const TextInput = ({ edit, k, label }: { edit: CardEdit; k: string; label: string }) => (
-  <textarea className={boxClass(edit, k)} aria-label={label} maxLength={1000} rows={3} value={edit.value(k)} onChange={e => edit.set(k, e.target.value)} />
-);
-const AttendanceNote = ({ edit }: { edit?: CardEdit | undefined }) => (edit?.attendance ? <div className="card-edit-note">{edit.attendance}</div> : null);
+export const sf9Page: Record<Sf9Form['layout'], string> = { grade1: 'sf9-g1', grades2_3: 'sf9-g23', grades4_6: 'sf9-g46' };
+const short = (month: string) => month.slice(0, 3);
+
+/*
+ * The card was once typed where it prints: every box the adviser fills was an
+ * input in its own cell. That was removed on 3 November 2026 so that the SF9 is
+ * only ever a reading of what is recorded. A report card is now entered in one
+ * place, Promotion → Report card, which goes through the same writer with its
+ * own review, version check and journal entry; a second way in was a second
+ * way for the two to disagree. Nothing here takes a value, by design — if
+ * typing ever returns it belongs behind that one writer, not in the sheet.
+ */
 /** A month under way is counted to date and starred, so a partial month never reads as a whole one. */
 const star = (to?: string) => (to ? '*' : '');
 function ToDate({ form }: { form: Sf9Form }) {
@@ -68,19 +60,47 @@ function ToDate({ form }: { form: Sf9Form }) {
   return <p className="card-small">* {month ? `${month.label} is counted to ${dayAndMonth(month.to_date!)}; the month is not over.` : ''}{total ? ` The total is to ${dayAndMonth(total)}.` : ''}</p>;
 }
 
+/**
+ * The two seals at the head of the card, as the DepEd forms place them: the
+ * Department's on the left, the school's on the right, the heading centred
+ * between them.
+ *
+ * They are files, not vector redraws like the EDUNEXUS mark in
+ * `components/brand.tsx`: a seal is photographic detail rather than geometry,
+ * and `img-src 'self'` already serves the sign-in page's hillside from
+ * `/images/`, so two more same-origin files need no change to the policy. They
+ * must stay same-origin — the policy blocks a remote URL, and a report card
+ * should not depend on a third-party host being up on the day it is printed.
+ * Each name carries its version, as the hero illustration's does.
+ *
+ * Both carry transparency. The Department's artwork as published sits on a grey
+ * gradient, which printed as a box around the seal; that background was cut
+ * away by flood-filling inwards from the border, so the white inside the ring
+ * and the open book is left alone.
+ *
+ * Empty alt text on purpose: the Department and the school are both named in
+ * the heading between them, so announcing either again would only repeat.
+ */
+const DepedSeal = () => <img className="card-seal" src="/images/deped-seal-v2-320.png" alt="" width={320} height={320} />;
+const SchoolSeal = () => <img className="card-seal" src="/images/balili-seal-v1-231.png" alt="" width={231} height={223} />;
+
 function Heading({ form, title }: { form: Sf9Form; title: string }) {
   const s = form.school;
   return (
     <div className="card-heading">
-      <p>Republic of the Philippines</p>
-      <p>Department of Education</p>
-      {s.region ? <p>{s.region}</p> : null}
-      {s.division ? <p>{s.division}</p> : null}
-      {s.district ? <p>{s.district}</p> : null}
-      <p className="card-school">{s.name.toUpperCase()}</p>
-      {s.school_code ? <p>School ID {s.school_code}</p> : null}
-      <h3>{title}</h3>
-      <p>School Year {schoolYearLabel(form.school_year.start_year).replace(' - ', '-')}</p>
+      <DepedSeal />
+      <div className="card-heading-text">
+        <p>Republic of the Philippines</p>
+        <p>Department of Education</p>
+        {s.region ? <p>{s.region}</p> : null}
+        {s.division ? <p>{s.division}</p> : null}
+        {s.district ? <p>{s.district}</p> : null}
+        <p className="card-school">{s.name.toUpperCase()}</p>
+        {s.school_code ? <p>School ID {s.school_code}</p> : null}
+        <h3>{title}</h3>
+        <p>School Year {schoolYearLabel(form.school_year.start_year).replace(' - ', '-')}</p>
+      </div>
+      <SchoolSeal />
     </div>
   );
 }
@@ -103,19 +123,16 @@ function Transfer({ form, adviserLabel, headLabel }: { form: Sf9Form; adviserLab
       </div>
       <h4>Cancellation of Eligibility {older ? 'for' : 'to'} Transfer</h4>
       <p>Admitted in: ______________________ &nbsp; Date: ______________</p>
-      <div className="card-signatures"><Signature name={null} role={headLabel} /></div>
+      <div className="card-signatures"><Signature name={form.school.school_head_name} role={headLabel} /></div>
     </div>
   );
 }
 
-function Grades({ form, finalLabel, edit }: { form: Sf9Form; finalLabel: string; edit?: CardEdit | undefined }) {
-  const typed = edit?.grades ? edit : undefined;
-  const grade = (key: string, shown: number | null | undefined, label: string, bold = false) => (typed
-    ? <td key={key} className="numeric box-cell"><GradeInput edit={typed} k={key} label={label} /></td>
-    : <td key={key} className="numeric">{bold ? <b>{shownGrade(shown)}</b> : shownGrade(shown)}</td>);
-  const remark = (key: string, shown: 'passed' | 'failed' | null, label: string) => (typed
-    ? <td key={key} className="numeric box-cell"><ChoiceInput edit={typed} k={key} label={label} options={remarkOptions} /></td>
-    : <td key={key} className="numeric">{remarkWord(shown)}</td>);
+function Grades({ form, finalLabel }: { form: Sf9Form; finalLabel: string }) {
+  const grade = (key: string, shown: number | null | undefined, _label: string, bold = false) =>
+    <td key={key} className="numeric">{bold ? <b>{shownGrade(shown)}</b> : shownGrade(shown)}</td>;
+  const remark = (key: string, shown: 'passed' | 'failed' | null, _label: string) =>
+    <td key={key} className="numeric">{remarkWord(shown)}</td>;
   return (
     <table className="paper-grid card-table">
       <thead>
@@ -150,7 +167,7 @@ function MonthTable({ form, rows, corner }: { form: Sf9Form; rows: [string, 'cla
 }
 
 /** The Grades 4–6 progress report card: a folded sheet, front and back. */
-function Card46({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) {
+function Card46({ form }: { form: Sf9Form }) {
   const tardy = form.rule?.mixed_day === 'tardy';
   return (
     <>
@@ -160,7 +177,6 @@ function Card46({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
           <MonthTable form={form} corner="Academic Months" rows={[['No. of School Days', 'class_days'], ['No. of School Days Present', 'present'], ...(tardy ? [['No. of Times Tardy', 'tardy']] as [string, 'tardy'][] : [])]} />
           <ToDate form={form} />
           {tardy ? null : <p className="card-small">Times tardy are not recorded under the school’s attendance rule.</p>}
-          <AttendanceNote edit={edit} />
           <h4>Parent/Guardian’s Signature</h4>
           {form.periods.map(p => <p key={p.id} className="card-sign-line">{p.name} ______________________________</p>)}
         </div>
@@ -182,7 +198,7 @@ function Card46({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
       <div className="card-page">
         <div className="card-half">
           <h4>Report on Learning Progress and Achievement</h4>
-          <Grades form={form} finalLabel="Final Grade" edit={edit} />
+          <Grades form={form} finalLabel="Final Grade" />
           <table className="paper-grid card-table descriptors">
             <thead><tr><th>Descriptors</th><th>Grading Scale</th><th>Remarks</th></tr></thead>
             <tbody>{(form.school_year.start_year >= 2026 ? descriptors23.map(([scale, word, remark]): [string, string, string] => [word, scale, remark]) : descriptors46).map(([a, b, c]) => <tr key={a}><td>{a}</td><td>{b}</td><td>{c}</td></tr>)}</tbody>
@@ -198,9 +214,7 @@ function Card46({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
                 <tr key={st.code}>
                   {i === 0 ? <td rowSpan={v.statements.length}><b>{v.value}</b></td> : null}
                   <td>{st.text}</td>
-                  {form.periods.map(p => (edit?.values
-                    ? <td key={p.id} className="numeric box-cell"><ChoiceInput edit={edit} k={`v:${p.id}:${st.code}`} label={`${st.code}, ${p.name}`} options={markOptions} /></td>
-                    : <td key={p.id} className="numeric">{form.values[p.id]?.[st.code] ?? ''}</td>))}
+                  {form.periods.map(p => <td key={p.id} className="numeric">{form.values[p.id]?.[st.code] ?? ''}</td>)}
                 </tr>
               )))}
             </tbody>
@@ -216,7 +230,7 @@ function Card46({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
 }
 
 /** The Grades 2–3 learner's performance report, one landscape sheet. */
-function Card23({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) {
+function Card23({ form }: { form: Sf9Form }) {
   return (
     <div className="card-page">
       <div className="card-half">
@@ -230,7 +244,7 @@ function Card23({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
           <Signature name={form.enrollment.adviser_name} role="Adviser" />
         </div>
         <h4>Learning Progress and Achievement</h4>
-        <Grades form={form} finalLabel={form.enrollment.grade_level === 3 ? 'Ave.' : 'Final Grade'} edit={edit} />
+        <Grades form={form} finalLabel={form.enrollment.grade_level === 3 ? 'Ave.' : 'Final Grade'} />
         <table className="paper-grid card-table descriptors">
           <thead><tr><th>Grading Scale</th><th>Descriptors</th><th>Remarks</th></tr></thead>
           <tbody>{descriptors23.map(([a, b, c]) => <tr key={a}><td>{a}</td><td>{b}</td><td>{c}</td></tr>)}</tbody>
@@ -240,11 +254,10 @@ function Card23({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
         <h4>Attendance Record</h4>
         <MonthTable form={form} corner="Month" rows={[['No. of Class Days', 'class_days'], ['No. of Days Present', 'present'], ['No. of Days Absent', 'absent']]} />
         <ToDate form={form} />
-        <AttendanceNote edit={edit} />
         <h4>Teacher’s Comments / Remarks</h4>
         {form.periods.map(p => (
           <div key={p.id} className="card-comment"><b>{p.name}</b>
-            {edit?.notes.includes('comment') ? <TextInput edit={edit} k={`n:comment:${p.id}`} label={`Teacher’s comment, ${p.name}`} /> : <p>{form.notes[p.id]?.comment ?? ''}</p>}
+            <p>{form.notes[p.id]?.comment ?? ''}</p>
           </div>
         ))}
         <h4>Parent/s Guardian’s Signature</h4>
@@ -256,7 +269,7 @@ function Card23({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) 
 }
 
 /** The Grade 1 learner's progress report card: narratives by term, no grades. */
-function Card1({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) {
+function Card1({ form }: { form: Sf9Form }) {
   const ageText = (a: Sf9Form['learner']['age_at_start']) => (a ? `${a.years} years, ${a.months} months` : '');
   const terms = [...new Set(form.attendance.rows.map(r => r.term ?? ''))];
   return (
@@ -272,10 +285,10 @@ function Card1({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) {
             <div key={p.id} className="card-term">
               <h4>{p.name.toUpperCase()}</h4>
               <div className="card-comment"><b>What Your Child Can Do (Mga Nagagawa)</b>
-                {edit?.notes.includes('can_do') ? <TextInput edit={edit} k={`n:can_do:${p.id}`} label={`What your child can do, ${p.name}`} /> : <p>{form.notes[p.id]?.can_do ?? ''}</p>}
+                <p>{form.notes[p.id]?.can_do ?? ''}</p>
               </div>
               <div className="card-comment"><b>What Your Child Is Learning To Improve (Dapat Linangin)</b>
-                {edit?.notes.includes('to_improve') ? <TextInput edit={edit} k={`n:to_improve:${p.id}`} label={`What your child is learning to improve, ${p.name}`} /> : <p>{form.notes[p.id]?.to_improve ?? ''}</p>}
+                <p>{form.notes[p.id]?.to_improve ?? ''}</p>
               </div>
               <p className="card-sign-line">Parent’s/Guardian’s Signature: ______________________</p>
             </div>
@@ -296,7 +309,6 @@ function Card1({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) {
             </tbody>
           </table>
           <ToDate form={form} />
-          <AttendanceNote edit={edit} />
           <h4>Important Note to Parents/Guardians</h4>
           <p className="card-small">A detailed record of your child’s progress across specific learning competencies is attached in the succeeding pages. This includes the monitoring of skills in Reading and Literacy, Language, Mathematics, Good Manners and Right Conduct, and Makabansa.</p>
           <p className="card-small">Performance levels used in monitoring:</p>
@@ -311,10 +323,10 @@ function Card1({ form, edit }: { form: Sf9Form; edit?: CardEdit | undefined }) {
   );
 }
 
-export function Sf9Sheet({ form, footer, edit }: { form: Sf9Form; footer?: ReactNode; edit?: CardEdit | undefined }) {
+export function Sf9Sheet({ form, footer }: { form: Sf9Form; footer?: ReactNode }) {
   return (
-    <div className={`paper sf9${edit ? ' typing' : ''}`}>
-      {form.layout === 'grade1' ? <Card1 form={form} edit={edit} /> : form.layout === 'grades2_3' ? <Card23 form={form} edit={edit} /> : <Card46 form={form} edit={edit} />}
+    <div className="paper sf9">
+      {form.layout === 'grade1' ? <Card1 form={form} /> : form.layout === 'grades2_3' ? <Card23 form={form} /> : <Card46 form={form} />}
       {footer ? <p className="print-foot">{footer}</p> : null}
     </div>
   );

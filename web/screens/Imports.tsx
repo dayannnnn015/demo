@@ -17,7 +17,7 @@ type Profile = { lrn: string | null; first_name: string; middle_name: string | n
 type Candidate = Profile & { id: string; version: number };
 type PreviewRow = { row: number; profile: Profile | null; action: 'create' | 'use_existing' | null; learner_id: string | null; candidates: Candidate[]; candidates_truncated: boolean };
 type Issue = { row: number; field: string; code: string; message: string };
-type Preview = { can_commit: boolean; preview_id: string | null; expires_at: string | null; section: { id: string; name: string; grade_level: number }; rows: PreviewRow[]; issues: Issue[] };
+type Preview = { can_commit: boolean; preview_id: string | null; expires_at: string | null; section: { id: string; name: string; grade_level: number } | null; academic_year_id: string; grade_level: number; rows: PreviewRow[]; issues: Issue[] };
 type Receipt = { preview_id: string; items: { row: number; learner_id: string; enrollment_id: string; action: 'create' | 'use_existing'; resolution_reason: string | null }[] };
 type Template = { csv: string; max_rows: number; max_csv_bytes: number; instructions: string[] };
 
@@ -25,7 +25,8 @@ export type Resolution = { row: number; action: 'use_existing'; learner_id: stri
 
 export { MAX_BYTES, MAX_ROWS, csvProblem, csvStats } from '../csv';
 import { EnlistSheet } from './LateLearner';
-import { csvProblem, csvStats, MAX_BYTES, MAX_ROWS, rosterFileText } from '../csv';
+import { csvProblem, csvStats, MAX_BYTES, MAX_ROWS, rosterFileText, rosterTemplateWorkbook } from '../csv';
+import { downloadXlsx } from '../xlsx';
 
 /** The resolutions a preview is sent with, one per row, in row order. */
 export const resolutionList = (chosen: Record<number, Resolution>) => Object.values(chosen).sort((a, b) => a.row - b.row);
@@ -85,6 +86,9 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   const [template, setTemplate] = useState<Template | null>(null);
   const [enrolledOn, setEnrolledOn] = useState('');
   const [kind, setKind] = useState<'regular' | 'transfer_in'>('regular');
+  /** Where the list lands: into one section, or onto the registry at a grade with no class yet. */
+  const [into, setInto] = useState<'section' | 'registry'>('section');
+  const [grade, setGrade] = useState('');
   const [csv, setCsv] = useState('');
   const [fileName, setFileName] = useState('');
   const [chosen, setChosen] = useState<Record<number, Resolution>>({});
@@ -111,8 +115,11 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   // something else entirely. A changed decision does not: the rows stay on
   // screen, because that is where decisions are made, and the preview is
   // marked stale until it is run again.
-  useEffect(() => { setPreview(null); setSent(null); }, [csv, scope.sectionId, enrolledOn, kind]);
-  useEffect(() => { setChosen({}); setReceipt(null); }, [csv, scope.sectionId]);
+  useEffect(() => { setPreview(null); setSent(null); }, [csv, scope.sectionId, enrolledOn, kind, into, grade]);
+  useEffect(() => { setChosen({}); setReceipt(null); }, [csv, scope.sectionId, into, grade]);
+  // An adviser's submitted list is always a section's, so opening one puts the
+  // choice back to a section rather than importing their class onto no class.
+  useEffect(() => { if (fromList) setInto('section'); }, [fromList]);
 
   // The year and section switch first; the list goes in once they are the ones on screen,
   // so the date reset that follows a change of year cannot overwrite it.
@@ -136,9 +143,18 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   const problem = csvProblem(csv);
   const stats = csvStats(csv);
   const closed = year?.status === 'closed';
+  /** Whether a destination has been chosen: a section, or a year and a grade. */
+  const target = into === 'section' ? !!scope.sectionId : !!scope.yearId && grade !== '';
 
+  // Into a section, or onto the registry at a grade with no class yet. The
+  // second is how a school puts every learner on the registry before classes
+  // are settled; assigning a class afterwards is a movement on the enrolment,
+  // not a second enrolment.
   const body = () => ({
-    section_id: scope.sectionId, enrolled_on: enrolledOn, entry_kind: kind, csv,
+    ...(into === 'section'
+      ? { section_id: scope.sectionId }
+      : { section_id: null, academic_year_id: scope.yearId, grade_level: Number(grade) }),
+    enrolled_on: enrolledOn, entry_kind: kind, csv,
     resolutions: resolutionList(chosen).map(r => (r.action === 'create_distinct' ? { ...r, reason: tidy(r.reason) } : r)),
   });
 
@@ -191,11 +207,13 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   };
 
   if (scope.years === null) return <><PageHeader route={route} /><div className="card"><TableSkeleton columns={4} /></div></>;
-  if (!scope.years.length || scope.sections?.length === 0) {
+  // A year with no sections yet is no longer a dead end: learners can be
+  // registered onto it at a grade, which is the whole point of that mode.
+  if (!scope.years.length) {
     return (
       <>
         <PageHeader route={route} />
-        <div className="card"><EmptyState title="No section to import into" body="An import enrols a class into one section of a school year. Create the year and its sections first." /></div>
+        <div className="card"><EmptyState title="No school year to import into" body="An import enrols learners for one school year. Create the year first; its sections can come afterwards." /></div>
       </>
     );
   }
@@ -211,7 +229,10 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
       <PageHeader
         route={route}
         actions={<>
-          <button type="button" className="btn secondary" disabled={!template} onClick={download}><Icon name="imports" size={15} />Download the template</button>
+          <button type="button" className="btn secondary" onClick={() => { void downloadXlsx('edunexus-class-list-template.xlsx', rosterTemplateWorkbook()).catch(error => setStatus({ text: message(error), kind: 'error' })); }}>
+            <Icon name="imports" size={15} />Download the template (Excel)
+          </button>
+          <button type="button" className="btn secondary" disabled={!template} onClick={download}><Icon name="imports" size={15} />Template as CSV</button>
           <button type="button" className="btn" disabled={!scope.year || !scope.sections?.length} onClick={() => setEnlisting(true)}><Icon name="plus" size={15} />Enlist one late learner</button>
         </>}
       />
@@ -233,15 +254,50 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
         ) : null}
         <div className="card-head">
           <div>
-            <h2>1. Where the class goes</h2>
-            <p className="card-note">Every learner in one file is enrolled into one section, on one date.</p>
+            <h2>1. Where the learners go</h2>
+            <p className="card-note">
+              {into === 'section'
+                ? 'Every learner in one file is enrolled into one section, on one date.'
+                : 'Every learner in one file is registered and enrolled at one grade, with no class yet. Assigning a class later is a change to that enrolment, not a second one.'}
+            </p>
           </div>
+        </div>
+        <div className="card-body">
+          <fieldset className="choose">
+            <legend className="label">Where this file lands</legend>
+            <label className="check-line">
+              <input type="radio" name={`${id}-into`} checked={into === 'section'} onChange={() => setInto('section')} />
+              <span>Into a section — the class list for one class</span>
+            </label>
+            <label className="check-line">
+              <input type="radio" name={`${id}-into`} checked={into === 'registry'} disabled={!!fromList} onChange={() => setInto('registry')} />
+              <span>Onto the registry at a grade, with no class yet — for registering the school’s learners before classes are settled</span>
+            </label>
+            {fromList ? <p className="muted">An adviser’s submitted list is a class list, so it is imported into their section.</p> : null}
+          </fieldset>
+          {into === 'registry' ? (
+            <Callout tone="info" title="These learners will have no class until one is assigned">
+              They are on the registry and enrolled for the year, so they count on the enrolment totals. They appear as <b>not in a class</b> on the SF4, which is
+              refused until every registered learner is in one, and they are on no section’s register. Assign their classes afterwards on <b>Enrollment</b>, or by
+              importing a class list into each section — a learner already enrolled this year is then refused, so import the registry list <i>or</i> the class lists,
+              not both.
+            </Callout>
+          ) : null}
         </div>
         <div className="card-head">
           <div className="toolbar">
-            <ScopePickers scope={scope} />
+            <ScopePickers scope={scope} yearOnly={into === 'registry'} />
+            {into === 'registry' ? (
+              <div className="field inline">
+                <label className="label" htmlFor={`${id}-grade`}>Enrol at grade</label>
+                <Select id={`${id}-grade`} value={grade} onChange={event => setGrade(event.target.value)}>
+                  <option value="">Choose a grade…</option>
+                  {[0, 1, 2, 3, 4, 5, 6].map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
+                </Select>
+              </div>
+            ) : null}
             <div className="field inline">
-              <label className="label" htmlFor={`${id}-on`}>First day in the section</label>
+              <label className="label" htmlFor={`${id}-on`}>{into === 'section' ? 'First day in the section' : 'First day enrolled'}</label>
               <input id={`${id}-on`} type="date" className="date-input" value={enrolledOn} min={String(year?.starts_on ?? '')} max={String(year?.ends_on ?? '')} onChange={event => setEnrolledOn(event.target.value)} />
             </div>
             <div className="field inline">
@@ -293,7 +349,7 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
           ) : null}
           {problem ? <Callout tone="attention" title="This file cannot be sent">{problem}</Callout> : null}
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !csv.trim() || !!problem || !scope.sectionId || !enrolledOn || closed} onClick={() => void runPreview()}>
+            <button type="button" className="btn" disabled={busy || !csv.trim() || !!problem || !target || !enrolledOn || closed} aria-busy={busy && !preview} onClick={() => void runPreview()}>
               {busy && !preview ? 'Checking…' : preview ? 'Preview again' : 'Preview the import'}
             </button>
           </div>
@@ -308,7 +364,10 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
             <div>
               <h2>3. Review</h2>
               <p className="card-note">
-                Into <b>{gradeName(preview.section.grade_level)} · {preview.section.name}</b> from <span className="mono">{enrolledOn}</span> as {kind === 'regular' ? 'regular enrollment' : 'transfers in'}.
+                {preview.section
+                  ? <>Into <b>{gradeName(preview.section.grade_level)} · {preview.section.name}</b></>
+                  : <>Onto the registry at <b>{gradeName(preview.grade_level)}</b>, <b>with no class yet</b></>}
+                {' '}from <span className="mono">{enrolledOn}</span> as {kind === 'regular' ? 'regular enrollment' : 'transfers in'}.
                 {preview.can_commit ? <> {creating} new {creating === 1 ? 'record' : 'records'}, {existing} already on file.</> : null}
               </p>
             </div>
@@ -354,7 +413,7 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
                   If you confirm and never see a response, confirm again — the same review returns the original receipt rather than importing twice.
                 </p>
                 <div className="form-actions">
-                  <button type="button" className="btn" disabled={busy} onClick={() => void commit()}>
+                  <button type="button" className="btn" disabled={busy} aria-busy={busy} onClick={() => void commit()}>
                     {busy ? 'Importing…' : `Import ${preview.rows.length} ${preview.rows.length === 1 ? 'learner' : 'learners'}`}
                   </button>
                 </div>

@@ -26,11 +26,11 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
   switch (id) {
     case 'learnerCreate': {
       const b = input.body as z.infer<typeof s.learnerCreate>;
-      return found(await tx.query('insert into edunexus.learners(lrn,first_name,middle_name,last_name,name_extension,birth_date,sex) values($1,$2,$3,$4,$5,$6,$7) returning *', [b.lrn, b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex]));
+      return found(await tx.query('insert into edunexus.learners(lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address) values($1,$2,$3,$4,$5,$6,$7,$8) returning *', [b.lrn, b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address]));
     }
     case 'learnerUpdate': {
       const b = input.body as z.infer<typeof s.learnerUpdate>;
-      return found(await tx.query('update edunexus.learners set first_name=$1,middle_name=$2,last_name=$3,name_extension=$4,birth_date=$5,sex=$6 where id=$7 and version=$8 returning *', [b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, input.id, b.version]), true);
+      return found(await tx.query('update edunexus.learners set first_name=$1,middle_name=$2,last_name=$3,name_extension=$4,birth_date=$5,sex=$6,address=$7 where id=$8 and version=$9 returning *', [b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address, input.id, b.version]), true);
     }
     case 'learnerLrn': {
       const b = input.body as z.infer<typeof s.learnerLrn>;
@@ -48,15 +48,50 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
       // accents and punctuation set aside on both sides; an LRN may carry spaces.
       const words = q.search === undefined ? null : searchWords(q.search);
       const lrnSearch = q.search === undefined ? null : q.search.replace(/[\s-]/g, '');
-      const rows = await tx.query(`select * from edunexus.learners where
+      // The grade and section each row shows come from the learner's enrolment
+      // in the active school year — there is at most one, by a unique index on
+      // academic_years(status) where status='active'. Row security filters the
+      // lateral join on its own, so a teacher reads a placement only for the
+      // sections they advise and everyone else's comes back null.
+      const rows = await tx.query(`select learners.*,p.placement from edunexus.learners
+        left join lateral (
+          select jsonb_build_object('enrollment_id',e.id,'academic_year_id',e.academic_year_id,'grade_level',e.grade_level,
+            'section_id',s.id,'section_name',s.name,'status',e.status) as placement
+          from edunexus.enrollments e left join edunexus.sections s on s.id=e.section_id
+          where e.learner_id=learners.id and e.record_state='valid'
+            and e.academic_year_id=(select id from edunexus.academic_years where status='active')
+          limit 1
+        ) p on true
+        where
         ($1::text[] is null or not exists (select 1 from unnest($1::text[]) w where position(w in regexp_replace(translate(lower(concat_ws(' ',last_name,first_name,middle_name,name_extension)),'ñáàâäãéèêëíìîïóòôöõúùûüç','naaaaaeeeeiiiiooooouuuuc'),'[^a-z0-9]+',' ','g'))=0) or lrn=$8)
         and ($2::date is null or birth_date=$2) and ($3::text is null or lrn=$3) and ($6::boolean or merged_into is null) and ($7::text is null or sex=$7)
-        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [words, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true',q.sex ?? null, lrnSearch]);
-      const result = page(rows, q.limit, q.offset); await record(result.items.map(row => row.id)); return result;
+        -- Scoped to the active year, the same year the Grade column above reads.
+        -- Without that predicate it matched a learner who was *ever* at the
+        -- grade, so a promoted learner answered to their old grade while their
+        -- row showed the new one: the filter and the column contradicted each
+        -- other on screen. With no active year nothing matches, which is what
+        -- the column says too -- it reads "Not enrolled this year" for everyone.
+        and ($9::int is null or exists (select 1 from edunexus.enrollments e where e.learner_id=learners.id and e.grade_level=$9 and e.record_state='valid'
+          and e.academic_year_id=(select id from edunexus.academic_years where status='active')))
+        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [words, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true',q.sex ?? null, lrnSearch, q.grade_level ?? null]);
+      const result = page(rows, q.limit, q.offset);
+      // The placement names an enrolment, so the access row names it too. One
+      // read of the registry stays one audit row either way; leaving the
+      // enrolments out would under-record what was actually disclosed.
+      const placed = result.items.flatMap(row => { const p = row.placement as { enrollment_id?: string } | null; return p?.enrollment_id ? [p.enrollment_id] : []; });
+      await record([...result.items.map(row => row.id), ...placed]);
+      return result;
     }
     case 'enrollmentCreate': {
       const b = input.body as z.infer<typeof s.enrollmentCreate>;
-      const row=found(await tx.query('select * from edunexus.enroll_learner($1,$2,$3,$4)', [b.learner_id, b.section_id, b.enrolled_on, b.entry_kind])); return enrollmentRow(row.id);
+      // With a section the older writer still derives the year and grade from
+      // it, so nothing that already worked changes. Without one the year and
+      // grade are what make the enrolment, and the section stays empty until an
+      // authorised workflow assigns it.
+      const row = found(b.section_id !== null
+        ? await tx.query('select * from edunexus.enroll_learner($1,$2,$3,$4)', [b.learner_id, b.section_id, b.enrolled_on, b.entry_kind])
+        : await tx.query('select * from edunexus.place_enrollment($1,$2,$3::smallint,null,$4,$5)', [b.learner_id, b.academic_year_id, b.grade_level, b.enrolled_on, b.entry_kind]));
+      return enrollmentRow(row.id);
     }
     case 'enrollmentMove': {
       const b = input.body as z.infer<typeof s.movement>;

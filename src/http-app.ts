@@ -33,6 +33,8 @@ import { executeSchoolReport } from './modules/school-reports/service.js';
 import { executeSubmission } from './modules/roster-submissions/service.js';
 import { executeForm } from './modules/forms/service.js';
 import { executeReport } from './modules/report-records/service.js';
+import { executePrior } from './modules/prior-records/service.js';
+import { executeRoster } from './modules/teacher-roster/service.js';
 import { executeNextYear } from './modules/next-year/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
@@ -133,7 +135,11 @@ export function createApp(deps: Dependencies) {
           and to_regprocedure('edunexus.record_report_card(uuid,jsonb,text)') is not null
           and to_regprocedure('edunexus.read_my_profile()') is not null
           and to_regprocedure('edunexus.read_my_sessions(uuid)') is not null
-          and to_regprocedure('edunexus.read_my_activity(text,bigint,integer)') is not null as ready`);
+          and to_regprocedure('edunexus.read_my_activity(text,bigint,integer)') is not null
+          and to_regprocedure('edunexus.read_learner_prior_records(uuid)') is not null
+          and to_regclass('edunexus.learner_prior_record_events') is not null
+          and to_regprocedure('edunexus.read_pullable_learners(uuid,text,integer)') is not null
+          and to_regprocedure('edunexus.read_encoding_progress(uuid)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });
@@ -164,11 +170,16 @@ export function createApp(deps: Dependencies) {
     });
     app.get(['/account/setup', '/app'], (_req, res) => {
       // The bundle is hashed and same-origin; styles and fonts ship as files.
-      // `img-src 'self'` exists for one file, /favicon.svg, which a browser
-      // fetches as an image and default-src would otherwise block. It stays at
-      // 'self' with no `data:`. The sign-in page shows the front page's hillside
-      // from /images/; past it the workspace renders no image, and nothing
-      // user-supplied is ever served from this origin.
+      // `img-src 'self'` exists for /favicon.svg, which a browser fetches as an
+      // image and default-src would otherwise block. It stays at 'self' with no
+      // `data:`. A short, closed list is served under it besides, every one from
+      // /images/ and versioned in its name: the front page's hillside, which the
+      // sign-in page shows, and the DepEd seal, DepEd wordmark and school seal at
+      // the heads of the SF9 and SF10. Past those the workspace renders no image
+      // -- a staff photo is drawn on a canvas from bytes read through the API, and
+      // the brand mark is a vector redraw, both for this reason. Every file on the
+      // list is one this repository ships, and nothing user-supplied is ever
+      // served from here. Adding to the list needs a decision in constraints.md.
       res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.type('html').send(appPage());
@@ -220,6 +231,8 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'roster-submissions') return executeSubmission(operation.id, context, input);
         if (operation.module === 'forms') return executeForm(operation.id, context, input);
         if (operation.module === 'report-records') return executeReport(operation.id, context, input);
+        if (operation.module === 'prior-records') return executePrior(operation.id, context, input);
+        if (operation.module === 'teacher-roster') return executeRoster(operation.id, context, input);
         if (operation.module === 'next-year') return executeNextYear(operation.id, context, input);
         if (operation.module === 'site') return executeSite(operation.id, context, input);
         if (operation.module === 'profiles') return executeProfile(operation.id, context, input);

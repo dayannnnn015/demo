@@ -8,6 +8,11 @@ export const profileFields: Field[] = [
   { key: 'name_extension', label: 'Extension', optional: true, maxLength: 20, hint: 'Jr, III, and so on.' },
   { key: 'birth_date', label: 'Birth date', type: 'date' },
   { key: 'sex', label: 'Sex as recorded on school forms', options: [['female', 'Female'], ['male', 'Male']], choose: true },
+  // One line, which is the whole of what migration 0053 opened of the
+  // learner-fields gate. Optional, because an address nobody has written down
+  // is unrecorded rather than blank, and requiring it would block registering a
+  // learner the school is enrolling today.
+  { key: 'address', label: 'Address', optional: true, maxLength: 300, wide: true, hint: 'One line, as the school’s own learner information writes it.' },
 ];
 
 /** The school's heading and signature details, as every form prints them; School profile and the forms edit them alike. */

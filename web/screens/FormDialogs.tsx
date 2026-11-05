@@ -1,19 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Api, Row } from '../api';
-import { ApiError, message } from '../api';
+import { message } from '../api';
 import { Icon } from '../components/icons';
-import { Confirm, Sheet } from '../components/overlay';
+import { Sheet } from '../components/overlay';
 import { PrintCopy } from '../components/print';
 import { SeededNotice } from '../components/seeded';
 import { Badge, Callout, FormSheet, StatusLine, TableSkeleton, idle, learnerName, localToday, type Status, ScrollArea } from '../components/primitives';
 import { Affects } from '../components/affects';
-import { descriptiveGrading } from '../deped';
 import { IssueFlow, issuedLine } from '../forms/shared';
-import { Sf9Sheet, type CardEdit } from '../forms/sf9';
+import { Sf9Sheet, sf9Page } from '../forms/sf9';
 import { Sf10Sheet } from '../forms/sf10';
 import { fingerprint, type Issuance, type Sf10Form, type Sf9Form } from '../forms/types';
-import { CardReview, cardBoxes, cardParts, useCardDraft, type CardRecords } from './CardEditor';
-import { gradeProblem } from './ReportCards';
 import { profileFields } from '../record-fields';
 
 // The SF9 and SF10 open in a view of their own that takes the working area
@@ -46,79 +43,30 @@ export function Sf9Dialog({ api, me, learner, enrollment, onClose }: { api: Api;
   const [status, setStatus] = useState<Status>(idle);
   const [issuing, setIssuing] = useState(false);
   const [printing, setPrinting] = useState<Issuance | null | false>(false);
-  const [records, setRecords] = useState<CardRecords | null>(null);
-  const [typing, setTyping] = useState(false);
-  const [reviewing, setReviewing] = useState(false);
-  const [leaving, setLeaving] = useState<'close' | 'stop' | null>(null);
-  const [tick, setTick] = useState(0);
-  const draft = useCardDraft(typing ? records?.learner : undefined);
 
-  useEffect(() => { void api<Sf9Form>(url).then(setForm).catch(error => setStatus({ text: message(error), kind: 'error' })); }, [api, url, tick]);
+  useEffect(() => { void api<Sf9Form>(url).then(setForm).catch(error => setStatus({ text: message(error), kind: 'error' })); }, [api, url]);
 
-  const readCard = () => api<CardRecords>(`/enrollments/${String(enrollment.id)}/report-card`).then(card => { setRecords(card); return card; });
-  const startTyping = async () => {
-    setStatus({ kind: 'busy', text: 'Opening the card for typing…' });
-    try {
-      const card = await readCard();
-      if (card.school_year.status === 'closed') { setStatus({ kind: 'error', text: 'This school year is closed, so its report cards are read only.' }); return; }
-      draft.discard();
-      setTyping(true);
-      setStatus(idle);
-    } catch (error) {
-      setStatus({ kind: 'error', text: error instanceof ApiError && error.status === 404
-        ? 'This card cannot be typed here: an adviser types the cards of the section they advise now, in a school year that is not closed.'
-        : message(error) });
-    }
-  };
-  // Recorded or refused, the card is read again and the draft dropped: what is shown is what is recorded.
-  const reread = () => { draft.discard(); refresh(); };
-  // After a conflict the card is read again and what was typed stays, over what is on file now (testing finding F28).
-  const refresh = () => { setTick(t => t + 1); void readCard().catch(error => setStatus({ kind: 'error', text: message(error) })); };
-
-  const descriptive = form ? descriptiveGrading(form.enrollment.grade_level, form.school_year.start_year) : false;
-  const changed = typing && records ? cardBoxes(records, records.learner, descriptive).filter(b => draft.changedKeys.includes(b.key)) : [];
-  const dirty = changed.length > 0;
-  const close = () => (dirty ? setLeaving('close') : onClose());
-  const teacher = me.role === 'teacher';
-  const edit: CardEdit | undefined = typing && records ? {
-    value: draft.value, set: draft.set,
-    changed: key => draft.changedKeys.includes(key),
-    invalid: key => (key.startsWith('g:') || key === 'a:grade') && !!gradeProblem(draft.value(key)),
-    ...cardParts(records.section.grade_level, descriptive),
-    attendance: (
-      <>These boxes are not typed. Each month is counted from the daily register by the school’s attendance rule, so the card always agrees with the SF2. To change one, mark the days on{' '}
-        <a href={teacher ? '#/attendance' : '#/sf2'} onClick={event => { if (dirty) { event.preventDefault(); setLeaving('close'); } }}>{teacher ? 'Daily attendance' : 'School Form 2'}</a>.</>
-    ),
-  } : undefined;
-
-  const actions = form ? (typing ? (
-    <>
-      <Badge tone={dirty ? 'attention' : 'neutral'}>{dirty ? `${changed.length} ${changed.length === 1 ? 'box' : 'boxes'} changed` : 'Typing on the card'}</Badge>
-      <button type="button" className="btn" disabled={!dirty || draft.problems.length > 0} onClick={() => setReviewing(true)}>Review and record</button>
-      {dirty ? <button type="button" className="btn ghost" onClick={draft.discard}>Discard changes</button> : null}
-      <button type="button" className="btn secondary" onClick={() => (dirty ? setLeaving('stop') : setTyping(false))}>Done typing</button>
-    </>
-  ) : (
+  const actions = form ? (
     <>
       <IssuedBadge issuance={form.last_issuance} />
-      <button type="button" className="btn secondary" onClick={() => void startTyping()}><Icon name="scores" size={15} />Type on the card</button>
-      <button type="button" className="btn secondary" onClick={() => setPrinting(null)}><Icon name="print" size={15} />Print</button>
+      <button type="button" className="btn secondary" onClick={() => setPrinting(null)}><Icon name="print" size={15} />Print a working copy</button>
       <button type="button" className="btn" onClick={() => setIssuing(true)}>Issue this SF9</button>
     </>
-  )) : undefined;
+  ) : undefined;
 
   return (
-    <Sheet full title={`SF9 · ${learnerName(learner)}`} actions={actions} onClose={close}
-      note={typing
-        ? 'Type each box as the ECR shows it, then review and record. A blank box stays not recorded; it is never read as zero. Nothing here computes a grade.'
-        : 'The report card for this school year, as it prints. Opening it is recorded in the privacy access log.'}>
+    <Sheet full title={`SF9 · ${learnerName(learner)}`} actions={actions} onClose={onClose}
+      note="The report card for this school year, as it prints. Grades are entered on Promotion → Report card, so this view only shows what is recorded. Opening it is recorded in the privacy access log.">
       <StatusLine status={status} />
       {form ? (
         <>
-          {!typing && form.warnings.length ? <Callout tone="attention" title="Before you issue it">{form.warnings.join(' ')}</Callout> : null}
-          {typing ? <Affects what="grades">This is the report card itself, the same record as Promotion → Report card. Forms already issued keep what they said.</Affects> : null}
-          {typing && draft.problems.length ? <p className="field-error" role="alert">{draft.problems[0]}</p> : null}
-          <ScrollArea className="paper-frame" label="The SF9, scrolls sideways"><Sf9Sheet form={form} edit={edit} /></ScrollArea>
+          {/* One warning reads as a sentence; several are one per month now that each names its own dates, and a paragraph of them hides the list. */}
+          {form.warnings.length ? (
+            <Callout tone="attention" title="Before you issue it">
+              {form.warnings.length === 1 ? form.warnings[0] : <ul>{form.warnings.map(w => <li key={w}>{w}</li>)}</ul>}
+            </Callout>
+          ) : null}
+          <ScrollArea className="paper-frame" label="The SF9, scrolls sideways"><Sf9Sheet form={form} /></ScrollArea>
           {issuing ? (
             <IssueFlow
               label="SF9" cost={issueCost('SF9')}
@@ -128,20 +76,7 @@ export function Sf9Dialog({ api, me, learner, enrollment, onClose }: { api: Api;
               setStatus={setStatus}
             />
           ) : null}
-          {reviewing && records ? (
-            <CardReview learner={records.learner} rows={changed.map(b => ({ box: b, before: draft.stored[b.key] ?? '', after: draft.value(b.key).trim() }))}
-              onClose={() => setReviewing(false)}
-              submit={reason => api(`/enrollments/${String(enrollment.id)}/report-card`, 'POST', { ...draft.body(), reason })}
-              onDone={() => { setReviewing(false); setStatus({ kind: 'done', text: `Recorded on ${learnerName(learner)}’s card: ${changed.length} ${changed.length === 1 ? 'box' : 'boxes'}.` }); reread(); }}
-              onConflict={refresh} />
-          ) : null}
-          {leaving ? (
-            <Confirm title="Leave this card without recording it?" tone="plain" confirmLabel="Leave without recording"
-              body={`${changed.length === 1 ? '1 box' : `${changed.length} boxes`} on ${learnerName(learner)}’s card changed and ${changed.length === 1 ? 'is' : 'are'} not recorded yet. Leaving discards ${changed.length === 1 ? 'it' : 'them'}.`}
-              onClose={() => setLeaving(null)}
-              onConfirm={() => { const what = leaving; setLeaving(null); draft.discard(); if (what === 'close') onClose(); else setTyping(false); }} />
-          ) : null}
-          <PrintCopy printing={printing !== false} onPrinted={() => setPrinting(false)} landscape={Number(enrollment.grade_level) !== 1} long={Number(enrollment.grade_level) === 1}>
+          <PrintCopy printing={printing !== false} onPrinted={() => setPrinting(false)} page={sf9Page[form.layout]}>
             <SeededNotice me={me} />
             <Sf9Sheet form={form} footer={footerFor('SF9')(printing || null)} />
           </PrintCopy>
@@ -174,7 +109,7 @@ function FormDialog<F extends Sf10Form>({ api, me, title, note, url, label, rend
     <>
       <IssuedBadge issuance={form.last_issuance} />
       {manager && learnerId ? <button type="button" className="btn secondary" onClick={() => void editDetails()}><Icon name="learners" size={15} />Edit learner details</button> : null}
-      <button type="button" className="btn secondary" onClick={() => setPrinting(null)}><Icon name="print" size={15} />Print</button>
+      <button type="button" className="btn secondary" onClick={() => setPrinting(null)}><Icon name="print" size={15} />Print a working copy</button>
       <button type="button" className="btn" onClick={() => setIssuing(true)}>Issue this {label}</button>
     </>
   ) : undefined;
@@ -202,7 +137,7 @@ function FormDialog<F extends Sf10Form>({ api, me, title, note, url, label, rend
               onSaved={() => { setEditing(null); setTick(t => t + 1); setStatus({ text: 'Learner details saved. The SF10 now shows them.', kind: 'done' }); }}
               onClose={() => setEditing(null)} />
           ) : null}
-          <PrintCopy printing={printing !== false} onPrinted={() => setPrinting(false)} landscape={false} long>
+          <PrintCopy printing={printing !== false} onPrinted={() => setPrinting(false)} page="sf10">
             <SeededNotice me={me} />
             {render(form, footerFor(label)(printing || null))}
           </PrintCopy>

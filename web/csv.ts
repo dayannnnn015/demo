@@ -4,7 +4,7 @@
  * save, and the reads that filled it were logged like any other.
  */
 import { weekday } from './dates';
-import { XWorkbook, readXlsxRows, tableWorkbook, type XStyle } from './xlsx';
+import { XWorkbook, readXlsxRows, tableWorkbook, textPx, type XStyle } from './xlsx';
 
 /**
  * One CSV cell. Quoted when it holds a separator, and defused when it starts
@@ -165,20 +165,97 @@ export function csvProblem(text: string): string | null {
   return null;
 }
 
-/** The roster's columns, which the API requires in this order. */
-export const ROSTER_HEADER = 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex';
+/**
+ * The roster's columns, which the API requires in this order.
+ *
+ * This is the one frontend copy of the list `GET /roster-imports/template`
+ * publishes, and `tests/registry-address.test.ts` asserts the two are equal. It
+ * is a copy rather than a fetch because the template endpoint is manager-only
+ * and advisers prepare class lists too, and widening a backend control to save a
+ * frontend fetch is not a trade this codebase makes.
+ *
+ * `address` is last, and was added by migration 0053. It is the only learner
+ * field beyond the name, LRN, birth date and sex that EDUNEXUS holds: any
+ * further field about a child or their family waits on the school's reviewed
+ * field list. A file saved from the earlier seven-column template still imports.
+ */
+export const ROSTER_HEADER = 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address';
+
+/** What each column holds, said in the template itself rather than only on the screen that downloads it. */
+const rosterColumnNotes: Record<string, { required: boolean; note: string }> = {
+  lrn: { required: true, note: 'All twelve digits, as the school’s LIS shows it, leading zeroes included. This column is already formatted as text; typed into a number column, a twelve-digit LRN becomes 1.36512E+11 and the digits are gone for good.' },
+  first_name: { required: true, note: 'As the school’s own forms print it.' },
+  middle_name: { required: false, note: 'Optional. Leave it empty where the learner has none recorded.' },
+  last_name: { required: true, note: 'As the school’s own forms print it.' },
+  name_extension: { required: false, note: 'Jr., III and the like. Optional.' },
+  birth_date: { required: true, note: 'YYYY-MM-DD, for example 2017-03-14. A past date. This column is formatted as text so the day and month cannot be swapped by a regional setting.' },
+  sex: { required: true, note: 'male or female, as recorded on school forms. M and F are read too.' },
+  address: { required: false, note: 'One line, as the school’s own learner information writes it. Optional: an address nobody has recorded is left empty rather than guessed at, and the learner is recorded without one.' },
+};
 
 /**
- * The class-list template as an Excel file. The LRN and birth-date columns are
- * set to text before anyone types in them: typed into a plain cell, a twelve-digit
- * LRN shows as 1.36512E+11, and a CSV saved from it loses the LRN for good.
+ * The class-list template as an Excel file: the rows to fill in, what each
+ * column holds, and one worked row.
+ *
+ * The LRN and birth-date columns are set to text before anyone types in them,
+ * and the empty rows are written rather than left absent — an unstyled cell is
+ * one Excel formats as a number, and the LRN typed into it loses its digits.
+ * This is the template for registering the school's current learners in bulk;
+ * registering one learner at a time on the registry is unchanged and is still
+ * how a single child is added.
  */
 export function rosterTemplateWorkbook() {
-  return tableWorkbook({
-    sheet: 'Class list', title: 'EDUNEXUS class list',
-    note: 'One learner a row under the header, which stays as it is. LRN: all twelve digits, required for every learner. Birth date: YYYY-MM-DD. Sex: male or female. Save it and choose it on the import screen as it is.',
-    header: ROSTER_HEADER.split(','), rows: Array.from({ length: 50 }, () => Array<null>(7).fill(null)), text: [0, 5],
+  const header = ROSTER_HEADER.split(',');
+  const book = new XWorkbook();
+  const sheet = book.sheet('Class list');
+  const rows = 50;
+  sheet.setup = { landscape: true, paper: 'a4', fitWidth: false, freeze: { rows: 3, cols: 1 } };
+  sheet.merge(1, 1, 1, header.length, 'EDUNEXUS class list', { bold: true, size: 13 });
+  sheet.merge(2, 1, 2, header.length,
+    'One learner a row under the header, which stays exactly as it is — the columns are read by position. Read “What each column holds” before filling this in. Shaded headings are required. One file is one class list, up to 50 learners.',
+    { italic: true, size: 9, wrap: true });
+  header.forEach((name, i) => sheet.set(3, i + 1, name, {
+    bold: true, border: true, size: 9, wrap: true, valign: 'bottom',
+    // Required and optional are told apart by colour *and* by the word in the
+    // notes sheet, because colour alone says nothing to a reader who cannot see
+    // it or who prints this in grey.
+    fill: rosterColumnNotes[name]?.required ? 'FFE9C7' : 'F2F2F2',
+  }));
+  const text = new Set(['lrn', 'birth_date']);
+  for (let r = 0; r < rows; r++) header.forEach((name, c) => sheet.set(4 + r, c + 1, null, { border: true, size: 9, ...(text.has(name) ? { format: '@' as const } : {}) }));
+  const sex = header.indexOf('sex') + 1;
+  sheet.allow(4, sex, 3 + rows, sex, { kind: 'list', values: ['male', 'female'] }, 'male or female', 'Type male or female, as recorded on school forms.');
+  header.forEach((name, c) => {
+    const widest = Math.max(...name.split('_').map(word => textPx(word, 9, true)),
+      textPx(name === 'address' ? 'Purok 4, Balili, La Trinidad, Benguet' : name === 'birth_date' ? '0000-00-00' : '000000000000', 9));
+    sheet.width(c + 1, Math.min(44, Math.max(8, Math.ceil((widest + 6) / 7) + 1)));
   });
+
+  const notes = book.sheet('What each column holds');
+  notes.setup = { landscape: false, paper: 'a4', fitWidth: true };
+  notes.width(1, 22); notes.width(2, 13); notes.width(3, 76);
+  notes.merge(1, 1, 1, 3, 'EDUNEXUS class list', { bold: true, size: 13 });
+  notes.merge(2, 1, 2, 3, 'Fill the rows in on the “Class list” sheet, then choose the file on Roster import. A manager reviews it before any learner is created.', { italic: true, size: 9, wrap: true });
+  notes.set(4, 1, 'Column', { bold: true, border: true, size: 9, fill: 'F2F2F2' });
+  notes.set(4, 2, 'Required?', { bold: true, border: true, size: 9, fill: 'F2F2F2' });
+  notes.set(4, 3, 'What goes in it', { bold: true, border: true, size: 9, fill: 'F2F2F2' });
+  header.forEach((name, i) => {
+    const about = rosterColumnNotes[name];
+    notes.set(5 + i, 1, name, { border: true, size: 9, valign: 'top' });
+    notes.set(5 + i, 2, about?.required ? 'Required' : 'Optional', { border: true, size: 9, valign: 'top', bold: !!about?.required });
+    notes.set(5 + i, 3, about?.note ?? '', { border: true, size: 9, wrap: true, valign: 'top' });
+  });
+  const example: Record<string, string> = {
+    lrn: '136170000001', first_name: 'Ana', middle_name: 'Bautista', last_name: 'Reyes', name_extension: '',
+    birth_date: '2017-05-02', sex: 'female', address: 'Purok 4, Balili, La Trinidad, Benguet',
+  };
+  const at = 5 + header.length + 1;
+  notes.merge(at, 1, at, 3, 'One row, as it would be typed:', { bold: true, size: 10 });
+  header.forEach((name, i) => {
+    notes.set(at + 1 + i, 1, name, { border: true, size: 9, valign: 'top' });
+    notes.merge(at + 1 + i, 2, at + 1 + i, 3, example[name] || '(left empty)', { border: true, size: 9, wrap: true, valign: 'top', italic: !example[name] });
+  });
+  return book;
 }
 
 /**
@@ -189,10 +266,15 @@ export function rosterTemplateWorkbook() {
  */
 export async function rosterFileText(file: File) {
   if (!/\.xlsx$/i.test(file.name)) return file.text();
-  const rows = await readXlsxRows(await file.arrayBuffer());
-  const header = ROSTER_HEADER.split(',');
-  const top = rows.findIndex(r => header.every((h, i) => (r[i] ?? '').toLowerCase() === h));
+  const rows = await readXlsxRows(await file.arrayBuffer(), 'Class list');
+  const full = ROSTER_HEADER.split(',');
+  const matches = (row: string[] | undefined, header: string[]) => header.every((h, i) => (row?.[i] ?? '').trim().toLowerCase() === h);
+  // The current template, or the one before `address` was added. The API reads
+  // both, so a file somebody already filled in is not refused here either.
+  const earlier = full.slice(0, 7);
+  const top = rows.findIndex(r => matches(r, full) || matches(r, earlier));
   if (top < 0) throw new Error(`This Excel file has no header row reading ${ROSTER_HEADER}. Start from the template, and keep its header row as it is.`);
+  const header = matches(rows[top], full) ? full : earlier;
   const learners = rows.slice(top + 1).map(r => header.map((_, i) => r[i] ?? '')).filter(r => r.some(Boolean));
-  return [ROSTER_HEADER, ...learners.map(r => r.map(csvCell).join(','))].join('\r\n') + '\r\n';
+  return [header.join(','), ...learners.map(r => r.map(csvCell).join(','))].join('\r\n') + '\r\n';
 }

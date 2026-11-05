@@ -17,6 +17,13 @@ const pathOf = () => { const p = location.pathname.replace(/\/+$/, ''); return !
 // Contact lives on the About page; /contact is kept so an old link still lands on it.
 // Questions appear only once the school has published one, so the menu never leads to an empty page.
 const nav = [['/', 'Home'], ['/announcements', 'Announcements'], ['/calendar', 'Calendar'], ['/faq', 'Questions'], ['/about', 'About & contact']] as const;
+const pageTarget = (path: string) => ({ '/': 'home', '/announcements': 'announcements-content', '/calendar': 'calendar-content', '/about': 'about-content', '/contact': 'contact' } as Record<string, string>)[path];
+let announcementOrigin = '/announcements';
+const scrollToPageTarget = (path: string) => requestAnimationFrame(() => {
+  const element = document.getElementById(pageTarget(path) ?? '');
+  if (element) element.scrollIntoView();
+  else window.scrollTo({ top: 0 });
+});
 
 export type Go = (path: string) => void;
 
@@ -37,6 +44,8 @@ export function Site() {
   const [site, setSite] = useState<PublicSite | null>(null);
   const [failed, setFailed] = useState('');
   const [menu, setMenu] = useState(false);
+  const [activeNav, setActiveNav] = useState('/');
+  const [announcementBackground, setAnnouncementBackground] = useState('/');
   const main = useRef<HTMLElement>(null);
 
   const fetchSite = useCallback(() => {
@@ -46,10 +55,17 @@ export function Site() {
   useEffect(fetchSite, [fetchSite]);
 
   const go: Go = useCallback(to => {
+    const currentPath = pathOf();
+    const openingAnnouncement = to.startsWith('/announcements/') && !currentPath.startsWith('/announcements/');
+    const closingAnnouncement = currentPath.startsWith('/announcements/') && to === announcementOrigin;
+    if (openingAnnouncement) {
+      announcementOrigin = currentPath === '/' ? '/' : '/announcements';
+      setAnnouncementBackground(announcementOrigin);
+    }
     if (to !== location.pathname) history.pushState(null, '', to);
     const apply = () => {
       flushSync(() => { setPath(to); setMenu(false); });
-      window.scrollTo({ top: 0 });
+      if (!openingAnnouncement && !closingAnnouncement) scrollToPageTarget(to);
     };
     // A soft cross-fade between pages where the browser offers one, and none for anyone who asked for less motion.
     const doc = document as Transitioning;
@@ -59,10 +75,41 @@ export function Site() {
     requestAnimationFrame(() => main.current?.focus({ preventScroll: true }));
   }, []);
   useEffect(() => {
-    const back = () => { setPath(pathOf()); setMenu(false); };
+    const back = () => {
+      const next = pathOf();
+      const returningToAnnouncementList = next === announcementOrigin;
+      setPath(next);
+      setMenu(false);
+      if (!returningToAnnouncementList) scrollToPageTarget(next);
+    };
     window.addEventListener('popstate', back);
     return () => window.removeEventListener('popstate', back);
   }, []);
+  useEffect(() => {
+    if (path !== '/') {
+      const match = nav.find(([to]) => to !== '/' && (path === to || path.startsWith(`${to}/`)));
+      setActiveNav(path === '/contact' ? '/about' : match?.[0] ?? '/');
+      return;
+    }
+    const sections = nav
+      .filter(([to]) => to !== '/faq')
+      .map(([to]) => document.getElementById(to === '/' ? 'home' : to.slice(1)))
+      .filter((element): element is HTMLElement => !!element);
+    if (!sections.length) return;
+    const update = () => {
+      const marker = 96;
+      const visible = sections.filter(section => {
+        const box = section.getBoundingClientRect();
+        return box.top <= marker && box.bottom > marker;
+      });
+      const next = visible.at(-1) ?? sections.find(section => section.getBoundingClientRect().top > marker) ?? sections.at(-1);
+      if (next) setActiveNav(next.id === 'home' ? '/' : `/${next.id}`);
+    };
+    const observer = new IntersectionObserver(update, { threshold: [0, 0.1], rootMargin: '-68px 0px -55% 0px' });
+    sections.forEach(section => observer.observe(section));
+    update();
+    return () => observer.disconnect();
+  }, [path, site]);
 
   const name = site ? schoolName(site) : 'Balili Elementary School';
   const section = path.split('/')[1] ?? '';
@@ -72,7 +119,11 @@ export function Site() {
   let title = name;
   if (!site) page = failed ? <LoadFailed message={failed} retry={fetchSite} /> : <Loading />;
   else if (path === '/') page = <Home site={site} go={go} />;
-  else if (announcementId) { const found = site.announcements.find(a => a.id === announcementId); title = found ? `${found.title} · ${name}` : name; page = <AnnouncementPage site={site} go={go} id={announcementId} />; }
+  else if (announcementId) {
+    const found = site.announcements.find(a => a.id === announcementId);
+    title = found ? `${found.title} · ${name}` : name;
+    page = announcementBackground === '/' ? <Home site={site} go={go} selectedId={announcementId} /> : <AnnouncementsPage site={site} go={go} selectedId={announcementId} />;
+  }
   else if (path === '/announcements') { title = `Announcements · ${name}`; page = <AnnouncementsPage site={site} go={go} />; }
   else if (path === '/calendar') { title = `School calendar · ${name}`; page = <CalendarPage site={site} go={go} />; }
   else if (path === '/faq') { title = `Questions · ${name}`; page = <FaqPage site={site} go={go} />; }
@@ -80,7 +131,7 @@ export function Site() {
   else page = <NotFound go={go} />;
   useEffect(() => { document.title = title; }, [title]);
 
-  const current = (to: string) => (to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`) || (to === '/about' && path === '/contact'));
+  const current = (to: string) => activeNav === to || (to === '/about' && activeNav === '/contact');
 
   return (
     <div className="site">

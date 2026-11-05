@@ -96,8 +96,12 @@ export function Button({ label, onRun, setStatus, variant = 'secondary', size, c
 
   return (
     <>
-      <button type="button" className={classes} disabled={busy} onClick={() => (confirm ? setAsking(true) : void run())}>
-        {icon ? <Icon name={icon} size={15} /> : null}{label}
+      <button type="button" className={classes} disabled={busy} aria-busy={busy} onClick={() => (confirm ? setAsking(true) : void run())}>
+        {busy ? <span className="btn-mark" aria-hidden="true" /> : icon ? <Icon name={icon} size={15} /> : null}
+        {/* The same word every other waiting control in the workspace uses, so
+            "Working…" means one thing wherever it is read. The caller's own
+            label comes back the moment the request lands. */}
+        {busy ? 'Working…' : label}
       </button>
       {asking ? (
         <Confirm
@@ -133,7 +137,17 @@ export function Select({ children, ...props }: React.ComponentProps<'select'>) {
  * placeholder rather than a line beneath it, so every field in the row is the
  * same height and the labels sit on one line.
  */
-function Control({ field, id, value, error, onChange, compact }: {
+/**
+ * One labelled control, the unit `Editor` and `Finder` are both built from.
+ *
+ * It is exported for the one shape neither of those covers: a form that is not
+ * a flat list of fields, such as a scholastic block where header fields sit
+ * above a grid of learning areas saved in the same request. A screen using it
+ * directly owns what `Editor` would otherwise do for it — the error summary,
+ * mapping `ApiError.fields[]` onto these controls, and clearing a mark when the
+ * field is edited. Prefer `Editor` wherever the form really is a list.
+ */
+export function Control({ field, id, value, error, onChange, compact }: {
   field: Field;
   id: string;
   value: string;
@@ -338,7 +352,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
         ))}
       </div>
       <div className="form-actions">
-        <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button>
+        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : submitLabel}</button>
         {note}
       </div>
     </form>

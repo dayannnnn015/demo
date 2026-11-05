@@ -35,7 +35,45 @@ const reasons: [string, string[]][] = [
 const remarksHead = 'REMARKS (If DROPPED OUT, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)';
 // The form's own code reads a blank cell as present, so anything EDUNEXUS leaves blank for another reason is drawn and named.
 const drawnHere = 'On this copy: a grey column had no classes; a hatched cell is a day still to come; ? is a session nobody marked. None of them is counted as present.';
-const drawnInExcel = 'In this file: a grey column had no classes; a light grey cell is a day still to come; ? is a session nobody marked. None of them is counted as present. A tardy day is half shaded, as on the paper form.';
+
+/** The colours the screen draws a mark in, so the saved file is the same form and not a second one. */
+const SHADE = '6B6B6B', HATCH = 'A6A6A6', NO_CLASS = 'D9D9D9', TOTALS = 'F2F2F2', UNMARKED = 'A52222', UNMARKED_EDGE = 'C02B2B', WAITING = '444444';
+
+export type Sf2KeyItem = {
+  /** The cell class on screen, which is also what names its drawing to a reader. */
+  kind: string;
+  /** What the cell itself shows, if anything. */
+  text: string;
+  /** How a reader recognises it where there is no character to show. */
+  drawn: string;
+  words: string;
+};
+/**
+ * What every mark on this SF2 means, in the school's own words.
+ *
+ * The key printed beside the form, the key written into the saved Excel file
+ * and the legend under the paper copy are all this one list. A file a parent is
+ * handed must not explain itself differently from the screen it was saved from,
+ * and two lists would eventually do exactly that.
+ */
+export function keyItems(rule: Sf2Form['rule'], editing = false): Sf2KeyItem[] {
+  const item = (kind: string, text: string, drawn: string, words: string): Sf2KeyItem => ({ kind, text, drawn, words });
+  return [
+    item('present', '', 'blank', 'Present all day'),
+    item('absent', 'x', 'x', 'Absent all day'),
+    ...(rule?.mixed_day === 'tardy' ? [
+      item('late', '', 'upper half shaded', 'Late: missed the morning (tardy, counted present)'),
+      item('cutting', '', 'lower half shaded', 'Cutting classes: missed the afternoon (tardy, counted present)'),
+    ] : rule?.mixed_day === 'half_day' ? [item('half', '½', '½', 'Present for half the day')] : []),
+    ...(!rule || editing ? [
+      item('waiting', 'A/', 'A/', 'Absent in the morning only'),
+      item('waiting', '/A', '/A', 'Absent in the afternoon only'),
+    ] : []),
+    item('unmarked', '?', '? in red', 'Not marked: nobody recorded it yet, so it counts as neither'),
+    item('pending', '', 'hatched', 'A day still to come'),
+    item('off', '', 'grey', 'No classes that day, or not in the section yet'),
+  ];
+}
 
 /** "Total for the Month", or while days of classes are still to come, the total so far. */
 export const totalHead = (form: Sf2Form) => (form.to_date ? `Total to ${dayAndMonth(form.to_date.as_of)}` : 'Total for the Month');
@@ -139,22 +177,10 @@ function DayCell({ cell, edit, id, day, name }: { cell: Sf2Cell | undefined; edi
  * this school's rule can produce.
  */
 export function Sf2Key({ rule, editing = false }: { rule: Sf2Form['rule']; editing?: boolean }) {
-  const items: [string, string, string][] = [
-    ['present', '', 'Present all day'],
-    ['absent', 'x', 'Absent all day'],
-    ...(rule?.mixed_day === 'tardy' ? [
-      ['late', '', 'Late: missed the morning (tardy, counted present)'],
-      ['cutting', '', 'Cutting classes: missed the afternoon (tardy, counted present)'],
-    ] as [string, string, string][] : rule?.mixed_day === 'half_day' ? [['half', '½', 'Present for half the day']] as [string, string, string][] : []),
-    ...(!rule || editing ? [['waiting', 'A/', 'Absent in the morning only'], ['waiting', '/A', 'Absent in the afternoon only']] as [string, string, string][] : []),
-    ['unmarked', '?', 'Not marked: nobody recorded it yet, so it counts as neither'],
-    ['pending', '', 'A day still to come'],
-    ['off', '', 'No classes that day, or not in the section yet'],
-  ];
   return (
     <div className="sf2-key" role="note" aria-label="What the marks on this SF2 mean">
       <b>What the marks mean</b>
-      <ul>{items.map(([kind, text, words]) => <li key={words}><span className={`sf2-day ${kind}`} aria-hidden="true">{text}</span>{words}</li>)}</ul>
+      <ul>{keyItems(rule, editing).map(({ kind, text, words }) => <li key={words}><span className={`sf2-day ${kind}`} aria-hidden="true">{text}</span>{words}</li>)}</ul>
     </div>
   );
 }
@@ -291,7 +317,7 @@ export function sf2Workbook(form: Sf2Form, footer?: string) {
   const book = new XWorkbook();
   const sheet = book.sheet('SF2');
   const border: XStyle = { border: true, size: 8 }, head: XStyle = { ...border, bold: true, align: 'center', wrap: true }, num: XStyle = { ...border, align: 'center' };
-  const off: XStyle = { ...border, fill: 'D9D9D9' };
+  const off: XStyle = { ...border, fill: NO_CLASS };
   const n = form.columns.length, absentCol = 3 + n, presentCol = absentCol + 1, remarksCol = presentCol + 1;
   // A4 landscape, as the school's own SF2 template is set to print.
   sheet.setup = { landscape: true, paper: 'a4', fitWidth: true, freeze: { rows: 7, cols: 2 } };
@@ -310,8 +336,8 @@ export function sf2Workbook(form: Sf2Form, footer?: string) {
     .merge(4, a + 1, 4, b, field('Grade Level', levelName(form.section.grade_level)), fieldStyle)
     .merge(4, b + 1, 4, remarksCol, field('Section', form.section.name), fieldStyle);
   // The key, in the template's empty row: a blank cell is the form's code for present, which nobody guesses.
-  const tardyKey = form.rule?.mixed_day === 'tardy' ? '   upper half shaded = late (missed the morning)   lower half shaded = cutting (missed the afternoon)' : form.rule?.mixed_day === 'half_day' ? '   ½ = half a day' : '';
-  sheet.merge(5, 1, 5, remarksCol, `Key:   blank = present all day   x = absent all day${tardyKey}${form.rule ? '' : '   A/ = absent in the morning   /A = absent in the afternoon'}   ? = not marked   grey = no classes`, { size: 8, italic: true, wrap: true });
+  // The same list the screen's key shows, so the file says exactly what it was saved from.
+  sheet.merge(5, 1, 5, remarksCol, `Key:   ${keyItems(form.rule).map(k => `${k.drawn} = ${k.words}`).join('   ')}`, { size: 8, italic: true, wrap: true });
   let row = 6;
   sheet.merge(row, 1, row + 1, 1, 'No.', head).merge(row, 2, row + 1, 2, 'NAME\n(Last Name, First Name, Middle Name)', head);
   form.columns.forEach((c, i) => {
@@ -328,24 +354,34 @@ export function sf2Workbook(form: Sf2Form, footer?: string) {
       sheet.set(row, 1, l.no, num).set(row, 2, l.name, { ...border, wrap: true });
       form.columns.forEach((c, i) => {
         const cell = l.days[c.day_on];
-        // A day still to come is filled, not left blank: a blank SF2 cell is the form's code for present.
-        const style = !cell || typeof cell === 'string' ? off : cell.mark === 'late' || cell.mark === 'cutting' ? { ...num, half: cell.mark === 'late' ? 'top' as const : 'bottom' as const } : cell.mark === 'pending' ? { ...num, fill: 'EDEDED' } : num;
+        // Drawn as the screen draws it, in the screen's own colours: a half-shaded
+        // tardy day, a hatched day still to come — never left blank, because a blank
+        // SF2 cell is the form's code for present — and a red ? nobody marked.
+        const style = !cell || typeof cell === 'string' ? off
+          : cell.mark === 'late' || cell.mark === 'cutting' ? { ...num, fill: SHADE, half: cell.mark === 'late' ? 'top' as const : 'bottom' as const }
+          : cell.mark === 'pending' ? { ...num, fill: HATCH, hatch: true }
+          : cell.mark === 'unmarked' ? { ...num, color: UNMARKED, borderColor: UNMARKED_EDGE, bold: true }
+          : cell.mark === 'waiting' ? { ...num, color: WAITING }
+          : num;
         const text = cellText(cell);
         sheet.set(row, 3 + i, text, text.length > 1 ? { ...style, size: 6 } : style);
       });
       sheet.set(row, absentCol, l.absent, num).set(row, presentCol, l.present, num).set(row, remarksCol, l.remarks.join('; '), { ...border, wrap: true, size: 7 });
       row++;
     }
-    sheet.set(row, 1, rows.length, { ...num, bold: true }).set(row, 2, label, { ...border, bold: true });
-    form.columns.forEach((c, i) => sheet.set(row, 3 + i, daily.get(c.day_on)?.[sex] ?? null, c.kind === 'class' ? { ...num, bold: true, size: 7 } : off));
-    sheet.set(row, absentCol, null, border).set(row, presentCol, null, border).set(row, remarksCol, null, border);
+    // A total row is tinted as it is on screen, so the blocks are as easy to find in the file.
+    const totals: XStyle = { ...num, bold: true, fill: TOTALS }, totalText: XStyle = { ...border, bold: true, fill: TOTALS };
+    sheet.set(row, 1, rows.length, totals).set(row, 2, label, totalText);
+    form.columns.forEach((c, i) => sheet.set(row, 3 + i, daily.get(c.day_on)?.[sex] ?? null, c.kind === 'class' ? { ...totals, size: 7 } : off));
+    sheet.set(row, absentCol, null, totalText).set(row, presentCol, null, totalText).set(row, remarksCol, null, totalText);
     row++;
   };
   learnerRows('male', '<=== MALE | TOTAL Per Day ===>');
   learnerRows('female', '<=== FEMALE | TOTAL Per Day ===>');
-  sheet.set(row, 1, form.learners.length, { ...num, bold: true }).set(row, 2, 'Combined TOTAL PER DAY', { ...border, bold: true });
-  form.columns.forEach((c, i) => sheet.set(row, 3 + i, daily.get(c.day_on)?.total ?? null, c.kind === 'class' ? { ...num, bold: true, size: 7 } : off));
-  sheet.set(row, absentCol, null, border).set(row, presentCol, null, border).set(row, remarksCol, null, border);
+  const combined: XStyle = { ...num, bold: true, fill: TOTALS }, combinedText: XStyle = { ...border, bold: true, fill: TOTALS };
+  sheet.set(row, 1, form.learners.length, combined).set(row, 2, 'Combined TOTAL PER DAY', combinedText);
+  form.columns.forEach((c, i) => sheet.set(row, 3 + i, daily.get(c.day_on)?.total ?? null, c.kind === 'class' ? { ...combined, size: 7 } : off));
+  sheet.set(row, absentCol, null, combinedText).set(row, presentCol, null, combinedText).set(row, remarksCol, null, combinedText);
   const lastLearnerRow = row;
   row += 2;
   // The foot, as on the school's own SF2: guidelines, then the codes and reasons, then the summary and signatures,
@@ -369,7 +405,7 @@ export function sf2Workbook(form: Sf2Form, footer?: string) {
   const legend = (text: string, style: XStyle = { size: 7 }) => { mid = block(mid, reasonsFrom, labelFrom - 1, text, style); };
   legend('1. CODES FOR CHECKING ATTENDANCE', { bold: true, size: 8 });
   legend(codes);
-  legend(drawnInExcel, { size: 7, italic: true });
+  legend(drawnHere, { size: 7, italic: true });
   mid++;
   legend('2. REASONS/CAUSES FOR NLS', { bold: true, size: 8 });
   for (const [group, items] of reasons) { legend(group, { bold: true, size: 7 }); for (const item of items) legend(item); }

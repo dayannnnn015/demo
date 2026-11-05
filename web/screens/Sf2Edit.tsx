@@ -143,7 +143,7 @@ export function Sf2EditReview({ api, sectionId, monthOn, marks, remarks, onClose
           ) : null}
           {plan.days.length ? <p className="card-note">Checked: {plan.days.map(d => `${dayAndMonth(d.day_on)} (${d.changed} ${d.changed === 1 ? 'learner' : 'learners'})`).join(', ')}.</p> : null}
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || nothingToRecord} onClick={() => void record()}>{busy ? 'Recording…' : 'Record these changes'}</button>
+            <button type="button" className="btn" disabled={busy || nothingToRecord} aria-busy={busy} onClick={() => void record()}>{busy ? 'Recording…' : 'Record these changes'}</button>
             <button type="button" className="btn ghost" disabled={busy} onClick={() => setPlan(null)}>Change the reason</button>
           </div>
         </>
@@ -157,7 +157,7 @@ export function Sf2EditReview({ api, sectionId, monthOn, marks, remarks, onClose
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy}>{busy ? 'Checking…' : 'Check these changes'}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Checking…' : 'Check these changes'}</button>
             <button type="button" className="btn ghost" disabled={busy} onClick={onClose}>Keep editing</button>
           </div>
         </form>
