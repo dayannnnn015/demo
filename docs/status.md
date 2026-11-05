@@ -1,7 +1,8 @@
 # Where things stand
 
 **Version 0.90.3.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
-**Committed on this branch only** as `e0ab9a3`, with the local `user.name` and
+**Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
+with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
 and not pushed, by instruction** — the user merges. The commit bundles
 0.87.0–0.90.1 in one, which the working contract would normally not allow: the
