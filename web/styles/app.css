@@ -1649,9 +1649,66 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 .paper.sf9 { width: 210mm; min-height: 297mm; padding: 6mm; }
 .paper.sf9.sf9-grades2_3 { width: 297mm; min-height: 210mm; }
 .paper.sf9.sf9-grades4_6 { width: 297mm; min-height: 210mm; padding: 12.7mm; }
-.paper.sf9-grade1 .card-term { min-height: 44mm; }
-.paper.sf9-grade1 .card-comment { min-height: 18mm; }
-.paper.sf9-grade1 .card-comment p { overflow-wrap: anywhere; }
+/*
+  The Grade 1 card's narrative boxes are a fixed size, and the terms fill the
+  page rather than clustering at its top.
+
+  Both used to be `min-height`, so a box was as tall as whatever was typed into
+  it: three short remarks left a third of the sheet empty, and the three terms
+  sat in a clump at the top. The boxes are also the one place on this card a
+  parent actually reads, so the empty space was being taken from the only part
+  that wanted it.
+
+  Where the height comes from is the part worth understanding. `.card-columns`
+  is a two-column grid, so the row is as tall as its *taller* side — which is
+  always the right one here: the attendance table, the note to parents, the
+  performance levels and the transfer block. The left side is a grid item and so
+  is already stretched to that same height; it simply left the slack unused at
+  the bottom. So the terms are distributed into a height the page already has,
+  measured from the content beside them, rather than against a hard-coded page
+  figure that would go stale the moment anything on the right changed. It also
+  means **this cannot push the card onto a second page**: the row's height is
+  still set by the right column, exactly as before.
+
+  Each term takes an equal share (`flex: 1 0 auto` — grows into the slack,
+  never shrinks below its own content), and inside a term the two boxes take
+  what is left in equal measure above the signature line. So a box's height
+  depends on the page and never on the remark: one sentence, several paragraphs
+  and nothing at all all give the same box. `min-height` stays as the floor for
+  the case where the terms are the taller side, and `overflow: hidden` keeps a
+  very long remark inside its border instead of pushing the layout open.
+*/
+/*
+  The box height is an absolute measure, and the slack goes into the spacing
+  between the terms.
+
+  Two earlier attempts are worth recording, because both looked right and were
+  measured wrong in real Chrome. Sizing the box from its content (`min-height`,
+  or `flex-basis: auto`) is the original fault: a 1000-character remark gave
+  248px and 275px boxes against 90px for a short one, and pushed the card onto
+  a second sheet. Giving each box an equal *share* of the column fixed the
+  sheet count and made the six boxes equal to each other, but they still came
+  out 98px for long remarks against 90px for short ones — a grid row takes its
+  height from its items' max-content, so the text kept a little influence.
+
+  So the height is stated outright. 23mm × 6 boxes, plus the three headings and
+  signature lines, is just under the column the right-hand side defines, which
+  is what keeps the card on one sheet; `space-between` spreads what is left as
+  equal gaps between the three terms, so they sit across the page instead of
+  clustering at its top, and each signature stays directly under its own boxes.
+  Because nothing here reads the content, the box is identical whether the
+  remark is one sentence, several paragraphs or absent.
+*/
+.paper.sf9-grade1 .card-columns > div:first-child { display: flex; flex-direction: column; justify-content: space-between; }
+.paper.sf9-grade1 .card-term { display: flex; flex-direction: column; flex: none; margin-bottom: 0; }
+/* Padding between terms rather than a margin on each: a margin on the last one
+   is a gap at the bottom of the column, which is the clustering this fixes. */
+.paper.sf9-grade1 .card-term + .card-term { padding-top: var(--s3); }
+.paper.sf9-grade1 .card-comment { height: 23mm; flex: none; overflow: hidden; }
+.paper.sf9-grade1 .card-comment p { overflow-wrap: anywhere; overflow: hidden; }
+/* The signature belongs directly under its own term's boxes, so it must not
+   take a share of the slack — the boxes above it already did. */
+.paper.sf9-grade1 .card-sign-line { flex: none; }
 /*
   The SF10-ES, on screen and on paper alike.
 
@@ -1896,6 +1953,7 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
   /* Each page of a card starts a printed page, and so does each learner's card when a section prints together. */
   .print-root .card-page + .card-page, .print-root .paper + .paper { break-before: page; page-break-before: always; }
   .print-root .card-comment { min-height: 2.2rem; }
+  .print-root.sf9-g1 .card-comment { min-height: 0; }
   .print-root .card-letter { margin: 4pt 0; }
   .print-root .card-table.descriptors td { font-size: 6.5pt; }
   .print-root .paper.sf9, .print-root .paper.sf10 { font-size: 8pt; }
@@ -2033,8 +2091,15 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
   .print-root.sf9-g1 .card-table.descriptors td { font-size: 6pt; padding: .5pt 2pt; }
   .print-root.sf9-g1 .paper.sf9 h4 { font-size: 8.5pt; margin: 4pt 0 2pt; }
   .print-root.sf9-g1 .card-letter { margin: 4pt 0; line-height: 1.35; }
-  .print-root.sf9-g1 .card-comment { min-height: 22pt; }
-  .print-root.sf9-g1 .card-term { margin-bottom: 6pt; }
+  /* The floor only. The height a box actually gets is its share of the term,
+     and the term's is its share of the column — see `.paper.sf9-grade1`. */
+  /* The height is stated in `.paper.sf9-grade1` in mm, which prints as itself;
+     this only keeps the shared print floor from fighting it. */
+  .print-root.sf9-g1 .card-comment { min-height: 0; }
+  .print-root.sf9-g1 .card-term { margin-bottom: 0; }
+  /* Breathing room between terms without reintroducing a gap at the bottom of
+     the column, which is what `margin-bottom` on every term produced. */
+  .print-root.sf9-g1 .card-term + .card-term { padding-top: 6pt; }
   .print-root.sf9-g1 .card-heading { margin-bottom: 3pt; }
   .print-root.sf9-g1 .card-heading p { line-height: 1.2; }
   .print-root.sf9-g1 .card-box { padding: 2pt 4pt; margin-top: 4pt; }

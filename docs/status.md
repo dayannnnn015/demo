@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.3.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.90.4.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,47 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.90.4 — the Grade 1 card's remark boxes keep a stated height
+
+Asked for as a print fix, and it builds directly on 0.90.3: that release gave
+`.paper.sf9` its A4 page and added the `sf9-${layout}` class, which is what
+makes these per-layout rules selectable at all.
+
+The two narrative boxes were `min-height`, so each was as tall as whatever was
+typed into it, and the three terms clustered at the top of their column leaving
+a third of the sheet empty. They are now **23mm, stated outright**, with
+`overflow: hidden`, and the terms are spread down the column with
+`space-between` so each signature stays directly under its own boxes.
+
+**Measured in real Chrome rather than asserted.** CSS geometry cannot be checked
+in happy-dom, which computes no layout, so `.local/sf9-print/boxes.tsx` renders
+the card with the print stylesheet emulated at A4 less 6mm and reads the boxes'
+own rects. Run it with
+`npx tsx --tsconfig .local/sf9-print/tsconfig.json .local/sf9-print/boxes.tsx`
+— it needs Chrome, which is why it stays in `.local/` rather than `tests/`.
+
+| | short | long (1000 chars) | empty |
+|---|---|---|---|
+| before | 90px | **248 and 275px, 2 sheets** | 90px |
+| after | **23mm** | **23mm, 1 sheet** | **23mm** |
+
+Two designs were measured and rejected on the way: `min-height` (the original
+fault) and giving each box an equal *share* of the column, which equalised the
+six boxes but still gave 98px for long against 90px for short, because a grid
+row takes its height from its items' max-content.
+
+**The trade, which is the part to know:** a remark longer than roughly 350
+characters is **clipped on the printed card**. That is what a fixed box means
+and it is what was asked for; the remark is stored in full and shown in full
+where it is encoded, so nothing is lost from the record, but the parent's copy
+can show less than the adviser wrote. *What's new* now tells advisers to keep a
+printed remark brief. If that proves wrong in practice the answer is a
+character limit at encoding time, not a box that grows again.
+
+Scoped to the Grade 1 card: the Grades 2-3 and 4-6 cards are a different layout
+on landscape paper and are untouched, which `tests/web-card-boxes.test.ts`
+asserts along with the stated height.
 
 ### 0.90.3 — SF9 previews keep a fixed A4 page
 
@@ -241,7 +282,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **217 passed**, 21 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **221 passed**, 22 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |

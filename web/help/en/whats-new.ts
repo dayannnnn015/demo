@@ -8,6 +8,14 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.90.4', date: '2026-11-05',
+    items: [
+      'The Grade 1 progress report card prints better. The two remark boxes for each term are now a fixed size, so the card looks the same whether a remark is one sentence or several, and the three terms are spread down the page instead of bunched at the top.',
+      'A remark much longer than about 350 characters will not all fit in the printed box. What you typed is kept in full and is still shown in full where you enter it — it is only the printed box that has a fixed size, so keep a printed remark brief.',
+      'The Grades 2-3 and Grades 4-6 cards are unchanged.',
+    ],
+  },
+  {
     version: '0.90.2', date: '2026-11-05',
     items: [
       'Advisers: your {learners} now opens on your own learners, and the grade-level filter is gone from it. You were only ever shown the learners in the classes you advise, so choosing a grade could only narrow your own class — and a grade you do not teach would have come back empty.',
