@@ -72,6 +72,14 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
     return () => { live = false; };
   }, [api, asked, setStatus]);
   const [records, setRecords] = useState<Records | null>(null);
+  /** The learners the search found, and where in them the open one sits, so the
+   *  arrows can move between them without going back to the list. */
+  const siblings = found?.items ?? [];
+  const at = chosen ? siblings.findIndex(r => String(r.id) === String(chosen.id)) : -1;
+  const step = (by: number) => {
+    const next = siblings[at + by];
+    if (next) { setChosen(next); setRecords(null); }
+  };
   const [editing, setEditing] = useState<{ block: EncodedYear | null } | null>(null);
   const [removing, setRemoving] = useState<EncodedYear | null>(null);
   const [beat, setBeat] = useState(0);
@@ -84,16 +92,18 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
    * year to add. Read from the record once it loads, not from the search row,
    * because the record is what the API answered for.
    */
-  const inKinder = records !== null && !records.prior_years.length
-    && records.recorded_years.length > 0 && records.recorded_years.every(y => y.grade_level === 0);
+  const noBlockYet = records !== null && !records.prior_years.length
+    && records.recorded_years.length > 0 && records.recorded_years.every(y => y.grade_level <= 1);
+  /** Kindergarten only, which has its own wording: they have no SF10 at all yet. */
+  const inKinder = noBlockYet && records.recorded_years.every(y => y.grade_level === 0);
   useEffect(() => {
-    if (chosen || !searching) { setFound(null); return; }
+    if (!searching) { setFound(null); return; }
     let live = true;
     void api<Page>(`/learners${query({ ...search, limit: 25 })}`)
       .then(r => { if (live) setFound(r); })
       .catch(error => { if (live) { setFound({ items: [] }); setStatus({ kind: 'error', text: message(error) }); } });
     return () => { live = false; };
-  }, [api, search, searching, chosen, setStatus, token]);
+  }, [api, search, searching, setStatus, token]);
 
   useEffect(() => {
     if (!chosen) { setRecords(null); return; }
@@ -120,7 +130,7 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
       <PageHeader
         route={route}
         actions={chosen && records?.may_write
-          ? <button type="button" className="btn" disabled={inKinder} onClick={() => setEditing({ block: null })}><Icon name="plus" size={15} />Add a school year</button>
+          ? <button type="button" className="btn" disabled={noBlockYet} onClick={() => setEditing({ block: null })}><Icon name="plus" size={15} />Add a school year</button>
           : null}
       />
 
@@ -188,13 +198,27 @@ export function PriorRecords({ api, manager, setStatus, route, token }: {
                 <b>{learnerName(chosen)}</b>
                 {chosen.lrn == null ? <> · <Unrecorded label="LRN missing" /></> : <> · LRN {String(chosen.lrn)}</>}
               </p>
-              <button type="button" className="btn ghost small" onClick={() => { setChosen(null); setRecords(null); }}>Choose another learner</button>
+              <div className="learner-step">
+                {at >= 0 && siblings.length > 1 ? <span className="muted">{at + 1} of {siblings.length}</span> : null}
+                <button type="button" className="btn ghost small" disabled={at <= 0} aria-label="Previous learner" title="Previous learner"
+                  onClick={() => step(-1)}><Icon name="back" size={14} /></button>
+                <button type="button" className="btn ghost small" disabled={at < 0 || at >= siblings.length - 1} aria-label="Next learner" title="Next learner"
+                  onClick={() => step(1)}><Icon name="forward" size={14} /></button>
+                <button type="button" className="btn ghost small" aria-label="Find another learner" title="Find another learner"
+                  onClick={() => { setChosen(null); setRecords(null); }}><Icon name="search" size={14} /></button>
+              </div>
             </div>
             {inKinder ? (
               <Callout tone="info" title="This learner is in Kindergarten, so there is nothing to encode yet">
                 The SF10 begins when a learner enters Grade 1. Kindergarten is not a school year with grades on it — it is the <i>credential</i> that admits a learner to
                 Grade 1 — so a Kindergarten learner has no SF10 and no previous years to copy. Their Kindergarten records are the SF5-K and the ECCD checklist, which the
                 school keeps and EDUNEXUS neither holds nor replaces. Record the credential they present once they are enrolled in Grade 1.
+              </Callout>
+            ) : noBlockYet ? (
+              <Callout tone="info" title="There is no earlier school year to add for this learner yet">
+                A scholastic block on the SF10 is Grade 1 to Grade 6, and Kindergarten is never one — it is the <i>credential</i> that admits a learner to Grade 1. The
+                only year behind a Grade 1 learner is Kindergarten, so there is nothing to copy from a document. Record what they presented under <b>Eligibility for
+                Grade 1</b> below instead; a school year becomes addable once they have finished one at Grade 1 or above elsewhere.
               </Callout>
             ) : null}
             {chosen.lrn == null ? (

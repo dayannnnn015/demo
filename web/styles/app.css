@@ -654,7 +654,7 @@ code, .mono {
 .card-head-actions { flex: none; display: flex; align-items: center; gap: var(--s2); }
 /* The filter row sits inside the list it filters, above the table's own header. */
 .card-tools { padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); background: var(--sunk); }
-.card-body { padding: var(--s5); }
+.card-body { padding: var(--pad-card); }
 .card-body.flush { padding: 0; }
 .card-body > .empty:first-child { padding: var(--s6) var(--s4) var(--s5); }
 
@@ -842,7 +842,7 @@ table {
   font-size: var(--t-13);
 }
 thead th {
-  padding: var(--s2) var(--s5);
+  padding: calc(var(--row-y) - 4px) var(--s5);
   background: var(--sunk);
   /* The heavier rule under the column heads is the register's own: it separates
      what the columns are called from what is written in them. */
@@ -855,7 +855,7 @@ thead th {
   color: var(--ink-500);
   white-space: nowrap;
 }
-tbody td { padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line-soft); vertical-align: middle; color: var(--ink-600); }
+tbody td { padding: var(--row-y) var(--s5); border-bottom: 1px solid var(--line-soft); vertical-align: middle; color: var(--ink-600); }
 /* The full gutter belongs at the table's edges; between two columns half of it
    on each side still reads as a gap, and a nine-column register then fits. */
 thead th + th, tbody td + td { padding-left: var(--s3); }
@@ -2392,8 +2392,31 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
    Set as attributes on <html> by web/preferences.ts, never as inline styles. Text is
    sized in rem, so one root size scales every screen; spacing stays as it was. */
 
+/*
+  Text size and spacing, both set on <html> and both the person's own.
+
+  'small' was added on 2026-11-05 beside the two larger steps. It is offered
+  below Standard and is nobody's default — the scale only ever grew before, and
+  a smaller one is a real need for someone who wants more of a long register on
+  a screen at once. 93.75% is 15px against the 16px root, one step down by the
+  same ratio the larger steps go up.
+*/
+:root[data-text='small'] { font-size: 93.75%; }
 :root[data-text='large'] { font-size: 112.5%; }
 :root[data-text='larger'] { font-size: 125%; }
+
+/*
+  Spacing: how much room a row and a card are given. It moves two tokens and
+  nothing else, so a choice cannot drift into one screen and miss another, and
+  no layout is re-laid out — only padded differently. Comfortable is the
+  default and is what every screen was built at.
+
+  The header's padding is derived from the row's rather than set beside it, so
+  the heavier rule under the column names keeps its proportion at every choice.
+*/
+:root { --row-y: var(--s3); --pad-card: var(--s5); }
+:root[data-density='compact'] { --row-y: var(--s2); --pad-card: var(--s4); }
+:root[data-density='spacious'] { --row-y: var(--s4); --pad-card: var(--s6); }
 :root[data-motion='reduce'] { --fast: 0s; --base: 0s; --slow: 0s; }
 :root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after {
   animation-duration: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; scroll-behavior: auto !important;
@@ -2589,3 +2612,8 @@ a.btn { text-decoration: none; }
 .heading-preview p { margin: 0; }
 .heading-preview .heading-school { margin-top: var(--s2); font-weight: 700; font-size: var(--t-13); }
 .heading-preview .unrecorded { font-size: var(--t-11); }
+
+/* The arrows that step between the learners a search found, with the count and
+   the way back to the list. Icon-only, so each carries its own name. */
+.learner-step { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.learner-step .muted { font-size: var(--t-12); font-variant-numeric: tabular-nums; }

@@ -15,7 +15,7 @@ import { whatsNew } from '../help/en/whats-new';
 import { available, routes, type Role } from '../routes';
 import { PhotoProblem, centred, clampCrop, drawCrop, maxZoom, openPicture, preparePhoto, turned, type Crop } from '../photo';
 
-export type Profile = Look & { avatar: string; avatar_icon: string | null; avatar_tone: string; landing: string | null; text_size: string; motion: string; theme: string;
+export type Profile = Look & { avatar: string; avatar_icon: string | null; avatar_tone: string; landing: string | null; text_size: string; motion: string; theme: string; density: string;
   contrast: string; links: string; focus: string; targets: string; spacing: string; typeface: string; version: number };
 type Mine = { user_id: string; display_name: string; role: string; position: string | null; specialization: string | null; profile: Profile; advises: Row[]; name_request?: NameRequest | null;
   photo_taken_down?: { at: string; by: string | null; reason: string } | null };

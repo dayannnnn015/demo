@@ -88,14 +88,14 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
         actions={<>
           {manager
             ? <button type="button" className="btn" onClick={() => setAdding(true)}><Icon name="plus" size={15} />Register a learner</button>
-            : <button type="button" className="btn" onClick={() => setTaking(true)}><Icon name="enter" size={15} />Take learners into my class</button>}
+            : <button type="button" className="btn" onClick={() => setTaking(true)}><Icon name="enter" size={15} />Add learner</button>}
         </>}
       />
 
       {manager
         ? null
         : <Callout tone="info" title="You see your own learners">
-            Only the learners enrolled in the sections you advise, in an open school year. <b>Take learners into my class</b> adds a learner the office has already
+            Only the learners enrolled in the sections you advise, in an open school year. <b>Add learner</b> adds a learner the office has already
             registered, or registers a child the school has never held a record for. Correcting a learner’s details stays with a principal or administrative officer.
           </Callout>}
 

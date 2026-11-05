@@ -8,13 +8,14 @@
  * style, which the content policy would drop.
  */
 export type Preferences = {
-  text_size?: unknown; motion?: unknown; theme?: unknown;
+  text_size?: unknown; motion?: unknown; theme?: unknown; density?: unknown;
   contrast?: unknown; links?: unknown; focus?: unknown; targets?: unknown; spacing?: unknown; typeface?: unknown;
 };
 
 // The first of each is the default. Contrast and motion default to the device's own setting, which the stylesheets read.
 const choices = {
-  text_size: ['standard', 'large', 'larger'], motion: ['system', 'reduce'], theme: ['light', 'dark', 'system'],
+  text_size: ['standard', 'small', 'large', 'larger'], motion: ['system', 'reduce'], theme: ['light', 'dark', 'system'],
+  density: ['comfortable', 'compact', 'spacious'],
   contrast: ['system', 'more'], links: ['standard', 'underline'], focus: ['standard', 'strong'],
   targets: ['standard', 'large'], spacing: ['standard', 'relaxed'], typeface: ['standard', 'readable'],
 } as const;

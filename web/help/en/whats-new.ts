@@ -8,6 +8,16 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.91.0', date: '2026-11-05',
+    items: [
+      '{profile} has two new settings under *Preferences*. **Spacing** — Compact, Comfortable or Spacious — changes how much room each row and card is given: Compact fits more of a long register or learner list on a screen, Spacious is easier to hit on a tablet.',
+      '**Text size** now offers *Small* as well. Like every other setting here it is yours alone, it follows your account to any computer, and printed forms are unchanged.',
+      'On {prior-records}, arrows now step between the learners your search found, with a count, and the magnifier beside them goes back to the list.',
+      'Also on {prior-records}: a learner whose only earlier year is Kindergarten no longer offers **Add a school year**, because a record there starts at Grade 1. Record what they presented under *Eligibility for Grade 1* instead.',
+      'On {learners}, the button that builds your class from the learners the office has registered is now simply **Add learner**. It does the same thing as before.',
+    ],
+  },
+  {
     version: '0.90.9', date: '2026-11-05',
     items: [
       '{profile} now shows the address you signed in with, under *Signing in*, along with when this sign-in began. On a shared staffroom computer it is the quickest way to check whose account you are in before you record anything.',
@@ -77,7 +87,7 @@ export const whatsNew: Release[] = [
   {
     version: '0.90.0', date: '2026-11-05',
     items: [
-      'Advisers can now build their own class. On {learners}, **Take learners into my class** lists the learners the office has registered for your grade who are in no class yet, and takes as many as you tick into your class.',
+      'Advisers can now build their own class. On {learners}, **Add learner** lists the learners the office has registered for your grade who are in no class yet, and takes as many as you tick into your class.',
       'It never makes a second record for a child: it is the record the office already holds, given your class. A learner already in somebody’s class is not offered — a principal or administrative officer moves a learner between classes.',
       'A search there also finds a learner with no enrolment this school year, such as one returning to the school, so they can be taken in without being keyed again.',
       '**Register a new learner into my class** is for a child the school has never held a record for. The registry is checked first: a learner with the same name and birth date already on it is refused, and you take that learner in instead.',

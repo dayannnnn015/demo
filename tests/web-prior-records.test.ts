@@ -137,8 +137,10 @@ describe('the Academic history screen', () => {
       // Only the id travels in the link: the screen reads the learner, so the
       // link cannot put a name on screen the caller may not be allowed to see.
       expect(sent.some(r => r.path === '/learners/11111111-1111-4111-8111-111111111111')).toBe(true);
-      expect(host.textContent).toContain('Choose another learner');
+      // The learner is open: the finder's empty state is gone, and the way
+      // back to it is the icon beside the arrows that step between learners.
       expect(host.textContent).not.toContain('Find the learner first');
+      expect([...host.querySelectorAll('button')].some(b => b.getAttribute('aria-label') === 'Find another learner')).toBe(true);
     } finally { location.hash = ''; }
   });
 

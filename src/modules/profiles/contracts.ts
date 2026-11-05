@@ -16,7 +16,8 @@ export const profileSchemas={
   save:z.strictObject({version,
     avatar:z.enum(['initials','icon','photo']).optional(),avatar_icon:z.enum(avatarIcons).nullable().optional(),avatar_tone:z.enum(avatarTones).optional(),
     landing:z.string().regex(/^[a-z0-9-]{1,40}$/,'Choose one of the screens offered.').nullable().optional(),
-    text_size:z.enum(['standard','large','larger']).optional(),motion:z.enum(['system','reduce']).optional(),theme:z.enum(['light','dark','system']).optional(),
+    text_size:z.enum(['small','standard','large','larger']).optional(),motion:z.enum(['system','reduce']).optional(),theme:z.enum(['light','dark','system']).optional(),
+    density:z.enum(['compact','comfortable','spacious']).optional(),
     contrast:z.enum(['system','more']).optional(),links:z.enum(['standard','underline']).optional(),focus:z.enum(['standard','strong']).optional(),
     targets:z.enum(['standard','large']).optional(),spacing:z.enum(['standard','relaxed']).optional(),typeface:z.enum(['standard','readable']).optional()})
     .refine(v=>Object.keys(v).length>1,'Provide a change')
@@ -49,7 +50,8 @@ export const profileOperations=([
 export type ProfileOperationId=typeof profileOperations[number]['id'];
 
 const view=z.object({avatar:z.enum(['initials','icon','photo']),avatar_icon:z.enum(avatarIcons).nullable(),avatar_tone:z.enum(avatarTones),
-  landing:z.string().nullable(),text_size:z.enum(['standard','large','larger']),motion:z.enum(['system','reduce']),theme:z.enum(['light','dark','system']),
+  landing:z.string().nullable(),text_size:z.enum(['small','standard','large','larger']),motion:z.enum(['system','reduce']),theme:z.enum(['light','dark','system']),
+  density:z.enum(['compact','comfortable','spacious']),
   contrast:z.enum(['system','more']),links:z.enum(['standard','underline']),focus:z.enum(['standard','strong']),
   targets:z.enum(['standard','large']),spacing:z.enum(['standard','relaxed']),typeface:z.enum(['standard','readable']),
   version:z.number().int(),photo:z.object({sha256:z.string(),thumb:z.string().describe('Base64 JPEG, at most 256 pixels square'),updated_at:z.string()}).nullable()});

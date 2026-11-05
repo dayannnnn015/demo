@@ -52,8 +52,8 @@ describe('an adviser takes a learner into their class', () => {
   it('offers the action, lists only their own class, and the learner waiting for it', async () => {
     server.signInAs('teacher');
     const screen = await mountScreen(Learners as never, server, teacher, { route });
-    await screen.until(m => m.text().includes('Take learners into my class'), 'the adviser action');
-    await screen.click(screen.byText('Take learners into my class', 'button'));
+    await screen.until(m => m.text().includes('Add learner'), 'the adviser action');
+    await screen.click(screen.byText('Add learner', 'button'));
     // The class picker holds the sections row security gave them, and no more.
     await screen.until(m => m.text().includes('Masigla'), 'their own class');
     expect(screen.text()).not.toContain('Narra');
@@ -67,8 +67,8 @@ describe('an adviser takes a learner into their class', () => {
   it('takes the learner in, and the class is theirs afterwards', async () => {
     server.signInAs('teacher');
     const screen = await mountScreen(Learners as never, server, teacher, { route });
-    await screen.until(m => m.text().includes('Take learners into my class'), 'the adviser action');
-    await screen.click(screen.byText('Take learners into my class', 'button'));
+    await screen.until(m => m.text().includes('Add learner'), 'the adviser action');
+    await screen.click(screen.byText('Add learner', 'button'));
     await screen.until(m => m.text().includes('Reyes'), 'the waiting learner');
     // Tick the row, then send it: the batch is one request per learner.
     const tick = screen.all('input.batch-check')[0]!;
@@ -89,7 +89,7 @@ describe('an adviser takes a learner into their class', () => {
     server.signInAs('principal');
     const screen = await mountScreen(Learners as never, server, principal, { route });
     await screen.until(m => m.text().includes('Register a learner'), 'the manager action');
-    expect(screen.text()).not.toContain('Take learners into my class');
+    expect(screen.text()).not.toContain('Add learner');
     screen.unmount();
   });
 });

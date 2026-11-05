@@ -142,7 +142,10 @@ describe('the account My profile is signed in as', () => {
     // The address is not ours to keep: it belongs to the sign-in service.
     const contracts = readFileSync('src/modules/foundation/contracts.ts', 'utf8');
     expect(contracts).not.toMatch(/signedInAs|last_sign_in_at/);
-    const migrations = readFileSync('database/migration-checksums.json', 'utf8');
-    expect(Object.keys(JSON.parse(migrations)).length).toBe(54);
+    // Nor is it a column anywhere: it belongs to the sign-in service. (This
+    // once pinned the project's whole migration count, which said nothing
+    // about this change and broke the moment an unrelated migration landed.)
+    const sql = readFileSync('database/migrations/0043_staff_profiles.sql', 'utf8');
+    expect(sql).not.toMatch(/email|last_sign_in/);
   });
 });

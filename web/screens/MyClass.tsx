@@ -109,7 +109,7 @@ export function MyClassSheet({ api, onClose, onDone }: {
   return (
     <Sheet
       wide
-      title="Take learners into my class"
+      title="Add learner"
       note="Learners the office has registered, assigned to a class you advise. No learner record is created or duplicated."
       onClose={() => onClose(0)}
     >

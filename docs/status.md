@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.90.9.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.91.0.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -32,6 +32,50 @@ manager still passes every check exactly as before.
 > sends them. **Do not open Next year's classes on live until this ships.**
 
 ## What shipped in this session
+
+### 0.91.0 — spacing and a small text size (migration 0055)
+
+**This reverses yesterday's own decision**, and the reason is recorded: both
+were declined in 0.90.9 for needing a migration against preference axes nobody
+had asked for *by name*. The user then asked for both by name, which is exactly
+the condition that was missing.
+
+Built the way 0043 and 0047 built the other nine: columns on
+`staff_profiles` with `check` constraints, `save_my_profile` widened by one
+key, the view — and so the journal snapshot, which is built from it —
+following. The `text_size` check is **replaced** rather than altered, because
+a check cannot be widened in place.
+
+Two choices worth keeping:
+
+- **Spacing moves two tokens**, `--row-y` and `--pad-card`, which every row
+  and card already read, rather than editing padding rule by rule. A choice
+  therefore cannot land on one screen and miss another. The column header's
+  padding is derived from the row's, so the heavier rule under the column names
+  keeps its proportion at every setting.
+- **Small is not the default.** The scale only ever grew before; a new, smaller
+  choice must not quietly shrink somebody who never picked it. 93.75% is one
+  step down by the ratio the larger steps go up.
+
+**Three fixes asked for alongside it.** Academic history offers no *Add a
+school year* for a learner with no year above Grade 1 — an SF10 block is
+Grade 1 to Grade 6 and Kindergarten is never one, so the only year behind a
+Grade 1 learner is Kindergarten and there is nothing to copy; the disabled
+action carries its own callout rather than reading as broken, and points at
+*Eligibility for Grade 1*. Academic history now steps between the learners a
+search found with **arrows and a count** instead of *Choose another learner*;
+the results are kept while a learner is open, and the way back to the list
+stays as an icon, because with one result both arrows are disabled and a row
+with no way out is worse than the button it replaced. And the Learner
+registry's *Take learners into my class* is now **Add learner**, in the screen,
+the sheet, both guides and the tests.
+
+**Two stale assertions of my own were corrected**, both found by this release's
+check rather than by reading: a prior-records case still looked for the button
+that became arrows, and a 0.90.9 guard pinned the **whole project's migration
+count** to make a point about one change that added none — it broke the moment
+an unrelated migration landed, which is the assertion being wrong rather than
+the code. It now checks the thing it meant.
 
 ### 0.90.9 — My profile and Settings reviewed; one field added
 
@@ -445,7 +489,7 @@ deleted.
 | Check | Result |
 |---|---|
 | `npm run check` | **passes, exit 0** |
-| `npx vitest run` | **245 passed**, 24 files (114 in 11 at the start of the session) |
+| `npx vitest run` | **252 passed**, 25 files (114 in 11 at the start of the session) |
 | `npm run build` | clean |
 | `npm run api:export` | regenerated for 0.90.1. **0.90.1 adds no endpoint**: it changes the workspace only |
 | Migration checksums | **54/54**, by `tests/migrations.test.ts` — which caught 0054's missing checksum on its first run |

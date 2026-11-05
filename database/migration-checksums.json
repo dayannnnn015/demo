@@ -52,5 +52,6 @@
   "0051_prior_academic_records.sql": "47aadc58e9effe950a79d3e07cdfa89840b597b5dbd43c320099f74b1fa49c11",
   "0052_sf4_unplaced_learners.sql": "cf5215caa89ba2dccea99a7806abd96620a27d9cc83a30bb49687c09d5b4290a",
   "0053_learner_address.sql": "d714288c03ae83f8fa8efd8026d67a0882fa59aeb9f9771dbdcc9aa013ab9a01",
-  "0054_teacher_roster.sql": "c8996bc360913da90023d6c608e729e97dac728a0094eb325f27042df0dfafb3"
+  "0054_teacher_roster.sql": "c8996bc360913da90023d6c608e729e97dac728a0094eb325f27042df0dfafb3",
+  "0055_density_and_small_text.sql": "a395db585aecdd4d591b7508beff5ecc4ca5dd06e66d873c31e89a5c6d87c876"
 }

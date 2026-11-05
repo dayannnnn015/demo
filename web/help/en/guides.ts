@@ -109,7 +109,7 @@ export const guides: Guide[] = [
     summary: 'The learners you currently advise, with their SF9 and SF10.',
     steps: [
       'You see your own learners only. A learner who moves out of your section leaves your list.',
-      '**Take learners into my class** builds your class from the learners the office has already registered. Choose the class, and the learners registered for your grade with no class yet are listed; tick the ones who are yours and take them in.',
+      '**Add learner** builds your class from the learners the office has already registered. Choose the class, and the learners registered for your grade with no class yet are listed; tick the ones who are yours and take them in.',
       'Taking a learner in never makes a second record for them — it is the record the office already holds, given your class. A learner already in somebody else’s class is not offered: a principal or administrative officer moves a learner between classes.',
       'The search there also finds a learner with no enrolment this school year, such as one returning to the school, so they need not be keyed in again.',
       '**Register a new learner into my class** is for a child the school has never held a record for at all. The registry is checked first, so if a learner with the same name and birth date is already on it you take that learner in instead.',

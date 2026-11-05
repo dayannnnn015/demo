@@ -5,10 +5,11 @@ import { Select, StatusLine, idle, type Status } from '../components/primitives'
 import { applyPreferences } from '../preferences';
 import { changedElsewhere, type Profile } from './Profile';
 
-type Key = 'text_size' | 'motion' | 'theme';
+type Key = 'text_size' | 'density' | 'motion' | 'theme';
 type Access = 'contrast' | 'links' | 'focus' | 'targets' | 'spacing' | 'typeface';
 const options: Record<Key | Access, [string, string][]> = {
-  text_size: [['standard', 'Standard'], ['large', 'Large'], ['larger', 'Larger']],
+  text_size: [['small', 'Small'], ['standard', 'Standard'], ['large', 'Large'], ['larger', 'Larger']],
+  density: [['compact', 'Compact'], ['comfortable', 'Comfortable'], ['spacious', 'Spacious']],
   theme: [['light', 'Light'], ['dark', 'Dark'], ['system', 'Same as this device']],
   motion: [['system', 'Same as this device'], ['reduce', 'Less motion']],
   contrast: [['system', 'Same as this device'], ['more', 'Higher contrast']],
@@ -20,6 +21,7 @@ const options: Record<Key | Access, [string, string][]> = {
 };
 const labels: Record<Key | Access, { title: string; note: string }> = {
   text_size: { title: 'Text size', note: 'Every screen, the rail and the forms on screen. Printing is unchanged.' },
+  density: { title: 'Spacing', note: 'How much room each row and control is given. Compact fits more of a long register or learner list on a screen; Spacious is easier to hit on a tablet. Printing is unchanged.' },
   theme: { title: 'Theme', note: 'Dark is easier on the eyes in a dim room. Printed forms stay black on white.' },
   motion: { title: 'Motion', note: 'Less motion stops panels sliding and tours gliding between steps.' },
   contrast: { title: 'Contrast', note: 'Grey text as dark as the rest, and lines between things that show. Same as this device follows your computer’s own setting.' },
@@ -98,7 +100,7 @@ export function Preferences({ api, role, profile, onSaved, onConflict }: {
           </Select>
           </span>
         </div>
-        {(['text_size', 'theme', 'motion'] as Key[]).map(key => <Choice key={key} name={key} profile={profile} busy={busy} save={c => void save(c)} />)}
+        {(['text_size', 'density', 'theme', 'motion'] as Key[]).map(key => <Choice key={key} name={key} profile={profile} busy={busy} save={c => void save(c)} />)}
       </div>
     </div>
   );
