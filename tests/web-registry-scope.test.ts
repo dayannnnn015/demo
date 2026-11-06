@@ -49,6 +49,10 @@ beforeAll(async () => {
     [year2026, mine]);
   await db.pg.query(`select * from edunexus.place_enrollment('00000000-0000-4000-9001-000000000002'::uuid,$1::uuid,4::smallint,$2::uuid,'2026-06-01','regular')`,
     [year2026, theirs]);
+  await db.pg.query(`insert into edunexus.reporting_periods(academic_year_id,ordinal,name,starts_on,ends_on) values
+    ($1,1,'First','2026-06-01','2026-08-31'),($1,2,'Second','2026-09-01','2026-11-30'),
+    ($1,3,'Third','2026-12-01','2027-01-31'),($1,4,'Fourth','2027-02-01','2027-03-31')`, [year2026]);
+  await db.pg.query(`update edunexus.academic_years set status='active' where id=$1`, [year2026]);
 });
 afterAll(async () => { await server.close(); await db.database.close(); });
 
@@ -83,6 +87,19 @@ describe('what a manager is shown', () => {
     expect(screen.text()).toContain('Grade level this year');
     // Both classes, which is the school-wide visibility that must not change.
     expect(screen.text()).toContain('Lacsamana');
+    screen.unmount();
+  });
+
+  it('updates the registry immediately when Any grade is selected', async () => {
+    server.signInAs('principal');
+    const screen = await mountScreen(Learners as never, server, principal, { route });
+    await screen.until(m => m.text().includes('Lacsamana'), 'the school-wide registry');
+    const grade = screen.field('Grade level this year');
+    expect(grade).toBeInstanceOf(HTMLSelectElement);
+    await screen.type(grade, '3');
+    await screen.until(m => m.text().includes('Reyes') && !m.text().includes('Lacsamana'), 'the filtered registry');
+    await screen.type(grade, '');
+    await screen.until(m => m.text().includes('Reyes') && m.text().includes('Lacsamana'), 'the unfiltered registry');
     screen.unmount();
   });
 

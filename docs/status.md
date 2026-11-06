@@ -56,6 +56,14 @@ have downloaded, so it is the user's call.
 The 0.91.1 question is **answered**: Academic history is out of the learner
 panel, by instruction.
 
+### Unreleased — grade filter applies immediately
+
+The Principal/AO learner registry now applies a grade-level selection as soon
+as it changes, including returning to **Any grade**, without requiring the
+Search button. Other Finder fields retain their submit-to-search behavior.
+Covered by `tests/web-registry-scope.test.ts`; the next action remains applying
+migrations 0053–0056 and deploying.
+
 ## What shipped in this session
 
 ### 0.92.1 — Settings moved into the account menu (no migration)

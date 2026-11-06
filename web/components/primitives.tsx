@@ -398,11 +398,12 @@ export function FormSheet({ title, note, wide, submitLabel, fields, initial, onS
 }
 
 /** The same controls as an editor, but laid out as one filter row above a list. */
-export function Finder({ fields, initial, onApply, onClear }: {
+export function Finder({ fields, initial, onApply, onClear, onFieldChange }: {
   fields: Field[];
   initial: Record<string, string>;
   onApply: (values: Record<string, string>) => void;
   onClear?: (() => void) | undefined;
+  onFieldChange?: (key: string, value: string, values: Record<string, string>) => void;
 }) {
   const scope = useId();
   const [values, setValues] = useState(initial);
@@ -411,7 +412,11 @@ export function Finder({ fields, initial, onApply, onClear }: {
     <form className="toolbar" onSubmit={event => { event.preventDefault(); onApply(values); }}>
       <div className="form-grid">
         {fields.map(field => (
-          <Control key={field.key} compact field={field} id={`${scope}-${field.key}`} value={values[field.key] ?? ''} onChange={next => setValues(v => ({ ...v, [field.key]: next }))} />
+          <Control key={field.key} compact field={field} id={`${scope}-${field.key}`} value={values[field.key] ?? ''} onChange={next => {
+            const updated = { ...values, [field.key]: next };
+            setValues(updated);
+            onFieldChange?.(field.key, next, updated);
+          }} />
         ))}
       </div>
       <div className="form-actions">

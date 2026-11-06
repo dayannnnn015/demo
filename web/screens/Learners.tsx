@@ -112,6 +112,9 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
           <Finder
             initial={filters}
             onApply={next => { setFilters(next); setOffset(0); }}
+            onFieldChange={(key, _next, values) => {
+              if (key === 'grade_level') { setFilters(values); setOffset(0); }
+            }}
             onClear={() => { setFilters({ search: '', birth_date: '', sex: '', grade_level: '' }); setOffset(0); }}
             fields={[
               { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
