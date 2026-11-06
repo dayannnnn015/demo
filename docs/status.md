@@ -2,11 +2,11 @@
 
 > ## The hosted database is a demonstration registry, and live is at migration 0059 — read this first
 >
-> **Version 0.95.2, committed on branch `master`. The live database was wiped and
+> **Version 0.95.3, committed on branch `consolidated/2026-11-06`. The live database was wiped and
 > reseeded on 2026-11-06, and migrations 0053–0059 were applied to it.**
 >
-> **0.95.2 is a workspace-only fix and is NOT deployed.** Live still serves
-> 0.95.1. It changes no endpoint, schema, permission, error code or migration,
+> **0.95.2 and 0.95.3 are workspace-only fixes and are NOT deployed.** Live
+> still serves 0.95.1. It changes no endpoint, schema, permission, error code or migration,
 > so the live database needs nothing: it needs a deploy, and on this project a
 > push does not deploy — see the Git-link note below.
 >
@@ -159,8 +159,8 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Deploy 0.95.2.** It is committed, `npm run check` passes (32 files, 324
-tests), and it needs no migration — the live database is already at 0059 and
+**Deploy 0.95.3** (it carries 0.95.2 with it). It is committed, `npm run check`
+passes (32 files, 327 tests), and it needs no migration — the live database is already at 0059 and
 this release touches only `web/`. Deploy it with `vercel --prod` from this
 checkout, because the Vercel project has no Git link and **a push does not
 deploy** (the note at the top of this file has the project id and the one
@@ -171,6 +171,18 @@ applied to live on 2026-11-06, and the caution about opening Next year's classes
 against a 0.86.1 build is spent with it.
 
 ## Waiting on the user
+
+**The demonstration database cannot show the adviser pull as it stands, and two
+office steps would fix it.** Confirmed by a read-only query on 2026-11-06: every
+enrolment in the active year already has a class, so the pullable list is
+correctly empty for everyone; and the real teacher account advises none of the 30
+classes, so it reads no learners at all. To demonstrate the feature, a manager
+needs to (1) make that teacher the adviser of a class on **Staff access**, and
+(2) enrol a learner into that class's grade **without** a section, or carry last
+year's learners over on **Next year's classes**. Neither is a code change, and
+`scripts/seed-demo-registry.ts` places every learner it enrols
+([line 249](../scripts/seed-demo-registry.ts)), so a reseed alone will not
+produce a pullable learner either.
 
 **Are advisers meant to section the new school year in advance?** 0.95.2 took the
 answer the user gave for *this* release — the school builds its classes only once
@@ -191,6 +203,35 @@ anchor in `web/screens/LearnerProfile.tsx` and one assertion in
 is the user's to make, not the next agent's.
 
 ## What shipped in this session
+
+### 0.95.3 — the empty registry an adviser reads now points at Add learner (no migration)
+
+Reported as "the teacher's Learner Registry shows nothing, and Add learner
+cannot retrieve unassigned learners", with the reading that the pullable query
+required a `section_id`. **It did not.** `read_pullable_learners` (`0054`) joins
+enrolments on `section_id is null and grade_level = the section's grade` for the
+section's year, so an unplaced learner is exactly what it returns. The whole
+reported workflow was re-run end to end against the API — unplaced learners at
+the adviser's grade listed, another grade's refused `P2600`, the take-in
+assigning the enrolment the office already holds with no second learner or
+enrolment row, the learner leaving the list, a second take-in refused `P2602`,
+and a manager still reading everyone. It all held. The reasoning is in
+[teacher-roster.md](teacher-roster.md).
+
+**The live cause was the data, and it is the office's to fix, not code's.** A
+read-only query against live found that all 69 enrolments in the active year
+already held a class (`unplaced = 0`), so nobody was pullable; and the one real
+teacher account, *Diane Kaye Ancheta*, advised **none** of that year's 30
+classes, so row security correctly gave it no learners. Only the seeded teacher
+accounts advise anything, and only the seven `A` sections hold learners.
+
+What was actually wrong was the sentence: the empty table said "No learners are
+currently assigned to your sections." and stopped, which is true of the class and
+silent about the learners waiting at that grade. It now names what it is
+describing, does not call the registry empty, and carries **Add learner** inside
+it. The read scope is untouched, and the pull stays scoped to a section the
+teacher advises (the user reaffirmed this on 2026-11-06 rather than adopting the
+grade-level assignment the report assumed).
 
 ### 0.95.2 — the adviser's class sheet refuses a year that is not running (no migration)
 

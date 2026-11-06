@@ -83,6 +83,22 @@ describe('an adviser takes a learner into their class', () => {
     screen.unmount();
   });
 
+  // The empty table used to read "No learners are currently assigned to your
+  // sections." and stop, which is true and useless: it describes the adviser's
+  // own class and says nothing about the learners waiting to be taken into it,
+  // so an adviser read it as "there is nobody" and went no further. Masigla
+  // holds nobody here while Ana waits at its grade, which is exactly that case.
+  it('points an adviser whose class is empty at the learners waiting for it', async () => {
+    server.signInAs('teacher');
+    const screen = await mountScreen(Learners as never, server, teacher, { route });
+    await screen.until(m => m.text().includes('No learners in your classes yet'), 'the empty state');
+    expect(screen.text()).not.toContain('No learners are currently assigned to your sections');
+    // It names the way in, and the registry is not called empty: it is not.
+    expect(screen.text()).toContain('Add learner');
+    expect(screen.text()).not.toContain('The registry is empty');
+    screen.unmount();
+  });
+
   it('takes the learner in, and the class is theirs afterwards', async () => {
     server.signInAs('teacher');
     const screen = await mountScreen(Learners as never, server, teacher, { route });

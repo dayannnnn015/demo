@@ -8,6 +8,13 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.95.3', date: '2026-11-06',
+    items: [
+      'On {learners}, when none of your classes holds a learner yet, the table no longer just says that none is assigned to your sections. It now tells you that the learners the office has registered at your grade, with no class yet, are waiting under **Add learner** — and offers the button there, so you do not have to know where to look.',
+      'Nothing changed about who you may read. You still see the learners in the classes you advise, and **Add learner** still offers only the learners registered at the grade of a class you advise.',
+    ],
+  },
+  {
     version: '0.95.2', date: '2026-11-06',
     items: [
       'On {learners}, **Add learner** now names the school year of each of your classes under **My class**, and opens on the year the school is running rather than on whichever class happened to be first.',
