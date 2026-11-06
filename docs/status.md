@@ -5,8 +5,25 @@
 > **Version 0.95.1. Branch `branch-out`. The live database was wiped and reseeded
 > on 2026-11-06, and migrations 0053–0059 were applied to it.**
 >
-> **Live is now at migration 0059. The deployed app is still 0.86.1, so it is
-> behind the schema — deploying 0.95.1 is the next action and it is the user's.**
+> **Live is at migration 0059 and 0.95.1 is deployed and verified** (194/194
+> `npm run smoke` checks against `https://edunexus-balili.vercel.app`). The
+> adviser pull is live: `pullable-learners` and `pulls` answer 401 rather than
+> 404.
+>
+> **The Vercel project had no Git link, and that is why nothing deployed for
+> days.** `prj_soIqKqi62yMehbsUarsD0aHsWmJz` ("edunexus", team
+> `joshs-projects-47d7b071`) reported `link: null`, so pushing to
+> `bustamante-j/edunexus` triggered nothing — two pushes on 2026-11-06 produced
+> no deployment while production continued to serve the 29 October build. The
+> deployment that fixed it was made **from this machine with the Vercel CLI**
+> (`vercel --prod`), which needs no Git link. `.vercel/project.json` now links
+> this checkout to that project and is gitignored.
+>
+> **Still to do, and it is a dashboard/account action rather than code:** run
+> `npx vercel git connect` (or Vercel → project → Settings → Git) to attach the
+> repository, or every future release needs another manual `vercel --prod`.
+> Until then **a push does not deploy**, which is the opposite of what anyone
+> picking this up will assume.
 > The migrations were applied because the seed could not run without them: the
 > registry writer inserts `address`, `guardian_name` and `guardian_contact`
 > (0053, 0056) and live was at 0052, and the adviser pull the demonstration needs
@@ -50,8 +67,10 @@
 >
 > ### The single next action
 >
-> **Deploy 0.95.1**, so the deployed app matches the 0059 schema. Then, if the user
-> wants it, fix the `record_access_events` chunking as its own increment.
+> **Connect the Vercel project to the repository** (`npx vercel git connect`), so
+> a push deploys again. Then, if the user wants it, fix the
+> `record_access_events` chunking as its own increment — it is what stops Next
+> year's classes working at the school's real roll.
 >
 > Everything below describes the branch before this and is unchanged by it.
 
