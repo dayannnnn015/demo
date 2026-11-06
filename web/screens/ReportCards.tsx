@@ -403,7 +403,7 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                 />
               </>
             ) : null}
-            {tab === 'card' ? <CardEditor key={`card|${sectionId}`} onDirty={dirtyFor('card')} api={api} records={records} descriptive={descriptive} readOnly={readOnly} setStatus={setStatus} onSaved={reload} /> : null}
+            {tab === 'card' ? <CardEditor key={`card|${sectionId}`} onDirty={dirtyFor('card')} api={api} records={records} descriptive={descriptive} readOnly={readOnly} manager={manager} setStatus={setStatus} onSaved={reload} /> : null}
             {tab === 'summary' ? <ClassSummary me={me} records={records} /> : null}
             {tab === 'promotion' ? <PromotionPanel key={`promotion|${sectionId}`} onDirty={dirtyFor('promotion')} api={api} me={me} manager={manager} records={records} setStatus={setStatus} descriptive={descriptive} onDecided={reload}
               openApprove={asked.current.get('approve') === '1' && asked.current.get('section') === sectionId} onApproveOpened={() => { asked.current = new URLSearchParams(); forgetHashParams(); }} /> : null}

@@ -72,6 +72,11 @@ values, narratives or promotion endorsements. The report-record service also
 rejects those manager writes; advisers retain entry access. The next action
 remains applying migrations 0053–0056 and deploying.
 
+The Report card tab now makes that distinction visible: Principal/AO users see
+the card read-only until they choose **Correct this card**; only then can they
+edit and review a correction. The next action remains applying migrations
+0053–0056 and deploying.
+
 ## What shipped in this session
 
 ### 0.92.1 — Settings moved into the account menu (no migration)

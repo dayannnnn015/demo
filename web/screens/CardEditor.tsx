@@ -112,8 +112,8 @@ function cardBody(learner: ReportLearner, changedKeys: string[], value: (key: st
   return card;
 }
 
-export function CardEditor({ api, records, descriptive, readOnly, setStatus, onSaved, onDirty }: {
-  api: Api; records: ReportRecords; descriptive: boolean; readOnly: boolean; setStatus: (s: Status) => void; onSaved: () => void;
+export function CardEditor({ api, records, descriptive, readOnly, manager = false, setStatus, onSaved, onDirty }: {
+  api: Api; records: ReportRecords; descriptive: boolean; readOnly: boolean; manager?: boolean; setStatus: (s: Status) => void; onSaved: () => void;
   /** How many boxes are typed but not recorded, so the screen can ask before they are left. */
   onDirty?: ((count: number) => void) | undefined;
 }) {
@@ -121,6 +121,7 @@ export function CardEditor({ api, records, descriptive, readOnly, setStatus, onS
   const [chosen, setChosen] = useState(learners[0]?.enrollment_id ?? '');
   const [leaving, setLeaving] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
   const learner = learners.find(l => l.enrollment_id === chosen) ?? learners[0];
   const index = learner ? learners.indexOf(learner) : -1;
   const parts = cardParts(records.section.grade_level, descriptive);
@@ -138,15 +139,16 @@ export function CardEditor({ api, records, descriptive, readOnly, setStatus, onS
 
   const go = (id: string) => { if (changedKeys.length) setLeaving(id); else setChosen(id); };
   const changed = cardBoxes(records, learner, descriptive).filter(b => changedKeys.includes(b.key));
+  const locked = readOnly || (manager && !correcting);
 
   const isChanged = (key: string) => changedKeys.includes(key);
   // The form-control styles hang on .field; a box has no label of its own beyond its aria-label.
-  const gradeBox = (key: string, label: string) => readOnly ? <Shown kind="grade" value={stored[key] ?? ''} /> : (
+  const gradeBox = (key: string, label: string) => locked ? <Shown kind="grade" value={stored[key] ?? ''} /> : (
     <div className={`field cell-field grade${isChanged(key) ? ' changed' : ''}`}>
       <input className={`score-input${gradeProblem(value(key)) ? ' invalid' : ''}`} inputMode="decimal" aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)} />
     </div>
   );
-  const remarkBox = (key: string, label: string) => readOnly ? <Shown kind="remark" value={stored[key] ?? ''} /> : (
+  const remarkBox = (key: string, label: string) => locked ? <Shown kind="remark" value={stored[key] ?? ''} /> : (
     <div className={`field cell-field remark${isChanged(key) ? ' changed' : ''}`}>
       <Select aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)}><option value="">None</option><option value="passed">Passed</option><option value="failed">Failed</option></Select>
     </div>
@@ -165,6 +167,7 @@ export function CardEditor({ api, records, descriptive, readOnly, setStatus, onS
           <span className="muted">{index + 1} of {learners.length}</span>
         </div>
         <div className="card-head-actions">
+          {manager && !readOnly && !correcting ? <button type="button" className="btn secondary small" onClick={() => setCorrecting(true)}>Correct this card</button> : null}
           <button type="button" className="btn ghost small" disabled={index <= 0} aria-label="Previous learner" title="Previous learner"
             onClick={() => go(learners[index - 1]!.enrollment_id)}><Icon name="back" size={14} /></button>
           <button type="button" className="btn ghost small" disabled={index >= learners.length - 1} aria-label="Next learner" title="Next learner"
@@ -215,7 +218,7 @@ export function CardEditor({ api, records, descriptive, readOnly, setStatus, onS
                       <td className="statement">{s.text}</td>
                       {records.periods.map(p => {
                         const key = `v:${p.id}:${s.code}`;
-                        return <td key={p.id}>{readOnly ? <Shown kind="mark" value={stored[key] ?? ''} /> : (
+                        return <td key={p.id}>{locked ? <Shown kind="mark" value={stored[key] ?? ''} /> : (
                           <div className={`field cell-field mark${isChanged(key) ? ' changed' : ''}`}>
                             <Select aria-label={`${s.code}, ${p.name}`} title={s.text} value={value(key)} onChange={e => set(key, e.target.value)}>
                               <option value="">·</option>{marks.map(([c]) => <option key={c} value={c}>{c}</option>)}
@@ -240,14 +243,14 @@ export function CardEditor({ api, records, descriptive, readOnly, setStatus, onS
                 return (
                   <div key={key} className="field wide">
                     <span className="label">{label}</span>
-                    {readOnly ? <Shown kind="text" value={stored[key] ?? ''} /> : <textarea className="note-input" rows={2} maxLength={1000} aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)} />}
+                    {locked ? <Shown kind="text" value={stored[key] ?? ''} /> : <textarea className="note-input" rows={2} maxLength={1000} aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)} />}
                   </div>
                 );
               }))}
             </div>
           </section>
         ) : null}
-        {readOnly ? null : (
+        {locked ? null : (
           <>
             {problems.length ? <p className="field-error">{problems[0]}</p> : null}
             <div className="form-actions">
