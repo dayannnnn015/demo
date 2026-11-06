@@ -3,9 +3,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { ids, testDatabase, type TestDatabase } from './helpers/database.js';
 import { mountScreen, serverApi, type ServerApi } from './helpers/dom.js';
-import { Settings } from '../web/screens/Settings';
-import { Profile } from '../web/screens/Profile';
-import { available, routes } from '../web/routes';
+import { Settings } from '../web/screens/Settings.js';
+import { Profile } from '../web/screens/Profile.js';
+import { available, routes } from '../web/routes.js';
 
 /**
  * Settings, split out of My profile, and reached from the account menu.

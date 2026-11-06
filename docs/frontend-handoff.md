@@ -77,7 +77,7 @@ The rail names the school from the `/school` record rather than a literal, becau
 
 The year is a `.scope` chip rather than an eyebrow, because it is the scope every record in the system is filed under; it turns ochre when no year is active. It is a statement, not a control — a year is activated on the School years screen, where what that means is spelled out.
 
-`web/components/palette.tsx` is the command palette, opened with Ctrl/Cmd+K from a listener held in the shell so it works on any screen. **It searches the route table only.** That is a privacy property: every list under `/learners` and `/enrollments` writes a `record_access_events` row naming the exact records returned, so a palette that searched the registry would write one per keystroke and bury the audit it exists to serve. Its footer says so on screen, and `tests/web-shell.test.ts` asserts that sentence is still there. Both the school and the year are fetched once in `web/App.tsx` and passed down, so a screen never refetches them for its own furniture. There is deliberately **no notification bell**. Nothing in this system may raise an alert yet — the absence-alert gate blocks "any messaging on attendance" — so a badge would be decoration imitating a signal. Add one when a rule exists to fire it.
+`web/components/palette.tsx` is the command palette, opened with Ctrl/Cmd+K from a listener held in the shell so it works on any screen. **It searches the route table only.** That is a privacy property: every list under `/learners` and `/enrollments` writes a `record_access_events` row naming the exact records returned, so a palette that searched the registry would write one per keystroke and bury the audit it exists to serve. Its footer says so on screen, and `tests/web-shell.test.ts` asserts that sentence is still there. Both the school and the year are fetched once in `web/App.tsx` and passed down, so a screen never refetches them for its own furniture. A **notification bell** sits in the top bar since 0.93.0 (`web/screens/Notifications.tsx`, and `unread` on `AppShell`, which only draws it — `web/App.tsx` asks for the count), and the reason there was none until 2026-11-05 still governs what it shows. Nothing in this system may raise an *attendance* alert — the absence-alert gate blocks "any messaging on attendance" — and **no notification names a learner**, because every list under `/learners` and `/enrollments` writes a `record_access_events` row and a bell that previewed names would write one per poll. The count comes from `GET /api/v1/notifications/count`, which names no record and writes no access row, exactly as `GET /enrollment-counts` does for the Overview; only opening the centre lists anything, and a learner is reached by a link to the screen that logs the disclosure. See [notifications.md](notifications.md).
 
 ## Figures
 
@@ -337,7 +337,7 @@ address recorded must read as unrecorded, not as an empty cell**: that is
 is.
 
 `guardian_name` and `guardian_contact` joined it the same way in 0.92.0
-(migration 0056), and the same rule applies to them: they are on all three
+(migration 0057), and the same rule applies to them: they are on all three
 sheets because the list is shared, and an unrecorded guardian reads as
 *No guardian recorded*, never as an empty line — a blank there says *this child
 has no guardian*. The contact number is **never reformatted**: a mobile, a

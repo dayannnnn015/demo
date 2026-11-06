@@ -132,6 +132,30 @@ export function App() {
     return () => { live = false; };
   }, [me, api, token]);
 
+  // How many notifications are unread, for the bell.
+  //
+  // `/notifications/count` answers a number, names no record and writes no
+  // `record_access_events` row, which is the whole reason the bell asks for a
+  // count rather than paging the list: a list that named learners would write
+  // an access row on every poll and bury the privacy audit in its own noise.
+  // It refetches on every navigation (`token`) and once a minute besides, so a
+  // tab left open in a staffroom stays roughly current without polling hard.
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!me || !api) { setUnread(0); return; }
+    let live = true;
+    const ask = () => {
+      void api<{ unread: number }>('/notifications/count')
+        .then(answer => { if (live) setUnread(Number(answer.unread) || 0); })
+        // A bell that cannot count is silent, never an error: the count is
+        // furniture, and a failed poll must not interrupt what someone is typing.
+        .catch(() => { if (live) setUnread(0); });
+    };
+    ask();
+    const timer = setInterval(ask, 60000);
+    return () => { live = false; clearInterval(timer); };
+  }, [me, api, token]);
+
   // Retrying the staff record after a passing failure shows why, rather than a sign-in form.
   if (!client || !api || (signedIn && !me && fatal)) {
     return (
@@ -169,6 +193,7 @@ export function App() {
       me={me}
       school={school}
       hidden={hidden}
+      unread={unread}
       current={route}
       context={year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}

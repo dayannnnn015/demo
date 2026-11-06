@@ -64,7 +64,7 @@ Work lands as one reviewable increment per commit. Every module in `src/modules/
 
 ### Error code ranges
 
-`P0002` not found and `P0003` version conflict are shared. Module ranges: `P01xx` timeline, `P02xx` identity, `P03xx` enrollment records, `P04xx` placement, `P05xx` calendar, `P06xx` attendance, `P07xx` months, `P08xx` monitor, `P09xx` follow-ups, `P10xx` subjects, `P11xx` offerings, `P12xx` policy drafts, `P13xx` adoptions, `P14xx` bindings, `P15xx` invitations, `P16xx` assessment tasks and scores, `P17xx` roster submissions, `P18xx` school forms, `P19xx` report-card records, `P20xx` end-of-year outcomes, `P21xx` next year's classes, `P22xx` the public site, `P23xx` the front page's questions, `P24xx` staff profiles, `P25xx` historical academic records, `P26xx` an adviser’s own class roster. **Next free range: `P27xx`.**
+`P0002` not found and `P0003` version conflict are shared. Module ranges: `P01xx` timeline, `P02xx` identity, `P03xx` enrollment records, `P04xx` placement, `P05xx` calendar, `P06xx` attendance, `P07xx` months, `P08xx` monitor, `P09xx` follow-ups, `P10xx` subjects, `P11xx` offerings, `P12xx` policy drafts, `P13xx` adoptions, `P14xx` bindings, `P15xx` invitations, `P16xx` assessment tasks and scores, `P17xx` roster submissions, `P18xx` school forms, `P19xx` report-card records, `P20xx` end-of-year outcomes, `P21xx` next year's classes, `P22xx` the public site, `P23xx` the front page's questions, `P24xx` staff profiles, `P25xx` historical academic records, `P26xx` an adviser’s own class roster, `P27xx` notifications. **Next free range: `P28xx`.**
 
 ### Supabase configuration
 

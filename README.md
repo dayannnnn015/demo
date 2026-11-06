@@ -173,6 +173,19 @@ Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, ave
 
 Read [staff invitations](docs/staff-invitations.md). A manager records the request, then creates the account from the same screen. The API runtime still holds no service-role key: the key is confined to an isolated Edge Function whose only action is inviting one address, and a deployment without one keeps the operator's link-by-UUID route.
 
+## What works in notifications
+
+- A personal inbox per staff member, with an unread count, newest-first paging and mark-one or mark-all read.
+- Emitted inside the transaction that made the change, by the writer that made it, so a notification cannot report something that did not happen.
+- **No notification names a learner.** The payload admits a closed list of keys and the database refuses any other.
+- **An inbox is personal**: the row policy answers only rows addressed to the caller, so a principal reads their own and not the school’s. It is the one table where being a manager grants nothing.
+- **The API cannot send one.** `notify` is never granted to `edunexus_app`; only a security-definer writer can.
+- Emitters: the four roster-submission events; enrollment — an import (once, with a count), a move, a withdrawal, a re-entry (0.94.0); and the monthly consolidation, promotion outcomes and the instructional calendar (0.95.0).
+- **No notification carries an attendance figure.** The absence-alert gate is untouched: a month notification says a month moved, never how often anyone was absent.
+- A bell in the top bar with the unread count, and a centre listing your own, newest first, with mark-one and mark-all read (0.93.0).
+
+Read [notifications](docs/notifications.md). This reverses two settled decisions, on the user’s explicit decision of 2026-11-05, and the reasons are recorded there and in [constraints.md](docs/constraints.md). **Nothing here alerts, messages or notifies on attendance**: the absence-alert gate is untouched and still shut, and no figure is counted, compared or thresholded. Since 0.93.0 a **bell** in the top bar carries the unread count and opens the notification centre; the count names no record and writes no access row, so it may be polled.
+
 ## What works in the school workspace
 
 The workspace at `/app` is a keyboard-navigable administrative interface: minimal since 0.63.0 — a light navigation rail divided from the page by one hairline, a near-white canvas and flat white cards, so the records are the only thing that holds the eye. Tables keep the register's hairline rules between rows, because every form the workspace feeds is a ruled sheet and that is the structure the staff already read. Every editor whose record feeds a school form says, above its save button, what else the save changes, and the SF2, SF4 and SF10 are edited on the forms themselves. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:

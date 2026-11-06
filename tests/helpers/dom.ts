@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createApp } from '../../src/http-app.js';
 import type { Identity } from '../../src/core/auth.js';
-import { createApi, type Api } from '../../web/api';
+import { createApi, type Api } from '../../web/api.js';
 import { ids, type TestDatabase } from './database.js';
 
 /**

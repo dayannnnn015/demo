@@ -31,6 +31,7 @@ import { PublicSite } from './screens/PublicSite';
 import { Help } from './screens/Help';
 import { Profile } from './screens/Profile';
 import { Settings } from './screens/Settings';
+import { Notifications } from './screens/Notifications';
 
 export type Role = 'principal' | 'administrative_officer' | 'teacher';
 
@@ -93,6 +94,14 @@ export const routes: Route[] = [
     lede: 'Where the school year stands, and what is set up so far.',
     record: 'academic_years, sections, staff',
     render: p => <Overview {...p} />,
+  },
+
+  {
+    id: 'notifications', nav: 'Notifications', icon: 'bell', group: 'Workspace', built: true,
+    title: 'Notifications',
+    lede: 'What has moved on the work you are responsible for — yours alone, and naming no learner.',
+    record: 'notifications',
+    render: p => <Notifications {...p} />,
   },
 
   {

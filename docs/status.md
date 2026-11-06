@@ -1,6 +1,66 @@
 # Where things stand
 
-**Version 0.92.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+> ## Branch `notifications` — read this first
+>
+> **Version 0.95.0, migrations 0057–0059, merged into `branch-out`.**
+> The notification work is now reconciled with `0056_learner_guardian.sql`; the
+> current tree is the merged worktree.
+>
+> **Two things to know before merging.**
+>
+> 1. **The migration number was reconciled.** `branch-out` already had
+>    `0056_learner_guardian.sql`, so notification migrations are `0057`–`0059`.
+>    `tests/migrations.test.ts` requires numbering from 0001 with no gap and no repeat,
+>    The checksums were recomputed for the renamed files. None of these migrations
+>    is applied anywhere; live remains at 0052.
+> 2. **The status notes are reconciled.** The current branch's guardian and Settings
+>    notes remain below the notification summary.
+>
+> **What shipped here:** notifications, in two commits. **0.92.0** is the substrate
+> and the four roster emitters (migration 0057); **0.93.0** is the bell in the top bar
+> and the notification centre behind it, which changes no endpoint, schema, permission
+> or error code; **0.94.0** adds migration 0057, the enrollment and class-assignment
+> emitters; **0.95.0** adds migration 0059, the monthly consolidation, promotion
+> outcome and calendar emitters.
+> It reverses two settled decisions by the user’s explicit decision of 2026-11-05;
+> the reasoning is in [notifications.md](notifications.md) and in the top row of
+> [constraints.md](constraints.md). `npm run check` passes: 297 tests in 30 files.
+>
+> **The approved first release is built**, except for the three things below, each
+> named in notifications.md with its reason.
+>
+> **The single next action on this branch is a decision, not code:**
+> `adviser_assigned`, `adviser_removed`, `year_activated` and `year_closed` cannot
+> be emitted, because a section’s adviser and a year’s status are set by **plain
+> SQL in `src/modules/foundation/service.ts`**, not by a `security definer`
+> function — there is nothing to `create or replace`. Closing it means a new
+> writer function for those core 0001 tables, which is its own increment and
+> changes a write path everything else depends on. The other way, granting
+> `notify` to `edunexus_app`, **was refused** and is recorded as a decision: it
+> would let the API forge a notification. Ask the user which they want before
+> building either.
+>
+> **Two smaller gaps, both safe to leave:** an adviser pulling or registering a
+> learner who holds *no* enrolment this year reaches `place_enrollment` and so
+> notifies nobody; and `next_year_placed` has a writer and could be done, but is
+> loop-shaped like the import and must emit once, not per learner.
+>
+> **Read the 2026-11-06 decisions in constraints.md before adding any emitter:**
+> emit at the intent boundary, and check whether the writer is ever called in a
+> loop first.
+>
+> **Two repository gaps found on the way, neither mine to fix here.** `tests/web-screens.test.ts`
+> and `tests/web-shell.test.ts` are described in `AGENTS.md` but **do not exist in this
+> tree** — lost with the rest of `tests/` in the 0.86.1 recovery — so no test renders
+> every route, and `tests/web-notifications.test.ts` stands in for the new screen only.
+> And `AGENTS.md` describes the dark theme as retuning tokens under
+> `@media (prefers-color-scheme: dark)`; in this tree it is `:root[data-scheme='dark']`
+> in `app.css`, resolved in JS by `web/preferences.ts`.
+>
+> Everything below describes `branch-out` and is unchanged by this branch.
+
+
+**Version 0.91.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -13,12 +73,9 @@ inventing hunks that were never a working state. Its message says so.
 [docs/constraints.md](constraints.md) is the authority. The decisions table this
 file used to carry lives there; this file is a pointer, not a second changelog.
 
-The prior-records learning-area grid now gives the Remark select enough width to
-show its full options. TypeScript validation passed.
-
 ## The single next action
 
-**Apply migrations 0053 to 0056, then deploy.** All four are the user's.
+**Apply migrations 0053 and 0054, then deploy 0.90.3.** Both are the user's.
 The tree is committed (`e0ab9a3`); merging and pushing are not done, by
 instruction.
 
@@ -36,133 +93,15 @@ manager still passes every check exactly as before.
 
 ## Waiting on the user
 
-**Did "enable editing of student information" mean advisers too?** It was read
-as *make the editor evident*, which is what shipped: editing was folded inside a
-`Task` beside the reviewed LRN and identity workflows, so a plain correction
-read as unavailable, and **Edit profile** now opens a sheet. It was **not** read
-as widening who may edit, because a teacher correcting a learner profile is
-forbidden by the standing rule in `AGENTS.md` — whose three adviser exceptions
-are deliberately narrow and do not include it. If advisers are meant to correct
-profiles, that is a decision plus a backend change (the `learners` update policy
-and the HTTP role gate), not a screen change. **Ask before building it.**
-
-**Should the class-list import carry the guardian?** 0056 added
-`guardian_name` and `guardian_contact` to the record but **not** to
-`ROSTER_HEADER`, which still has its eight columns, because extending a
-published import contract is its own decision. The consequence is concrete: at
-897 learners the guardian is typed one learner at a time. The parser already
-accepts two header shapes (`columns` and `columnsV1`) and the pattern extends
-cleanly to a third, and the Excel template is generated from `ROSTER_HEADER`, so
-this is a contained change — but it changes a template the school may already
-have downloaded, so it is the user's call.
-
-The 0.91.1 question is **answered**: Academic history is out of the learner
-panel, by instruction.
-
-### Unreleased — grade filter applies immediately
-
-The Principal/AO learner registry now applies a grade-level selection as soon
-as it changes, including returning to **Any grade**, without requiring the
-Search button. Other Finder fields retain their submit-to-search behavior.
-Covered by `tests/web-registry-scope.test.ts`; the next action remains applying
-migrations 0053–0056 and deploying.
-
-### Unreleased — Promotion permissions narrowed
-
-Principal/AO users can approve or return teacher endorsements and correct an
-individual Report card, but cannot enter class grades, averages, observed
-values, narratives or promotion endorsements. The report-record service also
-rejects those manager writes; advisers retain entry access. The next action
-remains applying migrations 0053–0056 and deploying.
-
-The Report card tab now makes that distinction visible: Principal/AO users see
-the card read-only until they choose **Correct this card**; only then can they
-edit and review a correction. The next action remains applying migrations
-0053–0056 and deploying.
+**Should the learner's Academic history part link to that screen?** 0.91.1 gave
+it a signpost and no link, because the shortcut was deliberately removed from
+this same panel in 0.90.2 (the rail already carries the screen) and
+reorganising the panel is not a reason to reverse that. Restoring it is one
+anchor in `web/screens/LearnerProfile.tsx` and one assertion in
+`tests/web-learner-profile.test.ts` — but it reverses a settled decision, so it
+is the user's to make, not the next agent's.
 
 ## What shipped in this session
-
-### 0.92.1 — Settings moved into the account menu (no migration)
-
-Asked for directly, and it reverses that one detail of 0.92.0 the same day.
-0.92.0 put the screen on the rail and recorded why — someone hunting for the
-text size should find it in the navigation rather than only under their own
-name. The instruction settles it the other way, and **the better reason is the
-one the grouping already made**: the rail is the school's records, and the
-account menu is the person's own things, which is what Settings holds.
-
-- `offRail: true` on the route, like `profile`. It touches nothing the API
-  allows, and **Ctrl+K still reaches it**, because the palette searches the
-  route table regardless of that flag.
-- The menu item is in `ProfileMenu` (`web/components/AppShell.tsx`), which
-  writes its items out **by hand** — My profile, Settings, Change password,
-  Sign out. So a route going `offRail` disappears from the navigation and
-  appears nowhere else unless an item is added there too. That is why
-  `tests/web-settings.test.ts` asserts the menu item *and* the route flag: a
-  test checking only `offRail` passes with the item missing entirely.
-- The guided tour's *Your account* step listed the menu's items and now names
-  Settings, and both guides say which menu each screen is in. Help that
-  describes a menu it no longer matches is worse than no help.
-
-Both halves of the gate were mutation-tested: removing `offRail` and renaming
-the menu item each fail it.
-
-
-### 0.92.0 — the guardian pair, an evident editor, two screens (migration 0056)
-
-Four changes asked for together. The gate opening is the one to read first.
-
-**`guardian_name` and `guardian_contact` left the learner-fields gate.** They
-were asked for **by name** after 0.91.1 reported, in those words, that this gate
-blocked parent or guardian and contact number — a reaffirmation after being
-told, which is the only way a field may leave it and exactly how `address` left
-it on 2026-11-04. Both nullable: a learner the school has written no guardian
-for is **unrecorded, never "no guardian"**.
-
-Three sub-decisions that are easier to get wrong than to notice:
-
-- **One name field, no relationship field.** Nothing supplied says which
-  relationships the school records or how it writes them, so a closed list would
-  refuse a real family. It goes in the name — *Maria Reyes (mother)*.
-- **The number is never reformatted.** Digits and the punctuation a number is
-  written with; no minimum length, no leading-zero rule, no +63 normalisation.
-  `(074) 422-1234 / 0917 555 0101` is stored byte for byte. Letters are
-  refused, because a number is a number.
-- **It is not in the import template.** `ROSTER_HEADER` still has eight
-  columns. **Known cost: at 897 learners the guardian is typed one at a time**,
-  and that is the second open question above.
-
-Two things found rather than assumed. `audit_events` (0001) has only
-`changed_fields` and **no snapshot columns**, so the journal never holds a
-guardian's phone number anywhere — asserted on the whole row, because this is
-the first field on `learners` holding a third party's number, for 897 families,
-in an append-only table. And `register_learner_into_section` (0054) has a closed
-**deny-unknown** key list, so a new learner column breaks adviser registration
-with *Invalid learner fields* the moment the contract carries it — the control
-working. 0056 `create or replace`s it, as 0018/0019/0021 did, rather than
-editing an applied migration.
-
-**Editing is an action.** It sat inside a `Task` titled *Correct the details*,
-beside the LRN correction and identity links, which are **reviewed** workflows —
-so a plain correction read as unavailable. **Edit profile** opens a sheet.
-**No permission moved**; see the first open question above for what was *not*
-done and why.
-
-**Academic history is out of the learner panel**, by instruction, which returns
-it to where 0.90.2 left it. Removed from here twice now, so the gate opens
-**both** parts of the panel before asserting no `prior-records` link — 0.90.2's
-own gate was vacuous by asserting on the closed list.
-
-**My profile and Settings are two screens.** The 0.90.9 specification already
-called them *My profile* and *Settings & Accessibility*. Preferences,
-Accessibility and Learning EDUNEXUS moved to `web/screens/Settings.tsx`. **No
-preference moved, changed or was added** — same cards, same `staff_profiles`
-columns, same `save_my_profile`, no migration.
-
-`tests/registry-guardian.test.ts` (12 cases) and
-`tests/web-learner-profile.test.ts` (16) hold it; both new interface gates were
-mutation-tested, including a link planted on the *other* tab.
-
 
 ### 0.91.1 — one learner, read in three parts (no migration)
 
