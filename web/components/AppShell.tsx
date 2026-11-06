@@ -163,7 +163,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
   );
 }
 
-export function AppShell({ me, school, current, context, contextTone, hidden = [], unread = 0, onNavigate, onSignOut, onChangePassword, children }: {
+export function AppShell({ me, school, current, context, contextTone, hidden = [], unread = 0, notificationPanel, onNavigate, onSignOut, onChangePassword, children }: {
   me: Row;
   /** The school profile record. The rail states what it reads, never a literal:
    *  this is the same name printed on every official form, and it is editable. */
@@ -180,6 +180,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
    *  for the count, which names no record and writes no access row, so it may
    *  be asked for repeatedly. */
   unread?: number | undefined;
+  notificationPanel?: ReactNode;
   onNavigate: (id: string) => void;
   onSignOut: () => void;
   onChangePassword?: (() => void) | undefined;
@@ -189,6 +190,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState<HelpTopic | null>(null);
   const [tour, setTour] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState(false);
   const [collapsed, setCollapsed] = useState(() => remembered('rail-collapsed', false));
   const [shut, setShut] = useState(() => remembered<string[]>('nav-shut', []));
   const manager = me.role !== 'teacher';
@@ -197,6 +199,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
   // there is no way in that the other closes.
   const visible = routes.filter(route => available(route, me.role) && !hidden.includes(route.id));
   const working = useWorking();
+  const notificationWrap = useDismiss(notifications, () => setNotifications(false));
 
   const setRail = (next: boolean) => { setCollapsed(next); remember('rail-collapsed', next); };
   const toggleGroup = (group: string) => setShut(open => {
@@ -339,11 +342,15 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
             {/* A count rather than a bare dot, and the number is in the
                 label too: a screen reader should not have to infer it from
                 a badge. No learner is named here or on the screen it opens. */}
-            <button type="button" className="bell" onClick={() => onNavigate('notifications')} data-tour="bell"
-              aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications, none unread'}>
-              <Icon name="bell" size={16} />
-              {unread ? <span className="bell-count">{unread > 99 ? '99+' : unread}</span> : null}
-            </button>
+            <div className="notification-wrap" ref={notificationWrap}>
+              <button type="button" className="bell" onClick={() => setNotifications(open => !open)} data-tour="bell"
+                aria-expanded={notifications} aria-haspopup="dialog"
+                aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications, none unread'}>
+                <Icon name="bell" size={16} />
+                {unread ? <span className="bell-count">{unread > 99 ? '99+' : unread}</span> : null}
+              </button>
+              {notifications ? notificationPanel : null}
+            </div>
             <span className="topbar-sep" aria-hidden="true" />
             <button type="button" className="search-trigger" onClick={() => setPalette(true)} aria-label="Go to a screen" data-tour="palette">
               <Icon name="search" size={15} />

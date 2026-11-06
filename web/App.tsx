@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, createApi, message, rememberMe, sessionStore, type Page, type Row } from './api';
 import { Account, PasswordChange } from './Account';
 import { AppShell } from './components/AppShell';
+import { Notifications } from './screens/Notifications';
 import { BrandMark } from './components/brand';
 import { Sheet } from './components/overlay';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
@@ -194,6 +195,16 @@ export function App() {
       school={school}
       hidden={hidden}
       unread={unread}
+      notificationPanel={
+        <Notifications
+          api={api}
+          me={me}
+          token={token}
+          setStatus={setStatus}
+          popover
+          onUnreadChange={setUnread}
+        />
+      }
       current={route}
       context={year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}

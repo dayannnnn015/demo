@@ -18,7 +18,7 @@
 >
 > **What shipped here:** notifications, in two commits. **0.92.0** is the substrate
 > and the four roster emitters (migration 0057); **0.93.0** is the bell in the top bar
-> and the notification centre behind it, which changes no endpoint, schema, permission
+> and the notification popout behind it, which changes no endpoint, schema, permission
 > or error code; **0.94.0** adds migration 0057, the enrollment and class-assignment
 > emitters; **0.95.0** adds migration 0059, the monthly consolidation, promotion
 > outcome and calendar emitters.

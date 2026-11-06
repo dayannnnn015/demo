@@ -10,7 +10,7 @@ export const whatsNew: Release[] = [
   {
     version: '0.93.0', date: '2026-11-06',
     items: [
-      'There is now a **bell** in the top bar, with the number of notifications you have not read. It opens {notifications}.',
+      'There is now a **bell** in the top bar, with the number of notifications you have not read. It opens a popout without leaving the screen.',
       'You are told when a class list is submitted, imported, declined or withdrawn. Advisers hear about their own list; the office hears that one is waiting.',
       'Your notifications are yours alone — nobody else can read them, and *no learner is ever named in one*. A notification links to the screen where the records are, because opening a learner’s record is what belongs in the privacy log.',
       'Nothing notifies anyone about a learner’s absences. The school has no approved alert rule for attendance and EDUNEXUS will not invent one.',

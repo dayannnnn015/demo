@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { message, query } from '../api';
-import { available, routes, type Route } from '../routes';
+import { available, routes } from '../routes';
 import { Icon } from '../components/icons';
-import { Callout, Cell, EmptyState, PageHeader, Table, Unrecorded, type Status } from '../components/primitives';
+import { Callout, Cell, EmptyState, Table, Unrecorded, type Status } from '../components/primitives';
 
-type Props = { api: Api; me: Row; token: number; route: Route; setStatus: (s: Status) => void };
+type Props = { api: Api; me: Row; token: number; setStatus: (s: Status) => void; popover?: boolean; onUnreadChange?: (count: number) => void };
 
 /**
  * Your own notifications. Nobody else's: the row policy behind this list
@@ -72,7 +72,7 @@ function pointsAt(kind: string, role: unknown) {
   return { route: target, open: available(target, role) };
 }
 
-export function Notifications({ api, me, token, route, setStatus }: Props) {
+export function Notifications({ api, me, token, setStatus, popover = false, onUnreadChange }: Props) {
   const [status, setFilter] = useState<'unread' | 'all'>('unread');
   const [before, setBefore] = useState('');
   const [rows, setRows] = useState<Page | null>(null);
@@ -85,6 +85,11 @@ export function Notifications({ api, me, token, route, setStatus }: Props) {
       .then(setRows)
       .catch(() => setRows({ items: [] }));
   }, [api, status, before, token, refresh]);
+  useEffect(() => {
+    void api<{ unread: number }>('/notifications/count')
+      .then(answer => onUnreadChange?.(Number(answer.unread) || 0))
+      .catch(() => undefined);
+  }, [api, refresh, onUnreadChange]);
 
   const show = (next: 'unread' | 'all') => { setBefore(''); setFilter(next); };
 
@@ -110,21 +115,16 @@ export function Notifications({ api, me, token, route, setStatus }: Props) {
 
   const items = rows?.items ?? [];
   return (
-    <>
-      <PageHeader
-        route={route}
-        actions={
-          <button type="button" className="btn secondary" aria-busy={clearing} disabled={clearing || !items.some(r => r.read_at === null)} onClick={() => void readAll()}>
-            <Icon name="check" size={15} />{clearing ? 'Marking…' : 'Mark all as read'}
-          </button>
-        }
-      />
-
-      <div className="card">
+    <div className={popover ? 'notification-popover' : undefined} role={popover ? 'dialog' : undefined} aria-label={popover ? 'Notifications' : undefined}>
+      <div className={`card${popover ? ' notification-card' : ''}`}>
         <div className="card-head"><div>
-          <h2>Your notifications</h2>
-          <p className="card-note">Yours alone, and no learner is named in one. Open the screen a notification points at to see the records themselves.</p>
-        </div></div>
+          <h2>Notifications</h2>
+          <p className="card-note">Yours alone, and no learner is named in one.</p>
+        </div>
+          <button type="button" className="btn secondary small" aria-busy={clearing} disabled={clearing || !items.some(r => r.read_at === null)} onClick={() => void readAll()}>
+            <Icon name="check" size={14} />{clearing ? 'Marking…' : 'Mark all as read'}
+          </button>
+        </div>
         <div className="card-tools">
           <div className="segmented" role="group" aria-label="Which notifications to show">
             {([['unread', 'Unread'], ['all', 'Everything']] as const).map(([key, label]) => (
@@ -178,6 +178,6 @@ export function Notifications({ api, me, token, route, setStatus }: Props) {
       <Callout tone="info" title="What is notified, and what is not">
         EDUNEXUS notifies you about work that has moved: a class list submitted or decided, a learner’s class changed, a consolidation or an outcome sent on. It does <b>not</b> notify anyone about a learner’s absences — the school has no approved alert rule, and the system will not invent one. Nor does it notify on routine recording: a mark, a score, an opened record or a saved draft stays on its own screen and in the activity and access logs.
       </Callout>
-    </>
+    </div>
   );
 }

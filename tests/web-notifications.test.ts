@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { ids, testDatabase, type TestDatabase } from './helpers/database.js';
 import { mountScreen, serverApi, type ServerApi } from './helpers/dom.js';
 import { Notifications } from '../web/screens/Notifications';
@@ -24,8 +25,8 @@ let db: TestDatabase;
 let server: ServerApi;
 const year2026 = '00000000-0000-4000-9000-000000000001';
 const masigla = '00000000-0000-4000-9000-00000000000a';
-const route = routes.find(r => r.id === 'notifications')!;
 const teacher = { user_id: ids.teacher, role: 'teacher', display_name: 'Teacher' };
+const shell = readFileSync('web/components/AppShell.tsx', 'utf8');
 const principal = { user_id: ids.principal, role: 'principal', display_name: 'Principal' };
 
 const header = 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address';
@@ -51,9 +52,16 @@ beforeAll(async () => {
 afterAll(async () => { await server.close(); await db.database.close(); });
 
 describe('the notification centre', () => {
+  it('is only a top-bar popout, never a route or rail item', () => {
+    expect(routes.some(r => r.id === 'notifications')).toBe(false);
+    expect(shell).toContain('notificationPanel');
+    expect(shell).toContain('aria-haspopup="dialog"');
+    expect(shell).toContain('onClick={() => setNotifications(open => !open)}');
+  });
+
   it('shows a manager the waiting class list, naming the class and no learner', async () => {
     server.signInAs('principal');
-    const screen = await mountScreen(Notifications as never, server, principal, { route });
+    const screen = await mountScreen(Notifications as never, server, principal);
     await screen.until(m => m.text().includes('class list is waiting'), 'the roster notification');
 
     const text = screen.text();
@@ -69,14 +77,14 @@ describe('the notification centre', () => {
   it('shows an adviser nothing of a colleague’s inbox', async () => {
     // The same rows exist; the row policy answers none of them to this reader.
     server.signInAs('teacher');
-    const screen = await mountScreen(Notifications as never, server, teacher, { route });
+    const screen = await mountScreen(Notifications as never, server, teacher);
     await screen.until(m => m.text().includes('Nothing unread'), 'the empty state');
     expect(screen.text()).not.toContain('class list is waiting');
   });
 
   it('marks one as read, and then has nothing unread to show', async () => {
     server.signInAs('principal');
-    const screen = await mountScreen(Notifications as never, server, principal, { route });
+    const screen = await mountScreen(Notifications as never, server, principal);
     await screen.until(m => m.text().includes('Mark as read'), 'the row action');
 
     await screen.click(screen.byText('Mark as read', 'button'));
@@ -90,7 +98,7 @@ describe('the notification centre', () => {
 
   it('names the screen it points at rather than linking a principal somewhere they are refused', async () => {
     server.signInAs('principal');
-    const screen = await mountScreen(Notifications as never, server, principal, { route });
+    const screen = await mountScreen(Notifications as never, server, principal);
     // Everything, because the case above has already marked it read.
     await screen.until(m => m.text().includes('Everything'), 'the filter');
     await screen.click(screen.byText('Everything', 'button'));
@@ -113,7 +121,7 @@ describe('the notification centre', () => {
     });
 
     server.signInAs('teacher');
-    const screen = await mountScreen(Notifications as never, server, teacher, { route });
+    const screen = await mountScreen(Notifications as never, server, teacher);
     await screen.until(m => m.text().includes('needs correcting'), 'the declined notification');
     expect(screen.all('a[href="#/imports"]').length).toBeGreaterThan(0);
     // And the manager who declined it is not named to them: staff_read is

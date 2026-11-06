@@ -176,7 +176,8 @@ of the writer it belongs to.
   was chosen here by default.
 ## The screen (0.93.0)
 
-A **bell** in the top bar carries the unread count and opens **Notifications**.
+A **bell** only in the top bar carries the unread count and opens a **popout**;
+there is no Notifications page or rail item.
 The count is a number, not a dot, and the number is in the accessible label
 too, because a screen reader should not have to infer it from a badge. It
 comes from `GET /notifications/count`, refetches on every navigation and once

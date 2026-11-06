@@ -443,6 +443,26 @@ code, .mono {
   line-height: 15px;
   text-align: center;
 }
+.notification-wrap { position: relative; }
+.notification-popover {
+  position: absolute;
+  z-index: var(--z-menu);
+  top: calc(100% + var(--s2));
+  right: 0;
+  width: min(720px, calc(100vw - var(--s6)));
+  max-height: min(640px, calc(100vh - var(--topbar-h) - var(--s6)));
+  overflow: auto;
+  padding: var(--s3);
+  border: 1px solid var(--line-strong);
+  background: var(--canvas);
+  box-shadow: var(--shadow-2);
+}
+.notification-popover .card { margin: 0; }
+.notification-popover .card-head { gap: var(--s3); }
+.notification-popover .card-head h2 { font-size: var(--t-16); }
+.notification-popover .card-note { font-size: var(--t-12); }
+.notification-popover .card-tools { margin-top: var(--s3); }
+.notification-popover .callout { margin-top: var(--s3); }
 .search-trigger .ico { flex: none; color: var(--ink-400); }
 .search-trigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

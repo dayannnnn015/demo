@@ -438,19 +438,4 @@ export const guides: Guide[] = [
       'From a learner in the {learners}, **Who has opened this record** opens this log for that learner.',
     ],
   },
-  {
-    route: 'notifications',
-    summary: 'What has moved on the work you are responsible for: a class list submitted or decided, a learner’s class changed, a consolidation or an outcome sent on. Yours alone — nobody can read your notifications, not even the principal.',
-    steps: [
-      'The bell in the top bar carries the number you have not read yet. Opening it brings you here.',
-      '**Unread** is what is waiting; **Everything** also shows the ones you have read already.',
-      'Each row says what happened and which class it was about, and links to the screen where the work is. **Mark as read** clears one row; **Mark all as read** clears every unread one at once.',
-    ],
-    refuses: [
-      'No notification names a learner. This is deliberate: opening a learner’s record is recorded in the privacy log, so the notification points you at the screen that does that rather than naming the child here.',
-      'Nothing notifies you about a learner’s absences, however many there are. The school has no approved alert rule for attendance, and EDUNEXUS will not invent one — the absence monitor and follow-ups are where that work is done, by hand.',
-      'You are never notified about something you did yourself, and routine recording — a mark, a score, an opened record, a saved draft — notifies nobody.',
-      'If a row says *On Roster import* instead of linking, that screen is not part of your own work. The office imports class lists; you are told so you know it is waiting.',
-    ],
-  },
 ];
