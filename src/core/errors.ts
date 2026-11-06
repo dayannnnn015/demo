@@ -130,6 +130,7 @@ export function normalizeError(error: unknown): AppError {
     const which = /^[A-Z][^\n"]{3,200}$/.test(said) ? `: ${said.charAt(0).toLowerCase()}${said.slice(1)}` : '';
     return new AppError(409, 'CARD_HAS_NO_BOX', `This learner’s report card has no box for that${which}. It would be recorded but never printed on the SF9 or SF10.`);
   }
+  if (code === 'P2700') return new AppError(404, 'NOTIFICATION_NOT_FOUND', 'The notification was not found.');
   if (code === 'P1800') return new AppError(403, 'PRINCIPAL_ONLY', 'Only the principal records the school’s attendance rule.');
   if (code === 'P1801') return new AppError(409, 'RULE_UNCHANGED', 'The rule is already recorded that way.');
   if (code === 'P1802') return new AppError(409, 'REISSUE_REASON', 'This form was issued before with different content. Give the reason it is being corrected.');

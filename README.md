@@ -173,6 +173,17 @@ Read [assessment tasks and raw scores](docs/assessment-scores.md). No total, ave
 
 Read [staff invitations](docs/staff-invitations.md). A manager records the request, then creates the account from the same screen. The API runtime still holds no service-role key: the key is confined to an isolated Edge Function whose only action is inviting one address, and a deployment without one keeps the operator's link-by-UUID route.
 
+## What works in notifications
+
+- A personal inbox per staff member, with an unread count, newest-first paging and mark-one or mark-all read.
+- Emitted inside the transaction that made the change, by the writer that made it, so a notification cannot report something that did not happen.
+- **No notification names a learner.** The payload admits a closed list of keys and the database refuses any other.
+- **An inbox is personal**: the row policy answers only rows addressed to the caller, so a principal reads their own and not the school’s. It is the one table where being a manager grants nothing.
+- **The API cannot send one.** `notify` is never granted to `edunexus_app`; only a security-definer writer can.
+- The first emitters are the four roster-submission events: submitted, withdrawn, imported, declined.
+
+Read [notifications](docs/notifications.md). This reverses two settled decisions, on the user’s explicit decision of 2026-11-05, and the reasons are recorded there and in [constraints.md](docs/constraints.md). **Nothing here alerts, messages or notifies on attendance**: the absence-alert gate is untouched and still shut, and no figure is counted, compared or thresholded. There is no screen yet — the bell and the notification centre are the next increment.
+
 ## What works in the school workspace
 
 The workspace at `/app` is a keyboard-navigable administrative interface: minimal since 0.63.0 — a light navigation rail divided from the page by one hairline, a near-white canvas and flat white cards, so the records are the only thing that holds the eye. Tables keep the register's hairline rules between rows, because every form the workspace feeds is a ruled sheet and that is the structure the staff already read. Every editor whose record feeds a school form says, above its save button, what else the save changes, and the SF2, SF4 and SF10 are edited on the forms themselves. The modules it covers are real screens; the rest appear in the navigation as honest placeholders rather than disappearing. It covers:

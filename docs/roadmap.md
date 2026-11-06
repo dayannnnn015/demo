@@ -189,6 +189,7 @@ authority — the code is true, the changelog says why:
 | `report-records.md` | Grade entry from the ECR, observed values, narratives, the class summary, outcomes, `grade-entry` as the counting-read pattern, and the ORDER BY journal bug |
 | `next-year-classes.md` | Promotion outcomes into next year's enrolment after 0049 removed the draw, the review hash, the lock order, the vestigial seed |
 | `roster-submissions.md` | The adviser-proposes/manager-approves shape, why the check reads no learner, why acceptance points at an import rather than performing one |
+| `notifications.md` | The personal inbox (0056): the two decisions it reverses and the condition that changed, why no notification names a learner, why it carries no version and no journal of its own, why the API cannot forge one, and the roster emitters |
 | `public-site.md` | The front page as a second entry, its own content policy, what publishes and what never does |
 | `staff-profiles.md` | Profiles, avatars, why a photo loads no image file, what `checkJpeg` strips, sessions, the two-step removal, name corrections |
 | `help-and-tutorials-plan.md` | The in-app help, FAQ and tours, the three marks, the refusal-to-answer bridge — **and that the test holding them to the screens is missing** |

@@ -1,5 +1,38 @@
 # Where things stand
 
+> ## Branch `notifications` — read this first
+>
+> **Version 0.92.0, migration 0056, branch `notifications`, based on `8780422` (0.91.1).**
+> This is a **separate worktree branch**, created on the user’s instruction so it would
+> not disturb the uncommitted guardian-fields work in the `branch-out` checkout.
+> Not merged and not pushed — the user merges.
+>
+> **Two things to know before merging.**
+>
+> 1. **The migration number collides.** `branch-out` has an uncommitted, untracked
+>    `0056_learner_guardian.sql`; this branch has a committed `0056_notifications.sql`.
+>    `tests/migrations.test.ts` requires numbering from 0001 with no gap and no repeat,
+>    so **one of the two must be renumbered on merge** — renumber this one to the next
+>    free number, since the guardian file was written first. Neither is applied
+>    anywhere (live is at 0052), so renumbering is a rename plus a recomputed checksum
+>    in `database/migration-checksums.json`; nothing else in 0056 depends on its number.
+> 2. **This file will conflict.** It was edited in `branch-out` after this branch was
+>    cut. Keep both: that file’s state for `branch-out`, this block for the branch.
+>
+> **What shipped here:** notifications — the substrate and the four roster emitters.
+> It reverses two settled decisions by the user’s explicit decision of 2026-11-05;
+> the reasoning is in [notifications.md](notifications.md) and in the top row of
+> [constraints.md](constraints.md). `npm run check` passes: 277 tests in 27 files.
+> **There is no screen yet** — the bell and the notification centre are the next
+> increment, then the remaining emitters, one commit per emitting module.
+>
+> **The single next action on this branch:** build the notification centre screen and
+> the bell (unread count from `GET /notifications/count`, which writes no access row),
+> then the enrollment, attendance-month, promotion and assignment emitters.
+>
+> Everything below describes `branch-out` and is unchanged by this branch.
+
+
 **Version 0.91.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and

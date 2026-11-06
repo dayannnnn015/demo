@@ -35,6 +35,7 @@ import { executeForm } from './modules/forms/service.js';
 import { executeReport } from './modules/report-records/service.js';
 import { executePrior } from './modules/prior-records/service.js';
 import { executeRoster } from './modules/teacher-roster/service.js';
+import { executeNotification } from './modules/notifications/service.js';
 import { executeNextYear } from './modules/next-year/service.js';
 import { currentStaff, executeOperation } from './modules/foundation/service.js';
 import { openapi } from './openapi.js';
@@ -138,6 +139,7 @@ export function createApp(deps: Dependencies) {
           and to_regprocedure('edunexus.read_my_activity(text,bigint,integer)') is not null
           and to_regprocedure('edunexus.read_learner_prior_records(uuid)') is not null
           and to_regclass('edunexus.learner_prior_record_events') is not null
+          and to_regclass('edunexus.notifications') is not null
           and to_regprocedure('edunexus.read_pullable_learners(uuid,text,integer)') is not null
           and to_regprocedure('edunexus.read_encoding_progress(uuid)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
@@ -233,6 +235,7 @@ export function createApp(deps: Dependencies) {
         if (operation.module === 'report-records') return executeReport(operation.id, context, input);
         if (operation.module === 'prior-records') return executePrior(operation.id, context, input);
         if (operation.module === 'teacher-roster') return executeRoster(operation.id, context, input);
+        if (operation.module === 'notifications') return executeNotification(operation.id, context, input);
         if (operation.module === 'next-year') return executeNextYear(operation.id, context, input);
         if (operation.module === 'site') return executeSite(operation.id, context, input);
         if (operation.module === 'profiles') return executeProfile(operation.id, context, input);
