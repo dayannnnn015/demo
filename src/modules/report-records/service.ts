@@ -32,18 +32,22 @@ export async function executeReport(id:ReportOperationId,ctx:Context,input:{body
       return {...section,learner};
     }
     case 'reportGradesRecord':{
+      if(ctx.staff.role!=='teacher') throw new AppError(403,'FORBIDDEN','Only the class adviser can enter grades.');
       const b=input.body as z.infer<typeof s.grades>;
       return written(tx,'select edunexus.record_report_grades($1,$2,$3::jsonb,$4) r',[input.id,b.reporting_period_id,JSON.stringify(b.entries),b.reason]);
     }
     case 'reportSummariesRecord':{
+      if(ctx.staff.role!=='teacher') throw new AppError(403,'FORBIDDEN','Only the class adviser can enter general averages.');
       const b=input.body as z.infer<typeof s.summaries>;
       return written(tx,'select edunexus.record_report_summaries($1,$2::jsonb,$3) r',[input.id,JSON.stringify(b.entries),b.reason]);
     }
     case 'reportValuesRecord':{
+      if(ctx.staff.role!=='teacher') throw new AppError(403,'FORBIDDEN','Only the class adviser can enter observed values.');
       const b=input.body as z.infer<typeof s.values>;
       return written(tx,'select edunexus.record_report_values($1,$2,$3::jsonb,$4) r',[input.id,b.reporting_period_id,JSON.stringify(b.entries),b.reason]);
     }
     case 'reportNotesRecord':{
+      if(ctx.staff.role!=='teacher') throw new AppError(403,'FORBIDDEN','Only the class adviser can enter report-card narratives and comments.');
       const b=input.body as z.infer<typeof s.notes>;
       return written(tx,'select edunexus.record_report_notes($1,$2,$3,$4,$5::jsonb,$6) r',[input.id,b.kind,b.reporting_period_id,b.month_on,JSON.stringify(b.entries),b.reason]);
     }
@@ -59,6 +63,7 @@ export async function executeReport(id:ReportOperationId,ctx:Context,input:{body
       return row!.r;
     }
     case 'promotionsRecommend':{
+      if(ctx.staff.role!=='teacher') throw new AppError(403,'FORBIDDEN','Only the class adviser can endorse a promotion outcome.');
       const b=input.body as z.infer<typeof s.recommend>;
       const [row]=await tx.query<{r:{changed:number;entries:{enrollment_id:string}[]}}>('select edunexus.record_promotion_recommendations($1,$2::jsonb,$3) r',[input.id,JSON.stringify(b.entries),b.reason]);
       await logged(tx,'promotionsWrite',row!.r.entries.map(e=>e.enrollment_id));

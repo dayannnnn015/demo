@@ -64,6 +64,14 @@ Search button. Other Finder fields retain their submit-to-search behavior.
 Covered by `tests/web-registry-scope.test.ts`; the next action remains applying
 migrations 0053–0056 and deploying.
 
+### Unreleased — Promotion permissions narrowed
+
+Principal/AO users can approve or return teacher endorsements and correct an
+individual Report card, but cannot enter class grades, averages, observed
+values, narratives or promotion endorsements. The report-record service also
+rejects those manager writes; advisers retain entry access. The next action
+remains applying migrations 0053–0056 and deploying.
+
 ## What shipped in this session
 
 ### 0.92.1 — Settings moved into the account menu (no migration)

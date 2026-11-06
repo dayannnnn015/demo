@@ -309,8 +309,10 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
               Under DepEd Order No. 15, s. 2026, {gradeName(grade)} receives performance levels and narratives instead of numeric grades, and the school’s {gradeName(grade)} card prints each term’s narratives. Record them under <b>Narratives</b>. The performance levels A to E go on the card’s competency pages, which the school has not supplied yet.
             </Callout>
           ) : (
-            <Callout tone="info" title="Grades come from the ECR">
-              Type each grade, final grade, remark and general average exactly as the DepEd class record (ECR) computed it. EDUNEXUS keeps and prints them; it does not compute or round a grade.
+            <Callout tone="info" title={manager ? 'Grades are entered by the adviser' : 'Grades come from the ECR'}>
+              {manager
+                ? <>The adviser enters the grades and general averages from the ECR. Use <b>Report card</b> only to record a correction, then review the updated card before approving the learner’s endorsed outcome.</>
+                : <>Type each grade, final grade, remark and general average exactly as the DepEd class record (ECR) computed it. EDUNEXUS keeps and prints them; it does not compute or round a grade.</>}
             </Callout>
           )}
         </div>
@@ -350,7 +352,7 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                   </div>
                   <EntryTable
                     key={`grades|${sectionId}|${offeringId}|${column}`} onDirty={dirtyFor('grades')}
-                    learners={learners} readOnly={readOnly} setStatus={setStatus} onSaved={reload}
+                    learners={learners} readOnly={readOnly || manager} setStatus={setStatus} onSaved={reload}
                     what={final ? 'Subject averages' : 'Grades'}
                     columns={final ? [{ key: 'grade', label: 'Subject average', kind: 'grade' }, { key: 'remark', label: 'Remark', kind: 'remark' }] : [{ key: 'grade', label: records.periods.find(p => p.id === column)?.name ?? 'Grade', kind: 'grade' }]}
                     stored={l => {
@@ -366,7 +368,7 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
             {tab === 'average' ? (
               <EntryTable
                 key={`average|${sectionId}`} onDirty={dirtyFor('average')}
-                learners={learners} readOnly={readOnly} setStatus={setStatus} onSaved={reload} what="General averages"
+                learners={learners}                 readOnly={readOnly || manager} setStatus={setStatus} onSaved={reload} what="General averages"
                 columns={[{ key: 'general_average', label: 'General average', kind: 'grade' }, { key: 'remark', label: 'Remark', kind: 'remark' }]}
                 stored={l => ({ values: { general_average: asText(l.summary?.general_average), remark: l.summary?.remark ?? '' }, version: l.summary?.version ?? 0 })}
                 toEntry={(l, v, version) => ({ enrollment_id: l.enrollment_id, general_average: numberOrNull(v.general_average!), remark: v.remark || null, version })}
@@ -393,7 +395,7 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                 </div>
                 <EntryTable
                   key={`values|${sectionId}|${periodId}`} onDirty={dirtyFor('values')}
-                  learners={learners} readOnly={readOnly} setStatus={setStatus} onSaved={reload} what="Observed values"
+                  learners={learners} readOnly={readOnly || manager} setStatus={setStatus} onSaved={reload} what="Observed values"
                   columns={valueCodes.map(code => ({ key: code, label: code, kind: 'mark' as const, title: coreValues.flatMap(v => v.statements).find(s => s.code === code)?.text }))}
                   stored={l => { const row = l.values.find(v => v.reporting_period_id === periodId); return { values: row?.ratings ?? {}, version: row?.version ?? 0 }; }}
                   toEntry={(l, v, version) => ({ enrollment_id: l.enrollment_id, ratings: Object.fromEntries(valueCodes.map(code => [code, v[code] || null])), version })}
@@ -411,11 +413,11 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                   {(['can_do', 'to_improve'] as const).map(kind => (
                     <div key={kind}>
                       <div className="card-body"><h3>{kind === 'can_do' ? 'What your child can do (Mga Nagagawa)' : 'What your child is learning to improve (Dapat Linangin)'}</h3></div>
-                      <NoteTable key={`${kind}|${sectionId}|${periodId}`} onDirty={dirtyFor(kind)} kind={kind} periodId={periodId} learners={learners} readOnly={readOnly} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
+                      <NoteTable key={`${kind}|${sectionId}|${periodId}`} onDirty={dirtyFor(kind)} kind={kind} periodId={periodId} learners={learners} readOnly={readOnly || manager} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
                     </div>
                   ))}
                 </>
-              ) : <NoteTable key={`comment|${sectionId}|${periodId}`} onDirty={dirtyFor('comment')} kind="comment" periodId={periodId} learners={learners} readOnly={readOnly} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
+              ) : <NoteTable key={`comment|${sectionId}|${periodId}`} onDirty={dirtyFor('comment')} kind="comment" periodId={periodId} learners={learners} readOnly={readOnly || manager} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
             ) : null}
           </>
         ) : null}
@@ -558,7 +560,7 @@ function PromotionPanel({ api, me, manager, records, setStatus, descriptive = fa
       </div>
       <EntryTable
         onDirty={onDirty}
-        learners={learners} readOnly={readOnly} setStatus={setStatus} what="Endorsements" suggested="Endorsed from the class’s end-of-year promotion report."
+        learners={learners} readOnly={readOnly || manager} setStatus={setStatus} what="Endorsements" suggested="Endorsed from the class’s end-of-year promotion report."
         onSaved={() => setTick(t => t + 1)}
         extra={[
           ...(descriptive ? [] : [{ header: 'General average', cell: (l: ReportLearner) => l.summary?.general_average === null || l.summary?.general_average === undefined ? <Unrecorded label="Not recorded" /> : <span className="mono">{String(l.summary.general_average)} {l.summary.remark === 'failed' ? 'Failed' : l.summary.remark === 'passed' ? 'Passed' : ''}</span> },
