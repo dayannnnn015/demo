@@ -63,6 +63,7 @@
     "tests/my-preferences.test.ts",
     "tests/web-notifications.test.ts",
     "tests/web-learner-profile.test.ts",
-    "tests/web-settings.test.ts"
+    "tests/web-settings.test.ts",
+    "tests/web-empty-school.test.ts"
   ]
 }

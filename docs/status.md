@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## The hosted database is a demonstration registry, and live is at migration 0059 — read this first
+> ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >
 > **Version 0.95.3, merged to `master` and pushed as `aed5294` on 2026-11-06. The live database was wiped and
 > reseeded on 2026-11-06, and migrations 0053–0059 were applied to it.**
@@ -10,7 +10,7 @@
 > so the live database needs nothing: it needs a deploy, and on this project a
 > push does not deploy — see the Git-link note below.
 >
-> **Live is at migration 0059 and 0.95.1 is deployed and verified** (194/194
+> **Live is at migration 0060 and 0.95.1 is deployed and verified** (194/194
 > `npm run smoke` checks against `https://edunexus-balili.vercel.app`). The
 > adviser pull is live: `pullable-learners` and `pulls` answer 401 rather than
 > 404.
@@ -161,7 +161,7 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 **Deploy 0.95.3** (it carries 0.95.2 with it). It is merged to `master`, pushed,
 and `npm run check` passes on `master` (32 files, 327 tests), and it needs no migration — the live database is already at 0059 and
-this release touches only `web/`. Deploy it with `vercel --prod` from this
+this release touches only `web/`. Live is at 0060. Deploy it with `vercel --prod` from this
 checkout, because the Vercel project has no Git link and **a push does not
 deploy** (the note at the top of this file has the project id and the one
 dashboard action that would fix it for good). Then `npm run smoke`.
@@ -172,15 +172,13 @@ against a 0.86.1 build is spent with it.
 
 ## Waiting on the user
 
-**Migration 0060 is written, committed and NOT applied to live, which is still at
-0059.** It restores `conditionally_promoted`, which `0059` dropped by restating
-`record_promotion_recommendations` from 0033's text instead of 0036's — so on the
-live database today that outcome is refused with `23514` by the only function that
-records it, while the CHECK constraint, the next-year carry, the Zod contract, the
-SF9/SF10 and the Promotion screen all still offer it. `/health/ready` does not
-check anything from 0060, so 0.95.3 deploys and runs without it; applying it is a
-separate decision because it is a live schema change. `npm run db:migrate` applies
-it.
+**Migration 0060 IS applied to live — an earlier note in this file said it was
+not, and that was wrong.** Checked directly against `edunexus_meta.migrations` on
+2026-11-06: `0060_conditional_promotion_restored.sql` was applied at 07:44:11Z and
+its checksum matches `database/migrations/` byte for byte. Live therefore carries
+60 migrations, not 59, and `conditionally_promoted` is **not** broken on it. There
+is no migration backlog: the code and the live schema agree, and only the deploy
+is outstanding.
 
 **The demonstration database cannot show the adviser pull as it stands, and two
 office steps would fix it.** Confirmed by a read-only query on 2026-11-06: every
@@ -217,6 +215,45 @@ anchor in `web/screens/LearnerProfile.tsx` and one assertion in
 is the user's to make, not the next agent's.
 
 ## What shipped in this session
+
+### The clean-slate demonstration (2026-11-06) — verified, nothing reset
+
+The user is wiping the demonstration records to run the whole workflow live, by
+hand, and asked for verification rather than action. **No reset and no seed was
+run from here**, by their explicit instruction.
+
+**A backup was taken first**, read-only: every table snapshotted to
+`.local/backups/edunexus-data-<stamp>.json` — 4,218 rows across 30 non-empty
+tables, 74 `edunexus` tables plus `edunexus_meta.migrations` and `auth.users`. It
+is a **data** snapshot, not a `pg_dump`: no local `pg_dump` exists and Docker
+Desktop was not running, and the schema is reproducible from
+`database/migrations/` anyway. `bytea` is base64 under `__bytea_base64`.
+
+**What `npm run reset:seeded-data` would do, read rather than assumed.** It
+refuses outright unless `edunexus.seeded_data_notice` holds a row (it does, 1).
+`keptTables` preserves `staff`, `school_profile`, `staff_invitations`,
+`staff_invitation_events`, `staff_profiles`, `staff_photos` and
+`staff_profile_events`; every other table in the schema is truncated, read from
+`pg_tables` so a later migration's table goes too. **Account deletion is scoped
+to `id = any(synthetic)`**, and synthetic means only
+`%@seed.edunexus.invalid` or `%@balili-es.invalid`. Measured against live:
+**5 real accounts survive** — Alexei Borodin (principal, inactive), Development
+Administrator, Diane Ancheta (principal), Joshkane Gabol (administrative
+officer) and Diane Kaye Ancheta (**the only teacher**) — and **31 synthetic
+accounts go**, 1 principal and all 30 seeded teachers. No `auth.users` row lacks
+a `staff` row, so nothing is orphaned. After the wipe the school has exactly one
+teacher account, which is enough for Phases 5 and 6 but worth knowing.
+
+**The empty state is now tested, and it never was before.** Every other DOM test
+builds a fixture first, so "the day the school starts" was the one day nobody
+had looked at. `tests/web-empty-school.test.ts` mounts **every route** for a
+principal, an administrative officer and an adviser against a database holding
+nothing but staff, with the real API and real fetches, and asserts each renders,
+none renders a crash and none leaks `[object Object]` or `undefined is not…`.
+63 route renders, all passing. It also drives the first school year end to end
+from nothing — create, four periods, activate, build a class — and records that
+`/roster-imports/template` is **manager-only by design**, so an adviser's
+Roster import screen uses the workspace's own `ROSTER_HEADER` copy instead.
 
 ### 0.95.3 — the empty registry an adviser reads now points at Add learner (no migration)
 
