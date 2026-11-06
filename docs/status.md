@@ -2,7 +2,7 @@
 
 > ## Branch `notifications` — read this first
 >
-> **Version 0.93.0, migration 0056, branch `notifications`, based on `8780422` (0.91.1).**
+> **Version 0.94.0, migrations 0056 and 0057, branch `notifications`, based on `8780422` (0.91.1).**
 > This is a **separate worktree branch**, created on the user’s instruction so it would
 > not disturb the uncommitted guardian-fields work in the `branch-out` checkout.
 > Not merged and not pushed — the user merges.
@@ -22,19 +22,24 @@
 > **What shipped here:** notifications, in two commits. **0.92.0** is the substrate
 > and the four roster emitters (migration 0056); **0.93.0** is the bell in the top bar
 > and the notification centre behind it, which changes no endpoint, schema, permission
-> or error code.
+> or error code; **0.94.0** adds migration 0057, the enrollment and class-assignment
+> emitters.
 > It reverses two settled decisions by the user’s explicit decision of 2026-11-05;
 > the reasoning is in [notifications.md](notifications.md) and in the top row of
-> [constraints.md](constraints.md). `npm run check` passes: 282 tests in 28 files.
+> [constraints.md](constraints.md). `npm run check` passes: 288 tests in 29 files.
 >
 > **The single next action on this branch:** the remaining emitters of the approved
-> first release, one commit per emitting module — enrollment (`place_enrollment`,
-> `move_enrollment`), the monthly consolidation, promotion outcomes, and adviser
-> assignment with the calendar. Each is a `create or replace` of an existing writer
-> plus one `notify` line; every kind they need is already declared in 0056, so none
-> of them needs a new check constraint.
+> first release, one commit per group — the monthly consolidation, promotion
+> outcomes, and adviser assignment with the calendar, then next year’s placement.
+> Every kind they need is already declared in 0056, so none needs a new check
+> constraint. **Read the 2026-11-06 decision in constraints.md first:** emit at the
+> intent boundary, and check whether a writer is ever called in a loop before
+> putting a `notify` in it — next year’s placement is loop-shaped like the import
+> and must emit once, not per learner. One gap is open and named in
+> notifications.md: an adviser pulling or registering a learner with no enrolment
+> this year reaches `place_enrollment` and so notifies nobody.
 >
-> **Two gaps found on the way, neither mine to fix here.** `tests/web-screens.test.ts`
+> **Two repository gaps found on the way, neither mine to fix here.** `tests/web-screens.test.ts`
 > and `tests/web-shell.test.ts` are described in `AGENTS.md` but **do not exist in this
 > tree** — lost with the rest of `tests/` in the 0.86.1 recovery — so no test renders
 > every route, and `tests/web-notifications.test.ts` stands in for the new screen only.

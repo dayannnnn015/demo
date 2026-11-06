@@ -206,8 +206,52 @@ It also stands in for `tests/web-screens.test.ts`, which `AGENTS.md` describes
 and which **does not exist in this tree** — it was lost with the rest of
 `tests/` in the 0.86.1 recovery, so nothing else renders this route at all.
 
+## Enrollment and class assignment (0057)
+
+**The emission is at the intent boundary, not the row writer.** This is the
+most important thing to know before adding another emitter.
+
+The obvious place to notify was `place_enrollment`: every enrolment in the
+system goes through it. But it is called **in a loop** — once per row of a
+reviewed import by `src/modules/registry-review/service.ts`, and once per
+promoted learner by `commit_next_year_placement` (0049). Emitting there would
+have sent an adviser fifty notifications for one class list, and the office
+several hundred for one year’s promotion.
+
+So `place_enrollment` is left exactly as 0054 wrote it and **emits nothing**,
+and the notification is sent by whichever function represents the act a person
+took:
+
+| Emitter | Why it, and not the row writer |
+|---|---|
+| `finish_import` | Called once per commit, and already holds the receipt — so the `count` is a fact it has rather than one to recompute |
+| `move_enrollment` | One movement per API call; `registry/service.ts` calls it once per request and nothing calls it in a loop |
+
+| Event | Who is told | Kind |
+|---|---|---|
+| An import into a class | That class’s adviser, once, with a count | `learner_placed` |
+| An import onto the registry with no class | Every manager, once, with a count | `learner_unplaced` |
+| A learner moved between classes | The class they joined, and the class they left, each in its own terms, plus managers | `learner_placed` / `learner_moved` |
+| A learner withdrawn | The adviser of the class they were in, plus managers | `learner_withdrawn` |
+| A learner re-entered | The adviser of the class they joined, plus managers | `learner_reentered` |
+
+An adviser’s own pull reaches `move_enrollment` through
+`pull_learner_into_section`, so the office is told and the adviser is not —
+`notify` drops the actor’s own row, and they just did it.
+
+A row carries `learner_id` so a screen can link to the record. It still names
+nobody: an id is not a name, and following the link is what writes the privacy
+access row.
+
 ## What is deliberately still not here
 
-- **No emitter outside roster submissions yet.** Enrollment, the monthly
-  consolidation, promotion outcomes, adviser assignment and the calendar are
-  declared in the vocabulary and emit nothing; each is its own increment.
+- **One known gap in the enrollment group.** An adviser pulling or registering
+  a learner who holds *no* enrolment this year reaches `place_enrollment`
+  instead of `move_enrollment`, so nothing is emitted and the office is not
+  told. Closing it means `create or replace` of `pull_learner_into_section`
+  and `register_learner_into_section`, which is its own increment rather than
+  a line added here.
+- **No emitter for the monthly consolidation, promotion outcomes, adviser
+  assignment, the calendar or next year’s placement yet.** Each kind is
+  declared in 0056 and emits nothing. Next year’s placement is the same
+  loop-shaped problem as the import and must emit once, not per learner.
