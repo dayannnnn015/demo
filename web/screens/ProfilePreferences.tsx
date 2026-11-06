@@ -80,7 +80,7 @@ export function Preferences({ api, role, profile, onSaved, onConflict }: {
   api: Api; role: unknown; profile: Profile; onSaved: (p: Profile) => void; onConflict: () => Promise<void>;
 }) {
   const { status, busy, save } = useSave(api, profile, onSaved, onConflict);
-  const screens = routes.filter((r: Route) => available(r, role) && r.id !== 'profile');
+  const screens = routes.filter((r: Route) => available(r, role) && r.id !== 'profile' && r.id !== 'settings');
 
   return (
     <div className="card" data-tour="profile-preferences">

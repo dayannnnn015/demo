@@ -60,6 +60,10 @@ const paths = {
   enter: <><path d="M20 6v5a3 3 0 0 1-3 3H4" /><path d="m8 10-4 4 4 4" /></>,
   updown: <><path d="M8 9.5 12 5l4 4.5" /><path d="m8 14.5 4 4.5 4-4.5" /></>,
   eye: <><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  // Settings, when it became a screen of its own (0.92.0). Three sliders rather
+  // than a gear: what the screen holds is a set of choices along named scales —
+  // text size, spacing, contrast — and a gear would promise machinery.
+  settings: <><path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h10M18 17h2" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="16" cy="17" r="2" /></>,
   'eye-off': <><path d="m3 3 18 18" /><path d="M10.6 6.1A8.7 8.7 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3.2 3.9" /><path d="M6.3 8.2A16 16 0 0 0 2.5 12S6 18 12 18a9.2 9.2 0 0 0 3.4-.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>,
   // A page with its lines, for opening one of the school forms.
   form: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h6M9 9h2" /></>,

@@ -7,7 +7,6 @@ import { Confirm, Sheet } from '../components/overlay';
 import { Callout, PageHeader, StatusLine, TableSkeleton, Unrecorded, gradeName, idle, sentence, type Status } from '../components/primitives';
 import type { SessionAuth } from '../api';
 import { MyActivity, NameCorrection, type NameRequest } from './ProfileRecords';
-import { Accessibility, Preferences } from './ProfilePreferences';
 import { editions } from '../help';
 import { useHelp } from '../help/context';
 import { Prose } from '../help/Prose';
@@ -17,7 +16,7 @@ import { PhotoProblem, centred, clampCrop, drawCrop, maxZoom, openPicture, prepa
 
 export type Profile = Look & { avatar: string; avatar_icon: string | null; avatar_tone: string; landing: string | null; text_size: string; motion: string; theme: string; density: string;
   contrast: string; links: string; focus: string; targets: string; spacing: string; typeface: string; version: number };
-type Mine = { user_id: string; display_name: string; role: string; position: string | null; specialization: string | null; profile: Profile; advises: Row[]; name_request?: NameRequest | null;
+export type Mine = { user_id: string; display_name: string; role: string; position: string | null; specialization: string | null; profile: Profile; advises: Row[]; name_request?: NameRequest | null;
   photo_taken_down?: { at: string; by: string | null; reason: string } | null };
 type Picture = { sha256: string; base64: string };
 
@@ -76,8 +75,6 @@ export function Profile(props: ScreenProps) {
       <PageHeader route={route} />
       <Identity mine={mine} picture={picture} api={api} onChanged={() => void load().catch(() => undefined)} />
       <PictureCard api={api} mine={mine} setStatus={setStatus} onSaved={saved} onConflict={reread} />
-      <Preferences api={api} role={mine.role} profile={mine.profile} onSaved={saved} onConflict={reread} />
-      <Accessibility api={api} profile={mine.profile} onSaved={saved} onConflict={reread} />
       <div className="card" data-tour="profile-security">
         <div className="card-head"><div>
           <h2>Signing in</h2>
@@ -112,13 +109,12 @@ export function Profile(props: ScreenProps) {
         </div>
       </div>
       <MyActivity api={api} token={token} />
-      <Learning role={mine.role} />
     </>
   );
 }
 
 /** The guided tours for this role, to take again, and what changed lately, in the screens' own words. */
-function Learning({ role }: { role: string }) {
+export function Learning({ role }: { role: string }) {
   const help = useHelp();
   const tours = editions.en.tours.filter(t => !t.roles || t.roles.includes(role as Role));
   const opens = new Set(routes.filter(r => available(r, role)).map(r => r.id));

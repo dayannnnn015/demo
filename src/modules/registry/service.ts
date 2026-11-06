@@ -26,11 +26,11 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
   switch (id) {
     case 'learnerCreate': {
       const b = input.body as z.infer<typeof s.learnerCreate>;
-      return found(await tx.query('insert into edunexus.learners(lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address) values($1,$2,$3,$4,$5,$6,$7,$8) returning *', [b.lrn, b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address]));
+      return found(await tx.query('insert into edunexus.learners(lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address,guardian_name,guardian_contact) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *', [b.lrn, b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address, b.guardian_name, b.guardian_contact]));
     }
     case 'learnerUpdate': {
       const b = input.body as z.infer<typeof s.learnerUpdate>;
-      return found(await tx.query('update edunexus.learners set first_name=$1,middle_name=$2,last_name=$3,name_extension=$4,birth_date=$5,sex=$6,address=$7 where id=$8 and version=$9 returning *', [b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address, input.id, b.version]), true);
+      return found(await tx.query('update edunexus.learners set first_name=$1,middle_name=$2,last_name=$3,name_extension=$4,birth_date=$5,sex=$6,address=$7,guardian_name=$8,guardian_contact=$9 where id=$10 and version=$11 returning *', [b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address, b.guardian_name, b.guardian_contact, input.id, b.version]), true);
     }
     case 'learnerLrn': {
       const b = input.body as z.infer<typeof s.learnerLrn>;

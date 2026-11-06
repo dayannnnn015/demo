@@ -17,8 +17,21 @@ export const guides: Guide[] = [
     ],
   },
   {
+    route: 'settings',
+    summary: 'How the workspace looks and behaves for you. Everything here is yours alone: it changes nothing any other person sees, and nothing on a printed form.',
+    steps: [
+      'Under *Preferences*, choose the screen EDUNEXUS opens on, a larger text size, the spacing between rows, less motion, and a light or dark theme or the one your device uses. Each takes effect at once and follows you to any computer you sign in on; printed forms are unchanged.',
+      'Under *Accessibility*, choose higher contrast (or your device’s own setting), links always underlined, a thicker outline around what the Tab key has reached, larger buttons and boxes, more line spacing, and Atkinson Hyperlegible, a typeface drawn for low vision. **Put these back** returns them all to the standard design.',
+      'Under *Learning EDUNEXUS*, take any guided tour for your role again, and read what changed lately.',
+      'Who you are, your picture, your password and where you are signed in are on {profile}, under your name at the top right.',
+    ],
+    refuses: [
+      'If your settings were changed in another window, the save stops and the page reads them again, so nothing you chose there is overwritten unseen.',
+    ],
+  },
+  {
     route: 'profile',
-    summary: 'Your own page: how the school has you recorded, how you appear in the workspace, and how you sign in. Open it from your name at the top right.',
+    summary: 'Your own page: how the school has you recorded, how you appear in the workspace, how you sign in and what you have done. Open it from your name at the top right. How the workspace looks and behaves is on {settings}.',
     steps: [
       'Your name, position and specialization print on the SF2, SF4 and SF9, so the principal or the administrative officer keeps them.',
       'Under *Your picture*, choose initials, an icon or your photo, and a colour, then **Save picture**. **Undo changes** puts back what was saved.',
@@ -27,9 +40,6 @@ export const guides: Guide[] = [
       'Your photo is seen by you, the principal and the administrative officer, never by other teachers. A manager may take down a photo that is not a suitable picture of you; you can upload another.',
       'If your name or position is wrong, **Ask for a correction** with a note saying why. The principal or the administrative officer decides; until then, **Withdraw the request** takes it back.',
       'Under *Your activity*, *Changes you made* lists what you recorded and *Records you were shown* each list or page of learner records you opened, from the same logs the principal reads.',
-      'Under *Preferences*, choose the screen EDUNEXUS opens on, a larger text size, less motion, and a light or dark theme or the one your device uses. Each takes effect at once and follows you to any computer you sign in on; printed forms are unchanged.',
-      'Under *Accessibility*, choose higher contrast (or your device’s own setting), links always underlined, a thicker outline around what the Tab key has reached, larger buttons and boxes, more line spacing, and Atkinson Hyperlegible, a typeface drawn for low vision. **Put these back** returns them all to the standard design.',
-      'Under *Learning EDUNEXUS*, take any guided tour for your role again, and read what changed lately.',
       '**Change password** asks for the one you use now first.',
       'Under *Where you are signed in*, each browser that opened EDUNEXUS lately is listed. **Sign out everywhere else** ends every session but this one, after a shared computer was left signed in or a phone was lost.',
       'To stop signing in each time on your own computer, tick **Keep me signed in on this computer** on the sign-in page. Leave it off on a shared staffroom computer; signing out ends it and forgets the choice.',

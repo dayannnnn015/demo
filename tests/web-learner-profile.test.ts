@@ -7,31 +7,28 @@ import { routes } from '../web/routes';
 import { ROSTER_HEADER } from '../web/csv';
 
 /**
- * The learner a staff member opens from the registry, in three parts.
+ * The learner a staff member opens from the registry, in two parts.
  *
- * What is being gated here is a reorganisation, not a new capability: no
- * endpoint, no column and no policy changed, so the cases that matter are the
- * ones that could go wrong *in the interface* and the one that must stay true
- * of the API behind it.
- *
- * - The panel offers three parts and shows the profile first.
- * - Every field it shows is one the class-list import already carries, and a
- *   field the school has not recorded is **drawn**, not blanked: this is the
- *   `Unrecorded` rule, and a profile is where a reader is most likely to read
- *   a blank as "nothing to report".
- * - **No parent, guardian, contact or demographic field is offered anywhere**,
- *   because EDUNEXUS holds none and the learner-fields gate is why. A gate
- *   kept by nothing eventually opens by accident.
- * - Editing writes to the same learner row, so the registry shows the change
- *   and **no second learner is created** — the one thing a "profile" feature
- *   can get catastrophically wrong in a system with one permanent record per
- *   child.
+ * - The panel offers **two** parts, profile first. Academic history was removed
+ *   from here on 2026-11-05, which puts this panel back where 0.90.2 left it:
+ *   no door into that screen, because the rail already carries it. The gate for
+ *   that is in `tests/web-registry-scope.test.ts`, and it was vacuous on its
+ *   first run because it asserted on the *closed* list; the one here opens the
+ *   panel, which is the only place such a link could be.
+ * - Every field shown is one the record holds, and a field the school has not
+ *   recorded is **drawn**, not blanked: the `Unrecorded` rule, and a profile is
+ *   where a reader most readily takes a blank for "nothing to report".
+ * - **The guardian pair is held and shown** (0056), and the number is kept
+ *   exactly as recorded rather than reformatted. What the learner-fields gate
+ *   still blocks is asserted refused, because a gate kept by nothing opens by
+ *   accident: a relationship field, a guardian email or address, a second
+ *   guardian, and the learner's own `contact_number`, which is not the
+ *   guardian's.
+ * - **Editing is an action, not a disclosure**, and it writes to the same
+ *   learner row, so the registry shows the change and **no second learner is
+ *   created** — the one thing a "profile" feature can get catastrophically
+ *   wrong in a system with one permanent record per child.
  * - An adviser is offered no editor, and the API refuses one anyway.
- * - Academic history stays a signpost: the shortcut removed in 0.90.2 is not
- *   back. The gate for that is in `tests/web-registry-scope.test.ts` and was
- *   vacuous on its first run because it asserted on the closed list; this one
- *   opens the tab that would hold such a link, which is the only place it
- *   could now appear.
  */
 
 let db: TestDatabase;
@@ -77,9 +74,12 @@ beforeAll(async () => {
     ($1,$3,3,'Masigla',$4),($2,$3,4,'Narra',$5)`, [mine, theirs, year, ids.teacher, ids.otherTeacher]);
   // Ana as the class-list import writes a complete row; Ben with the two
   // columns the import allows to be blank left blank.
-  await db.pg.query(`insert into edunexus.learners(id,lrn,first_name,middle_name,last_name,name_extension,sex,birth_date,address) values
-    ($1,'136170000001','Ana','Bituin','Reyes',null,'female','2017-05-02','12 Balili Road, La Trinidad, Benguet'),
-    ($2,'136170000002','Ben',null,'Lacsamana',null,'male','2016-03-11',null)`, [ana, ben]);
+  // Ana carries a guardian and a number written the way a school writes one:
+  // a landline with an area code and a mobile, on one line. Ben carries
+  // neither, which is unrecorded rather than "no guardian".
+  await db.pg.query(`insert into edunexus.learners(id,lrn,first_name,middle_name,last_name,name_extension,sex,birth_date,address,guardian_name,guardian_contact) values
+    ($1,'136170000001','Ana','Bituin','Reyes',null,'female','2017-05-02','12 Balili Road, La Trinidad, Benguet','Maria Reyes (mother)','(074) 422-1234 / 0917 555 0101'),
+    ($2,'136170000002','Ben',null,'Lacsamana',null,'male','2016-03-11',null,null,null)`, [ana, ben]);
   await db.pg.query(`select * from edunexus.place_enrollment($1::uuid,$2::uuid,3::smallint,$3::uuid,'2026-06-01','regular')`, [ana, year, mine]);
   await db.pg.query(`select * from edunexus.place_enrollment($1::uuid,$2::uuid,4::smallint,$3::uuid,'2026-06-01','regular')`, [ben, year, theirs]);
   // A year cannot be activated until its reporting periods are set: four
@@ -93,28 +93,28 @@ beforeAll(async () => {
 });
 afterAll(async () => { await server.close(); await db.database.close(); });
 
-describe('the three parts of a learner', () => {
-  it('offers the profile, the academic history and the enrollment, and shows the profile first', async () => {
+describe('the two parts of a learner', () => {
+  it('offers the profile and the enrollment, and shows the profile first', async () => {
     server.signInAs('principal');
     const screen = await mountScreen(Learners as never, server, principal, { route });
     await screen.until(m => m.text().includes('Reyes'), 'a learner');
     await openPanel(screen);
     const tabs = screen.all('[role="tab"]').map(t => t.textContent);
-    expect(tabs).toEqual(['Learner profile', 'Academic history', 'Enrollment']);
+    expect(tabs).toEqual(['Learner profile', 'Enrollment']);
     // The first one is the one selected, so a reader lands on the identity.
     expect(screen.all('[role="tab"][aria-selected="true"]').map(t => t.textContent)).toEqual(['Learner profile']);
     expect(screen.text()).toContain('Personal information');
     screen.unmount();
   });
 
-  it('shows an adviser the same three parts for a learner in their own class', async () => {
+  it('shows an adviser the same two parts for a learner in their own class', async () => {
     server.signInAs('teacher');
     const screen = await mountScreen(Learners as never, server, teacher, { route });
     await screen.until(m => m.text().includes('Reyes'), 'their own learner');
     // Row security, not the screen: the other adviser's learner is not listed.
     expect(screen.text()).not.toContain('Lacsamana');
     await openPanel(screen);
-    expect(screen.all('[role="tab"]').map(t => t.textContent)).toEqual(['Learner profile', 'Academic history', 'Enrollment']);
+    expect(screen.all('[role="tab"]').map(t => t.textContent)).toEqual(['Learner profile', 'Enrollment']);
     screen.unmount();
   });
 });
@@ -155,28 +155,70 @@ describe('what the profile shows', () => {
     screen.unmount();
   });
 
-  it('offers no parent, guardian, contact or demographic field, and says so rather than leaving a gap', async () => {
+  it('shows the parent or guardian and their number, the number exactly as recorded', async () => {
+    server.signInAs('principal');
+    const screen = await mountScreen(Learners as never, server, principal, { route });
+    await screen.until(m => m.text().includes('Reyes'), 'a learner');
+    await openPanel(screen);
+    const text = panelText(screen);
+    expect(text).toContain('Parent or guardian');
+    expect(text).toContain('Maria Reyes (mother)');
+    // Kept as the school wrote it: not stripped to digits, not normalised to
+    // +63, not reformatted. A number the school can dial is the whole point.
+    expect(text).toContain('(074) 422-1234 / 0917 555 0101');
+    screen.unmount();
+  });
+
+  it('draws an unrecorded guardian rather than implying the learner has none', async () => {
+    server.signInAs('principal');
+    const screen = await mountScreen(Learners as never, server, principal, { route });
+    await screen.until(m => m.text().includes('Lacsamana'), 'the learner with blanks');
+    await openPanel(screen, 'Lacsamana');
+    expect(panelText(screen)).toContain('No guardian recorded');
+    expect(panelText(screen)).toContain('No number recorded');
+    screen.unmount();
+  });
+
+  it('still offers nothing the learner-fields gate blocks, and says what it does not hold', async () => {
     server.signInAs('principal');
     const screen = await mountScreen(Learners as never, server, principal, { route });
     await screen.until(m => m.text().includes('Reyes'), 'a learner');
     await openPanel(screen);
     const panel = screen.all('tr.row-panel')[0]!;
-    // No such control or field exists, under any of the names it is given.
     const labels = [...panel.querySelectorAll('label, dt')].map(el => (el.textContent ?? '').toLowerCase());
-    for (const banned of ['guardian', 'mother', 'father', 'parent', 'contact', 'religion', 'indigenous']) {
+    // One guardian, one number, and nothing else about a family. "Relationship"
+    // in particular: it is written into the name, not chosen from a list this
+    // project invented.
+    for (const banned of ['relationship', 'mother tongue', 'religion', 'indigenous', 'email', 'occupation', 'second guardian']) {
       expect(labels.filter(l => l.includes(banned)), banned).toEqual([]);
     }
+    expect(labels.filter(l => l.includes('guardian'))).toHaveLength(1);
     // And the absence is explained, so a reader does not take it for an
     // unfilled box: which of these the school may keep is behind the gate.
     expect(screen.text()).toContain('What this record does not hold');
     screen.unmount();
   });
 
-  it('shows only fields the import template has a column for', () => {
-    // A guard against this screen drifting ahead of the record. Every fact the
-    // profile claims to show is one of the import's own columns.
-    const columns = ROSTER_HEADER.split(',');
-    expect(columns).toEqual(['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address']);
+  it('refuses at the API every family field the gate still blocks', async () => {
+    // The screen not drawing a box is not a gate. The contract is strict, so a
+    // field somebody adds hopefully is a 422 rather than a silent drop.
+    // `contact_number` is the *learner's* own and is not `guardian_contact`.
+    server.signInAs('principal');
+    for (const extra of ['guardian_relationship', 'guardian_email', 'contact_number', 'religion', 'mother_tongue']) {
+      const refused = await server.api('/learners', 'POST', {
+        lrn: '136170000900', first_name: 'Gate', last_name: 'Check', birth_date: '2016-01-01', sex: 'male', [extra]: 'something',
+      }).then(() => null, (error: unknown) => error as { status?: number });
+      expect(refused?.status, extra).toBe(422);
+    }
+  });
+
+  it('is not ahead of the class-list template, which still carries eight columns', () => {
+    // A guard against this screen drifting away from the import. The guardian
+    // pair was added to the *record* (0056) and deliberately NOT to the
+    // published template, so a class list imports as it always did and the
+    // guardian is typed per learner. If the template ever gains the two
+    // columns, this is the line that says so.
+    expect(ROSTER_HEADER.split(',')).toEqual(['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address']);
   });
 });
 
@@ -187,13 +229,19 @@ describe('editing the profile', () => {
     const screen = await mountScreen(Learners as never, server, principal, { route });
     await screen.until(m => m.text().includes('Reyes'), 'a learner');
     await openPanel(screen);
-    // The editor is folded away in a Task, as every correction on this screen
-    // is; the summary carries its note too, so it is matched by its opening.
-    await screen.click(screen.all('tr.row-panel summary').find(s => (s.textContent ?? '').startsWith('Correct the details')) ?? null);
-    await screen.settle();
+    // Editing is an action now, not a disclosure: **Edit profile** opens a
+    // sheet. It used to be folded inside a `Task`, where the reviewed
+    // workflows live, and a plain correction read as unavailable there.
+    await screen.click(screen.byText('Edit profile', 'button'));
+    // A `label` for the contact number exists only inside the sheet — the panel
+    // behind it renders that heading as a `dt` — so this waits for the form.
+    await screen.until(m => m.all('label').some(l => (l.textContent ?? '').startsWith('Contact number')), 'the edit sheet');
     const address = screen.field('Address');
-    expect(address).toBeTruthy();
     await screen.type(address, '7 Km 5, Balili, La Trinidad, Benguet');
+    // The guardian is edited in the same sheet and the same request: one
+    // record, so one save.
+    await screen.type(screen.field('Parent or guardian'), 'Maria Reyes (mother)');
+    await screen.type(screen.field('Contact number'), '0917 555 0101');
     await screen.submit(address);
     // The harness's `reload` is deliberately a no-op — the shell's refetch is
     // driven by remounting — so what is waited on is the record, not the
@@ -207,8 +255,9 @@ describe('editing the profile', () => {
     // One record, corrected in place: the same id, a bumped version, no insert.
     const after = await db.pg.query<{ n: string }>('select count(*) as n from edunexus.learners');
     expect(after[0]!.n).toBe(before[0]!.n);
-    const saved = await db.pg.query<{ address: string; version: number }>('select address,version from edunexus.learners where id=$1', [ana]);
+    const saved = await db.pg.query<{ address: string; guardian_contact: string; version: number }>('select address,guardian_contact,version from edunexus.learners where id=$1', [ana]);
     expect(saved[0]!.address).toBe('7 Km 5, Balili, La Trinidad, Benguet');
+    expect(saved[0]!.guardian_contact).toBe('0917 555 0101');
     expect(saved[0]!.version).toBe(2);
     screen.unmount();
   });
@@ -229,9 +278,12 @@ describe('editing the profile', () => {
     const screen = await mountScreen(Learners as never, server, teacher, { route });
     await screen.until(m => m.text().includes('Reyes'), 'their own learner');
     await openPanel(screen);
-    expect(screen.text()).not.toContain('Correct the details');
+    expect(screen.byText('Edit profile', 'button')).toBeNull();
     expect(screen.text()).not.toContain('Identity links');
     expect(screen.text()).toContain('Corrections stay with the office');
+    // They still read the guardian of a learner in their own class: the read
+    // scope did not change, only who may write.
+    expect(panelText(screen)).toContain('Parent or guardian');
     screen.unmount();
   });
 
@@ -242,7 +294,8 @@ describe('editing the profile', () => {
     server.signInAs('teacher');
     const refused = await server.api(`/learners/${ana}`, 'PATCH', {
       last_name: 'Reyes', first_name: 'Ana', middle_name: 'Bituin', name_extension: null,
-      birth_date: '2017-05-02', sex: 'female', address: 'Anything at all', version: before[0]!.version,
+      birth_date: '2017-05-02', sex: 'female', address: 'Anything at all',
+      guardian_name: 'Anyone', guardian_contact: '0900 000 0000', version: before[0]!.version,
     }).then(() => null, (error: unknown) => error as { status?: number });
     expect(refused?.status).toBe(403);
     const after = await db.pg.query<{ address: string }>('select address from edunexus.learners where id=$1', [ana]);
@@ -268,22 +321,44 @@ describe('the enrollment part', () => {
   });
 });
 
-describe('academic history stays on its own screen', () => {
-  it('is a signpost, and puts back no second door into it', async () => {
+/**
+ * Academic history is not in this panel at all.
+ *
+ * It has been taken out of here twice now, which is why the gate is explicit.
+ * 0.90.2 removed the shortcut *Academic history before EDUNEXUS* because the
+ * navigation rail already carries the screen; 0.91.1 reorganised the panel and
+ * gave it a signpost tab with no link; 0.92.0 removed that too, on the user's
+ * instruction. The screen, its route and every historical record are untouched
+ * — `tests/web-registry-scope.test.ts` asserts the route still exists and is
+ * open to an adviser.
+ *
+ * The companion gate there was vacuous on its first run because it asserted on
+ * the *closed* learner list, where nothing inside a learner's panel is
+ * rendered. This one opens the panel first, and checks both parts of it.
+ */
+describe('academic history is not in the registry panel', () => {
+  it('offers no tab, no link and no mention of it, for either role', async () => {
     for (const [who, me] of [['principal', principal], ['teacher', teacher]] as const) {
       server.signInAs(who);
       const screen = await mountScreen(Learners as never, server, me, { route });
       await screen.until(m => m.text().includes('Reyes'), `a learner, as ${who}`);
       await openPanel(screen);
-      await openTab(screen, 'Academic history');
-      await screen.until(m => m.text().includes('Why it is a screen of its own'), `the academic history tab, as ${who}`);
-      // The removed shortcut, and any other link to that screen, stays removed —
-      // asserted on the one tab where it could now be.
+      // Both parts, since a link could live in either.
+      for (const part of ['Learner profile', 'Enrollment'] as const) {
+        await openTab(screen, part);
+        expect(screen.all('a').some(a => (a.getAttribute('href') ?? '').includes('prior-records')), `${who}/${part}`).toBe(false);
+      }
+      expect(screen.all('[role="tab"]').map(t => t.textContent), who).not.toContain('Academic history');
       expect(screen.text(), who).not.toContain('Academic history before EDUNEXUS');
-      expect(screen.all('a').some(a => (a.getAttribute('href') ?? '').includes('prior-records')), who).toBe(false);
-      // It still says where the records are, which is the navigation this tab is for.
-      expect(screen.text(), who).toContain('in the navigation rail');
       screen.unmount();
     }
+  });
+
+  it('leaves the screen itself reachable, which is where the records are', () => {
+    // Removing the door must not remove the room.
+    const history = routes.find(r => r.id === 'prior-records');
+    expect(history).toBeTruthy();
+    expect(history?.manager).not.toBe(true);
+    expect(history?.hiddenFor ?? []).not.toContain('teacher');
   });
 });

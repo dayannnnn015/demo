@@ -30,6 +30,7 @@ import { GradeEntry } from './screens/GradeEntry';
 import { PublicSite } from './screens/PublicSite';
 import { Help } from './screens/Help';
 import { Profile } from './screens/Profile';
+import { Settings } from './screens/Settings';
 
 export type Role = 'principal' | 'administrative_officer' | 'teacher';
 
@@ -97,9 +98,29 @@ export const routes: Route[] = [
   {
     id: 'profile', nav: 'My profile', icon: 'user', group: 'Workspace', built: true, offRail: true, ownHeader: true,
     title: 'My profile',
-    lede: 'How you appear, how you sign in, and what the workspace remembers for you.',
+    lede: 'How the school has you recorded, how you appear, how you sign in, and what you have done.',
     record: 'staff_profiles, staff_photos',
     render: p => <Profile {...p} />,
+  },
+
+  {
+    /*
+     * Split from My profile on the user's instruction of 2026-11-05. The two
+     * were one screen; the specification they were reviewed against in 0.90.9
+     * already called them *My profile* and *Settings & Accessibility*, so this
+     * follows a line that was already drawn. No preference moved, changed or
+     * was added — the same cards read and write the same `staff_profiles`
+     * columns through the same `save_my_profile`, so no migration was needed.
+     *
+     * On the rail, unlike My profile, which is `offRail` behind the person's
+     * own name: someone hunting for the text size should find it in the
+     * navigation rather than only under their name in the top bar.
+     */
+    id: 'settings', nav: 'Settings', icon: 'settings', group: 'Workspace', built: true, ownHeader: true,
+    title: 'Settings & accessibility',
+    lede: 'How the workspace looks and behaves for you, on every computer you sign in on.',
+    record: 'staff_profiles',
+    render: p => <Settings {...p} />,
   },
 
   {

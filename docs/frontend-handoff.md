@@ -313,32 +313,60 @@ address recorded must read as unrecorded, not as an empty cell**: that is
 `Unrecorded`'s job wherever the value is shown, exactly as a missing LRN already
 is.
 
-Nothing else about a child or their family goes in this list. The learner
-contract is strict, so an extra key is a 422 rather than a silently dropped
-field, and which further fields may exist at all is behind the learner-fields
-gate in [constraints.md](constraints.md) — a decision, not a line of code.
+`guardian_name` and `guardian_contact` joined it the same way in 0.92.0
+(migration 0056), and the same rule applies to them: they are on all three
+sheets because the list is shared, and an unrecorded guardian reads as
+*No guardian recorded*, never as an empty line — a blank there says *this child
+has no guardian*. The contact number is **never reformatted**: a mobile, a
+landline with an area code, or both on one line are kept exactly as the school
+wrote them.
 
-**One learner is read in three parts** (`web/screens/LearnerProfile.tsx`, 0.91.1).
+**A learner `PATCH` replaces the whole profile**, so any sheet that edits a
+learner must send every field in `profileFields` or it clears the ones it omits.
+That is why all three read their initial values from a full learner row — the
+registry list row, or a fresh `GET /learners/:id` in `FormDialogs.tsx` — and why
+a new field must be added to the shared list rather than to one screen.
+
+Nothing else about a child or their family goes in this list: no mother tongue,
+religion or indigenous group, no relationship field, no second guardian, no
+guardian email, occupation or address, and no contact number of the learner's
+own. The learner contract is strict, so an extra key is a 422 rather than a
+silently dropped field, and which further fields may exist at all is behind the
+learner-fields gate in [constraints.md](constraints.md) — a decision, not a line
+of code.
+
+**One learner is read in two parts** (`web/screens/LearnerProfile.tsx`, 0.92.0).
 `LearnerDetail` is what the registry's row panel renders: a `segmented`
-tablist over **Learner profile**, **Academic history** and **Enrollment**, with
-the profile selected first. The three are three different records, not three
-views of one, which is why they are separated — `learners`, the transcribed
-previous years, and the annual `enrollments` timeline. Three rules it carries,
-each the reason the file exists rather than a preference:
+tablist over **Learner profile** and **Enrollment**, with the profile selected
+first. The two are two different records, not two views of one — `learners`,
+and the annual `enrollments` timeline. Four rules it carries, each the reason
+the file exists rather than a preference:
 
-- **It shows only what the record holds**, which is `profileFields` and so
-  `ROSTER_HEADER`. A profile is where a reader most readily takes a gap for
-  "nothing to report", so the fields EDUNEXUS does **not** hold — parent,
-  guardian, relationship, contact number, mother tongue, religion, indigenous
-  group — are named in a `Callout` as not collected, rather than left out
-  silently. Adding one of them here is the learner-fields gate's decision.
-- **Academic history is a signpost with no link.** The shortcut into that
-  screen was removed from this panel in 0.90.2, because the rail already
-  carries it; reorganising the panel does not restore it.
-- **Editing is the existing `PATCH /learners/:id`** through `Editor` and
-  `profileFields`, on the same row, so there is no second learner and no second
-  copy of a field. An adviser gets no editor and is told whose the correction
-  is; the API refuses theirs anyway, and the test sends one to prove it.
+- **It shows only what the record holds**, which is `profileFields`: the name,
+  LRN, birth date, sex, the address line (0053) and the guardian pair (0056).
+  A profile is where a reader most readily takes a gap for "nothing to report",
+  so the fields EDUNEXUS does **not** hold — mother tongue, religion,
+  indigenous group, a relationship field, a second guardian, a guardian email
+  or address, the learner's own contact number — are named in a `Callout` as
+  not collected rather than left out silently. Adding one of them here is the
+  learner-fields gate's decision, not a layout change.
+- **An unrecorded guardian is drawn, never implied absent.** `No guardian
+  recorded` and `No number recorded`, through `Unrecorded`, because a blank
+  here reads as *this child has no guardian*.
+- **Academic history is not in this panel at all.** The shortcut was removed in
+  0.90.2 because the rail already carries that screen; 0.91.1's signpost tab
+  was removed too, in 0.92.0. The gate opens **both** parts before asserting no
+  `prior-records` link exists, because 0.90.2's gate was vacuous by asserting
+  on the closed list.
+- **Editing is an action**: **Edit profile** opens a `FormSheet` over the panel,
+  rather than sitting folded in a `Task` beside the reviewed LRN and identity
+  workflows, where a plain correction read as unavailable. It is the existing
+  `PATCH /learners/:id` with `profileFields` on the same row, so there is no
+  second learner and no second copy of a field; the request replaces the whole
+  profile, so **any screen that edits a learner must send every field** or it
+  clears the ones it omits — which is why `profileFields` is shared with
+  `FormDialogs.tsx` and the registration sheet. An adviser gets no editor; the
+  API refuses theirs anyway, and a test sends one to prove it.
 
 **The class-list template is generated, and its columns are not the workspace's
 to choose.** `rosterTemplateWorkbook()` in `web/csv.ts` builds the `.xlsx` from

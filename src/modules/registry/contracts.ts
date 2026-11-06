@@ -7,14 +7,28 @@ const date = z.iso.date();
 const lrn = z.string().overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.');
 const birthDate = date.refine(value => value >= '1900-01-01' && value <= new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }), 'Birth date must be a past or current date from 1900 onward.');
 const page = { limit: z.coerce.number().int().min(1).max(100).default(50), offset: z.coerce.number().int().min(0).max(100000).default(0) };
-// `address` is one nullable line, which is the whole of what migration 0053
-// opened of the learner-fields gate: a learner whose address the school has not
-// written down is unrecorded, never blank, and nothing else about a child or
-// their family is held until the school supplies its reviewed field list.
-const profile = { first_name: text(100), middle_name: text(100).nullable(), last_name: text(100), name_extension: text(20).nullable(), birth_date: birthDate, sex: z.enum(['male', 'female']), address: text(300).nullable() };
+// `address` (0053), `guardian_name` and `guardian_contact` (0056) are the whole
+// of what the learner-fields gate has been opened for, each on a named decision:
+// a learner whose address or guardian the school has not written down is
+// unrecorded, never blank, and nothing else about a child or their family is
+// held until the school supplies its reviewed field list. A hopeful extra key
+// is a 422 rather than a silently dropped field — `tests/registry-address.test.ts`
+// asserts that, and still does for `contact_number`, which is the *learner's*
+// own number and is not this.
+//
+// `guardian_contact` takes digits and the punctuation a number is written with,
+// so a mobile, a landline with an area code and two numbers on one line all
+// pass. It is deliberately not normalised to +63 and has no minimum length:
+// the school's own records are the authority on how it writes a number, and a
+// stricter rule invented here would refuse a real one. It must contain at
+// least one digit, because a contact number is a number.
+const guardianContact = z.string().trim().overwrite(singleSpaced).min(1).max(40)
+  .regex(/^[0-9+()/,\s-]+$/, 'Use digits and the punctuation a number is written with: + - ( ) / , and spaces.')
+  .regex(/[0-9]/, 'A contact number needs at least one digit. Leave it empty if the school has not recorded one.');
+const profile = { first_name: text(100), middle_name: text(100).nullable(), last_name: text(100), name_extension: text(20).nullable(), birth_date: birthDate, sex: z.enum(['male', 'female']), address: text(300).nullable(), guardian_name: text(150).nullable(), guardian_contact: guardianContact.nullable() };
 export const registrySchemas = {
   // Every new learner carries an LRN (the user's decision of 14 October). A record from before, without one, is still read and completed through learnerLrn.
-  learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), address: profile.address.default(null), lrn: z.string({ error: 'The LRN is required: all twelve digits.' }).overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.') }),
+  learnerCreate: z.strictObject({ ...profile, middle_name: profile.middle_name.default(null), name_extension: profile.name_extension.default(null), address: profile.address.default(null), guardian_name: profile.guardian_name.default(null), guardian_contact: profile.guardian_contact.default(null), lrn: z.string({ error: 'The LRN is required: all twelve digits.' }).overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.') }),
   learnerUpdate: z.strictObject({ ...profile, version }),
   learnerLrn: z.strictObject({ version, lrn }),
   // grade_level narrows to learners holding a valid enrolment at that grade in
@@ -58,7 +72,10 @@ export type RegistryOperationId = typeof registryOperations[number]['id'];
 
 const timestamps = { version: z.number().int(), created_at: z.iso.datetime(), updated_at: z.iso.datetime() };
 // Response schemas describe persisted values, without date-relative input refinements.
-const learner = z.object({ id: uuid, lrn: lrn.nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: date, sex: z.enum(['male', 'female']), address: z.string().nullable().describe('One line, as the school\'s own learner information carries it. Null where the school has not recorded one, which is unrecorded rather than blank'), merged_into: uuid.nullable(), identity_revision:z.number().int(), ...timestamps });
+const learner = z.object({ id: uuid, lrn: lrn.nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: date, sex: z.enum(['male', 'female']), address: z.string().nullable().describe('One line, as the school\'s own learner information carries it. Null where the school has not recorded one, which is unrecorded rather than blank'),
+  guardian_name: z.string().nullable().describe('The parent or guardian the school contacts, one line, as its own records write it — including any relationship it writes there. Null where none is recorded, which is unrecorded rather than none existing'),
+  guardian_contact: z.string().nullable().describe('That guardian\'s contact number as the school recorded it, not normalised to any format. Null where none is recorded'),
+  merged_into: uuid.nullable(), identity_revision:z.number().int(), ...timestamps });
 // section_id is nullable from 0048: a learner is enrolled in a year at a grade,
 // and which class they join is decided separately and later. The year and the
 // grade are what make the enrolment valid.

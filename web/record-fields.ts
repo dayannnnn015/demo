@@ -13,6 +13,21 @@ export const profileFields: Field[] = [
   // is unrecorded rather than blank, and requiring it would block registering a
   // learner the school is enrolling today.
   { key: 'address', label: 'Address', optional: true, maxLength: 300, wide: true, hint: 'One line, as the school’s own learner information writes it.' },
+  // The parent or guardian, which migration 0056 opened of the same gate on the
+  // user's decision of 2026-11-05. Both optional, for the reason address is: a
+  // guardian the school has not written down is unrecorded, not absent, and
+  // requiring either would refuse a class list the school already keeps.
+  //
+  // **One name field, and no relationship field.** Nothing supplied says which
+  // relationships the school records or how it writes them, so a closed list
+  // chosen here would refuse a real family; where it matters it goes in the
+  // name, as the school's own records write it.
+  { key: 'guardian_name', label: 'Parent or guardian', optional: true, maxLength: 150, wide: true, hint: 'The name the school contacts, written as its own records write it — including the relationship, if that is how it is written there.' },
+  // Not validated as a Philippine number on purpose: a mobile, a landline with
+  // an area code and two numbers on one line all pass, and nothing is
+  // normalised to +63. The school's own records are the authority on how it
+  // writes a number; a stricter rule here would refuse a real one.
+  { key: 'guardian_contact', label: 'Contact number', optional: true, maxLength: 40, hint: 'As the school recorded it — mobile or landline, however it is written.' },
 ];
 
 /** The school's heading and signature details, as every form prints them; School profile and the forms edit them alike. */

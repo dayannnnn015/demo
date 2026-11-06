@@ -78,15 +78,6 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
   const sectionLabel = (id: unknown) => String(sections.find(r => r.id === id)?.name ?? 'Unavailable section');
   // The year a registration enrols into. At most one may be active at a time.
   const activeYear = years.find(y => y.status === 'active');
-  /*
-   * Whether this person has any previous school year to encode at all, which is
-   * `hiddenByAssignment`'s rule read from the sections already loaded rather
-   * than fetched again. An SF10 scholastic block begins at Grade 1, so an
-   * adviser whose every class is Kindergarten or Grade 1 has nobody with one;
-   * a manager is never narrowed, and nor is an adviser between assignments.
-   * It only chooses a sentence — the API is what refuses the work.
-   */
-  const canEncodeHistory = manager || !sections.length || sections.some(s => Number(s.grade_level) > 1);
   const searching = Object.values(filters).some(Boolean);
   const found = rows?.items.length ?? 0;
 
@@ -228,7 +219,6 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
                 api={api}
                 learner={row}
                 manager={manager}
-                canEncodeHistory={canEncodeHistory}
                 setStatus={setStatus}
                 reload={reload}
                 yearLabel={yearLabel}

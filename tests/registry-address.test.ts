@@ -64,9 +64,13 @@ describe('the learner’s address', () => {
     const made = await register(learner({ lrn: '136170000003', first_name: 'Cris', last_name: 'Molina', sex: 'male' }));
     const id = String(made.data.id);
     const before = await db.pg.query<{ n: string }>(`select count(*) n from edunexus.audit_events where entity_id=$1`, [id]);
+    // A learner PATCH replaces the whole profile, so every field goes with it,
+    // the guardian pair added by 0056 included. Sending a partial body is a 422
+    // rather than a silent merge, which is what stops a form that does not know
+    // about a field from clearing it.
     const saved = await api.patch(`/api/v1/learners/${id}`, tokens.officer, {
       first_name: 'Cris', middle_name: null, last_name: 'Molina', name_extension: null,
-      birth_date: '2017-01-09', sex: 'male', address, version: Number(made.data.version),
+      birth_date: '2017-01-09', sex: 'male', address, guardian_name: null, guardian_contact: null, version: Number(made.data.version),
     });
     expect(saved.status).toBe(200);
     expect(saved.data.address).toBe(address);
@@ -81,7 +85,7 @@ describe('the learner’s address', () => {
     // Cleared back to unrecorded, which is a correction like any other.
     const cleared = await api.patch(`/api/v1/learners/${id}`, tokens.officer, {
       first_name: 'Cris', middle_name: null, last_name: 'Molina', name_extension: null,
-      birth_date: '2017-01-09', sex: 'male', address: null, version: Number(saved.data.version),
+      birth_date: '2017-01-09', sex: 'male', address: null, guardian_name: null, guardian_contact: null, version: Number(saved.data.version),
     });
     expect(cleared.status).toBe(200);
     expect(cleared.data.address).toBeNull();
@@ -101,11 +105,17 @@ describe('the learner’s address', () => {
     expect(made.status).toBe(403);
   });
 
-  it('is the only learner field added: nothing else about a child or their family is accepted', async () => {
-    // The gate stays shut for everything beyond this one line, and the contract
-    // is strict, so a field somebody adds hopefully is refused rather than
-    // silently dropped.
-    for (const extra of ['mother_tongue', 'religion', 'guardian_name', 'contact_number', 'barangay']) {
+  it('and the guardian pair are the only learner fields added: nothing else about a child or their family is accepted', async () => {
+    // The gate stays shut for everything beyond this one line and the guardian
+    // name and number that 0056 added, and the contract is strict, so a field
+    // somebody adds hopefully is refused rather than silently dropped.
+    //
+    // `contact_number` stays on this list and is **not** `guardian_contact`:
+    // the number EDUNEXUS holds is the guardian's, and the learner's own number
+    // is still a field nobody has asked for. `guardian_relationship` is here
+    // for the same reason — one guardian name, written as the school writes it,
+    // and no relationship taxonomy invented by us.
+    for (const extra of ['mother_tongue', 'religion', 'contact_number', 'barangay', 'guardian_relationship', 'guardian_email', 'guardian_address', 'second_guardian']) {
       const sent = await register(learner({ lrn: '136170000007', [extra]: 'something' }));
       expect(sent.status, extra).toBe(422);
     }

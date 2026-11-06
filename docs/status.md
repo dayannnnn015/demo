@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.91.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.92.0.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -15,7 +15,7 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Apply migrations 0053 and 0054, then deploy 0.90.3.** Both are the user's.
+**Apply migrations 0053 to 0056, then deploy.** All four are the user's.
 The tree is committed (`e0ab9a3`); merging and pushing are not done, by
 instruction.
 
@@ -33,15 +33,87 @@ manager still passes every check exactly as before.
 
 ## Waiting on the user
 
-**Should the learner's Academic history part link to that screen?** 0.91.1 gave
-it a signpost and no link, because the shortcut was deliberately removed from
-this same panel in 0.90.2 (the rail already carries the screen) and
-reorganising the panel is not a reason to reverse that. Restoring it is one
-anchor in `web/screens/LearnerProfile.tsx` and one assertion in
-`tests/web-learner-profile.test.ts` — but it reverses a settled decision, so it
-is the user's to make, not the next agent's.
+**Did "enable editing of student information" mean advisers too?** It was read
+as *make the editor evident*, which is what shipped: editing was folded inside a
+`Task` beside the reviewed LRN and identity workflows, so a plain correction
+read as unavailable, and **Edit profile** now opens a sheet. It was **not** read
+as widening who may edit, because a teacher correcting a learner profile is
+forbidden by the standing rule in `AGENTS.md` — whose three adviser exceptions
+are deliberately narrow and do not include it. If advisers are meant to correct
+profiles, that is a decision plus a backend change (the `learners` update policy
+and the HTTP role gate), not a screen change. **Ask before building it.**
+
+**Should the class-list import carry the guardian?** 0056 added
+`guardian_name` and `guardian_contact` to the record but **not** to
+`ROSTER_HEADER`, which still has its eight columns, because extending a
+published import contract is its own decision. The consequence is concrete: at
+897 learners the guardian is typed one learner at a time. The parser already
+accepts two header shapes (`columns` and `columnsV1`) and the pattern extends
+cleanly to a third, and the Excel template is generated from `ROSTER_HEADER`, so
+this is a contained change — but it changes a template the school may already
+have downloaded, so it is the user's call.
+
+The 0.91.1 question is **answered**: Academic history is out of the learner
+panel, by instruction.
 
 ## What shipped in this session
+
+### 0.92.0 — the guardian pair, an evident editor, two screens (migration 0056)
+
+Four changes asked for together. The gate opening is the one to read first.
+
+**`guardian_name` and `guardian_contact` left the learner-fields gate.** They
+were asked for **by name** after 0.91.1 reported, in those words, that this gate
+blocked parent or guardian and contact number — a reaffirmation after being
+told, which is the only way a field may leave it and exactly how `address` left
+it on 2026-11-04. Both nullable: a learner the school has written no guardian
+for is **unrecorded, never "no guardian"**.
+
+Three sub-decisions that are easier to get wrong than to notice:
+
+- **One name field, no relationship field.** Nothing supplied says which
+  relationships the school records or how it writes them, so a closed list would
+  refuse a real family. It goes in the name — *Maria Reyes (mother)*.
+- **The number is never reformatted.** Digits and the punctuation a number is
+  written with; no minimum length, no leading-zero rule, no +63 normalisation.
+  `(074) 422-1234 / 0917 555 0101` is stored byte for byte. Letters are
+  refused, because a number is a number.
+- **It is not in the import template.** `ROSTER_HEADER` still has eight
+  columns. **Known cost: at 897 learners the guardian is typed one at a time**,
+  and that is the second open question above.
+
+Two things found rather than assumed. `audit_events` (0001) has only
+`changed_fields` and **no snapshot columns**, so the journal never holds a
+guardian's phone number anywhere — asserted on the whole row, because this is
+the first field on `learners` holding a third party's number, for 897 families,
+in an append-only table. And `register_learner_into_section` (0054) has a closed
+**deny-unknown** key list, so a new learner column breaks adviser registration
+with *Invalid learner fields* the moment the contract carries it — the control
+working. 0056 `create or replace`s it, as 0018/0019/0021 did, rather than
+editing an applied migration.
+
+**Editing is an action.** It sat inside a `Task` titled *Correct the details*,
+beside the LRN correction and identity links, which are **reviewed** workflows —
+so a plain correction read as unavailable. **Edit profile** opens a sheet.
+**No permission moved**; see the first open question above for what was *not*
+done and why.
+
+**Academic history is out of the learner panel**, by instruction, which returns
+it to where 0.90.2 left it. Removed from here twice now, so the gate opens
+**both** parts of the panel before asserting no `prior-records` link — 0.90.2's
+own gate was vacuous by asserting on the closed list.
+
+**My profile and Settings are two screens.** The 0.90.9 specification already
+called them *My profile* and *Settings & Accessibility*. Preferences,
+Accessibility and Learning EDUNEXUS moved to `web/screens/Settings.tsx`, on the
+rail rather than `offRail`, because someone hunting for the text size should
+find it in the navigation. **No preference moved, changed or was added** — same
+cards, same `staff_profiles` columns, same `save_my_profile`, no migration.
+
+`tests/registry-guardian.test.ts` (12 cases) and
+`tests/web-learner-profile.test.ts` (16) hold it; both new interface gates were
+mutation-tested, including a link planted on the *other* tab.
+
 
 ### 0.91.1 — one learner, read in three parts (no migration)
 

@@ -6,7 +6,7 @@ import { Affects } from '../components/affects';
 import { profileFields } from '../record-fields';
 import { IdentityHistory, LrnCorrection, LrnHistory, ReviewActions } from './Reviews';
 import {
-  Badge, Callout, Editor, StatusLine, Table, Task, Unrecorded,
+  Badge, Callout, Editor, FormSheet, StatusLine, Table, Task, Unrecorded,
   gradeName, idle, sentence, shown, value, type Status,
 } from '../components/primitives';
 
@@ -16,36 +16,45 @@ import {
  */
 type Placement = { enrollment_id: string; academic_year_id: string; grade_level: number; section_id: string | null; section_name: string | null; status: string };
 
-type Tab = 'profile' | 'history' | 'enrollment';
-const tabs: [Tab, string][] = [['profile', 'Learner profile'], ['history', 'Academic history'], ['enrollment', 'Enrollment']];
+type Tab = 'profile' | 'enrollment';
+/*
+ * Two parts, not three. **Academic history was removed on the user's
+ * instruction of 2026-11-05**, the day after it was added, and it agrees with
+ * the older decision it was already being careful about: 0.90.2 took the
+ * shortcut *Academic history before EDUNEXUS* out of this same panel because
+ * the navigation rail already carries that screen. The signpost tab was the
+ * last trace of a second door here, and it is gone too; the screen, the route
+ * and every historical record are untouched.
+ */
+const tabs: [Tab, string][] = [['profile', 'Learner profile'], ['enrollment', 'Enrollment']];
 
 /**
- * One learner, opened from the registry, in three parts rather than one column.
+ * One learner, opened from the registry, in two parts rather than one column.
  *
- * The parts are the three different questions a staff member opens a learner to
- * answer, and they are deliberately not the same record: the **profile** is the
- * one permanent identity row in `learners`, the **academic history** is the
- * previous school years transcribed from the school's own documents, and the
+ * The parts are two different questions, and deliberately not the same record:
+ * the **profile** is the one permanent identity row in `learners`, and the
  * **enrollment** is the annual timeline in `enrollments`. They used to be one
  * panel, which made whichever was being looked for the hardest to find and
- * invited the reading that correcting a name was correcting a year.
+ * invited the reading that correcting a name was correcting a year. Academic
+ * history is neither of them and is not here at all — see `tabs` above.
  *
- * Two things it does not do. It **shows no field the registry does not already
- * hold** — the class-list import collects `lrn, first_name, middle_name,
- * last_name, name_extension, birth_date, sex, address` and nothing else, so
- * there is no parent, guardian, contact number or demographic breakdown to show,
- * and none is invented here; which further fields may exist at all is behind the
- * learner-fields gate. And it **transcribes no history of its own**: Academic
- * history hands the learner to the screen that already does that, as
- * `#/prior-records?learner=<id>`, where only the id travels.
+ * **It shows only fields the record actually holds**, which is `profileFields`:
+ * the name, LRN, birth date, sex, one line of address (0053) and the parent or
+ * guardian with a contact number (0056). Each of the last three left the
+ * learner-fields gate on a named decision, recorded in `docs/constraints.md`;
+ * everything the gate still blocks — mother tongue, religion, indigenous group,
+ * a relationship taxonomy, a second guardian — is named in the profile as *not
+ * collected* rather than left as an empty line, because a profile is where an
+ * empty line most readily reads as nothing to report.
  */
-export function LearnerDetail({ api, learner, manager, canEncodeHistory, setStatus, reload, yearLabel, sectionLabel, onIdentity, onView, onSf9 }: {
-  api: Api; learner: Row; manager: boolean; canEncodeHistory: boolean;
+export function LearnerDetail({ api, learner, manager, setStatus, reload, yearLabel, sectionLabel, onIdentity, onView, onSf9 }: {
+  api: Api; learner: Row; manager: boolean;
   setStatus: (s: Status) => void; reload: () => void;
   yearLabel: (id: unknown) => string; sectionLabel: (id: unknown) => string;
   onIdentity: () => void; onView: (enrollment: Row) => void; onSf9: (enrollment: Row) => void;
 }) {
   const [tab, setTab] = useState<Tab>('profile');
+  const [editing, setEditing] = useState(false);
   const id = String(learner.id);
   const placement = (learner.placement as Placement | null) ?? null;
 
@@ -59,6 +68,23 @@ export function LearnerDetail({ api, learner, manager, canEncodeHistory, setStat
 
       {tab === 'profile' ? (
         <>
+          {/*
+            Editing is an action, not a disclosure. It was folded inside a
+            `Task` titled "Correct the details", which is where every *reviewed*
+            workflow on this panel lives — and a plain correction is not one of
+            those, so it read as unavailable. **Edit profile** opens a sheet
+            over the panel, which is the workspace's rule for a form that
+            writes a record, and the reviewed workflows stay folded below.
+          */}
+          {manager ? (
+            <div className="form-actions sheet-tools">
+              <button type="button" className="btn" onClick={() => setEditing(true)}>
+                <Icon name="user" size={15} />Edit profile
+              </button>
+              <span className="muted">One record per learner: this corrects the one every form reads.</span>
+            </div>
+          ) : null}
+
           <h3>Personal information</h3>
           <dl className="facts">
             {/* An LRN the school has not been issued yet is a gap in the record, not a value someone left out. */}
@@ -76,27 +102,38 @@ export function LearnerDetail({ api, learner, manager, canEncodeHistory, setStat
             <div><dt>Address</dt><dd>{shown(learner, 'address', 'No address recorded')}</dd></div>
           </dl>
           <p className="muted">
-            One line, as the school’s own learner information writes it, and the only learner field EDUNEXUS holds beyond the name, LRN, birth date and sex.
-            It is printed on no DepEd form, because none of the forms the school has supplied has a box for it.
+            One line, as the school’s own learner information writes it. It is printed on no DepEd form, because none of the forms the school has supplied has a
+            box for it.
+          </p>
+
+          {/*
+            The parent or guardian, added by migration 0056 on the user's
+            decision of 2026-11-05. One name and one number: there is no
+            relationship field, because nothing supplied says which
+            relationships the school records or how it writes them, and a list
+            invented here would refuse a real family. A guardian nobody has
+            written down is unrecorded — never "no guardian".
+          */}
+          <h3>Parent or guardian</h3>
+          <dl className="facts">
+            <div><dt>Parent or guardian</dt><dd>{shown(learner, 'guardian_name', 'No guardian recorded')}</dd></div>
+            <div><dt>Contact number</dt><dd>{learner.guardian_contact == null || learner.guardian_contact === ''
+              ? <Unrecorded label="No number recorded" />
+              : <span className="mono">{value(learner, 'guardian_contact')}</span>}</dd></div>
+          </dl>
+          <p className="muted">
+            As the school’s own records write them, and the number is kept exactly as it was recorded rather than reformatted. Printed on no DepEd form: none of
+            the forms the school has supplied has a box for either.
           </p>
 
           <Callout tone="plain" title="What this record does not hold">
-            No parent or guardian name, relationship or contact number, and no mother tongue, religion or indigenous group. These are not blank fields waiting to be
-            filled in: EDUNEXUS does not collect them, the class-list import has no column for them, and which facts about a child and their family the school may
-            keep is the school’s own answer to give, in the reviewed field list it still owes. Nothing here guesses at one.
+            Beyond the fields above, EDUNEXUS holds nothing else about a child or their family: no mother tongue, religion or indigenous group, no second guardian,
+            no relationship field, no guardian address or email, and no breakdown of the learner’s address line. These are not blank fields waiting to be filled in
+            — they are not collected, and which of them the school may keep is its own answer to give, in the reviewed field list it still owes.
           </Callout>
 
           {manager ? (
             <>
-              <Task title="Correct the details" note="Spelling, birth date, extension, address">
-                <p className="muted">
-                  The same record the class-list import writes and every form reads, corrected in place: there is no second copy of a learner, so what is saved here
-                  is what the registry, the register, the class list and the forms show from their next read. An assigned LRN is never changed here; correcting one
-                  is the separate reviewed workflow below.
-                </p>
-                <Editor fields={profileFields} initial={learner} setStatus={setStatus} onSaved={reload} warning={<Affects what="learner" />}
-                  onSubmit={data => api(`/learners/${id}`, 'PATCH', { ...data, version: learner.version })} />
-              </Task>
               {learner.lrn == null ? (
                 <Task title="Fill the official LRN" note="Recorded once, and never cleared">
                   <p className="muted">EDUNEXUS never invents an LRN. Enter it only when the school has been issued one.</p>
@@ -132,37 +169,6 @@ export function LearnerDetail({ api, learner, manager, canEncodeHistory, setStat
         </>
       ) : null}
 
-      {tab === 'history' ? (
-        <>
-          <h3>Academic history</h3>
-          <p className="muted">
-            The school years this learner finished <b>before</b> EDUNEXUS, transcribed one year at a time from the school’s own documents, and the credential
-            presented for Grade 1. They are on <b>Academic history</b> in the navigation rail, which is the one place they are typed in and read.
-          </p>
-          {/*
-            No link, and that is the decision rather than an omission. The
-            shortcut *Academic history before EDUNEXUS* lived in this panel and
-            was taken out in 0.90.2, because the rail already carries the
-            screen; `tests/web-registry-scope.test.ts` holds that. So this tab
-            says where the records are and what they are, and stays a signpost:
-            putting the door back here is the user's decision to make, not a
-            consequence of reorganising the panel.
-          */}
-          <Callout tone="info" title="Why it is a screen of its own">
-            An encoded school year is a copy of a document, not an enrolment. It reaches the learner’s SF10 as one scholastic block and nothing else: no register,
-            no SF2, no SF4, no SF9, and nobody’s current grade or section. The grades EDUNEXUS recorded itself are on Promotion → Report card rather than here, and
-            nothing on either screen computes an average. That is also why this tab holds no copy of them: there is one set of historical records per learner, and
-            the screen that writes them is the screen that shows them.
-          </Callout>
-          {canEncodeHistory ? null : (
-            <p className="muted">
-              Every class you advise is Kindergarten or Grade 1, so there is no previous school year to encode for anyone in them, and Academic history is not in
-              your navigation: an SF10 scholastic block begins at Grade 1, and Kindergarten is the credential presented for it rather than a block of its own.
-            </p>
-          )}
-        </>
-      ) : null}
-
       {tab === 'enrollment' ? (
         <>
           <h3>This school year</h3>
@@ -180,6 +186,29 @@ export function LearnerDetail({ api, learner, manager, canEncodeHistory, setStat
           )}
           <EnrollmentHistory api={api} learnerId={id} manager={manager} yearLabel={yearLabel} sectionLabel={sectionLabel} onView={onView} onSf9={onSf9} />
         </>
+      ) : null}
+
+      {/*
+        One record, corrected in place. `profileFields` is the same list the
+        registration sheet and the SF10 edit, so a field cannot exist on one and
+        not the others, and the same manager-only `PATCH /learners/:id` carries
+        it: there is no second learner row and no second copy of a field
+        anywhere. The version goes with it, so a competing correction is a 409
+        rather than a silent overwrite.
+      */}
+      {editing ? (
+        <FormSheet
+          title="Edit profile"
+          note="The one permanent record for this learner. Correcting it here is what the registry, the class list, the register and the forms read from their next read — it never creates a second record."
+          submitLabel="Save profile"
+          wide
+          fields={profileFields}
+          initial={learner}
+          warning={<Affects what="learner" />}
+          onSubmit={data => api(`/learners/${id}`, 'PATCH', { ...data, version: learner.version })}
+          onSaved={() => { setEditing(false); reload(); setStatus({ text: 'Profile saved.', kind: 'done' }); }}
+          onClose={() => setEditing(false)}
+        />
       ) : null}
     </>
   );

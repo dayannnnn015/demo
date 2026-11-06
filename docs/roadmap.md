@@ -497,29 +497,44 @@ enforces and suggests no maximum, deliberately.
 
 **Needs:** an approved maximum, or a written statement that there is none.
 
-### 11a. The learner profile's parent, guardian and demographic sections
+### 11a. The learner profile's remaining demographic fields
 
-Gate: **learner fields and class capacity**, the same one. A Learner Profile
-feature was asked for on 2026-11-05 with sections for parent and guardian names,
-relationship and contact information, and "other existing demographic fields".
-**None of them exists to show.** The class-list import's columns are
-`ROSTER_HEADER` — `lrn, first_name, middle_name, last_name, name_extension,
-birth_date, sex, address` — and all eight are already on `edunexus.learners`,
-so there was no imported information to surface and nothing to read back: the
-request's premise that the importer collects more than
-the registry holds is simply not the case. Each missing field — parent or
-guardian, relationship, contact number, mother tongue, religion, indigenous
-group, and any breakdown of the one address line — is named by this gate as what
-it still blocks.
+Gate: **learner fields and class capacity**, the same one.
 
-What shipped instead is the reorganisation (0.91.1): the learner reads in three
-parts, and the profile **names the facts EDUNEXUS does not hold** rather than
-leaving them as empty lines. So the screen is ready for the fields and refuses
-to guess at them.
+**Two of the fields this section used to block have shipped.** A Learner
+Profile feature was asked for on 2026-11-05 with sections for parent and
+guardian names, relationship and contact information, and "other existing
+demographic fields". The first finding was that the class-list import collects
+nothing the registry did not already hold — `ROSTER_HEADER` is
+`lrn, first_name, middle_name, last_name, name_extension, birth_date, sex,
+address`, all eight on `edunexus.learners` — so there was no imported
+information to surface, and every extra field the request named was blocked
+here. That was reported in those words; the user then asked for the guardian
+name and contact number **by name**, which is the reaffirmation that opens this
+gate, and `guardian_name` and `guardian_contact` shipped in 0.92.0 (migration
+0056).
+
+**What this section still blocks**, and each is a fact about a child or their
+family that 897 real records would hold: mother tongue, religion, indigenous
+group, a relationship-to-learner field, a second guardian, a guardian email,
+occupation or address, the learner's own contact number, and any breakdown of
+the address line into columns. Two of these were refused *within* the shipped
+work rather than merely not built: **no relationship field**, because nothing
+supplied says which relationships the school records or how it writes them and a
+closed list would refuse a real family; and **the guardian pair is not in the
+import template**, because extending a published import contract is its own
+decision. At 897 learners the second is a real cost — the guardian is typed per
+learner — and it is the likeliest thing to be asked for next.
+
+The profile **names the fields EDUNEXUS does not hold** rather than leaving them
+as empty lines, so the screen is ready for more and refuses to guess at them.
 
 **Needs:** the school's reviewed field list — which facts about a child and
 their family it may keep, and for what purpose. Nothing here is a layout
-problem, so do not design the sections before the list exists.
+problem, so do not design the sections before the list exists. **And now a
+second thing is owed**, which was not before: the guardian pair is personal
+data about an adult who is not the learner, so the privacy owner's approved
+purposes must cover it before real records are imported.
 
 ### 12. Absence alerts and follow-up thresholds
 
