@@ -185,8 +185,12 @@ it.
 **The demonstration database cannot show the adviser pull as it stands, and two
 office steps would fix it.** Confirmed by a read-only query on 2026-11-06: every
 enrolment in the active year already has a class, so the pullable list is
-correctly empty for everyone; and the real teacher account advises none of the 30
-classes, so it reads no learners at all. To demonstrate the feature, a manager
+correctly empty for everyone. **Re-measured after the adviser assignments were
+changed later that day:** the real teacher account now advises Grade 2 **B** in
+the active year, which holds nobody; seven classes in the **closed** 2025 year
+holding ten learners each, which row security does not show and
+`may_advise_section` refuses; and one in the **draft** 2027 year. So it still
+reads no learners, for a reason that is nothing to do with the pull. To demonstrate the feature, a manager
 needs to (1) make that teacher the adviser of a class on **Staff access**, and
 (2) enrol a learner into that class's grade **without** a section, or carry last
 year's learners over on **Next year's classes**. Neither is a code change, and

@@ -221,11 +221,39 @@ row; the learner then leaves the available list and a second take-in is refused
 **The live cause was the data.** On the demonstration database every one of the
 69 enrolments in the active school year already held a class — `section_id is
 null` matched nothing — so no learner was pullable, which is the list being
-right rather than wrong. Separately, the one real teacher account advised none of
-that year's 30 classes, so row security correctly gave it no learners at all.
-Both are fixed from the office, not in code: the office enrols a learner without
-a section (or carries last year's over on **Next year's classes**), and a manager
-makes the teacher the adviser of a class on **Staff access**.
+right rather than wrong.
+
+**Re-measured later the same day, after the adviser assignments were changed,
+and the picture is worth keeping because the first reading of it was wrong.**
+The real teacher account does now advise an active-year class — Grade 2 **B**,
+which holds **nobody** — along with seven classes in the **closed** 2025 year
+holding ten learners each, and one in the **draft** 2027 year. So the registry is
+empty for a reason that is nothing to do with the pull: the only class they
+advise in the running year has no learners in it, and the ten-learner classes
+they do hold are in a year that is closed, which row security does not show and
+`may_advise_section` refuses outright.
+
+Both are fixed from the office, not in code: the office enrols a learner at that
+grade **without** a section (or carries last year's over on **Next year's
+classes**), and a manager moves learners into the class or makes the teacher the
+adviser of a class that has some, on **Staff access**.
+
+### The sheet that loaded for ever
+
+Reported with a screenshot on 2026-11-06, against the **deployed 0.95.1** build.
+`Add learner` sat on its skeleton rows and never resolved. The cause is the
+version, not the data: 0.95.1 has no `barrier()`, and it opened on
+`page.items[0]` of `/sections` — which orders by `academic_year_id`, a uuid, so
+it is not chronological and could land on a **closed** 2025 class. The list read
+then raised `P2600` through `may_advise_section`, and the fetch's only `catch`
+set the status line while leaving `answer` null, so `candidates` stayed null and
+`BatchSheet` drew its skeleton for ever. 0.95.2 fixed both halves — the picker
+sorts newest year first and opens on a class that can actually be built, and a
+closed, draft or not-yet-started year is stated as a refusal that renders no list
+at all. `tests/web-teacher-roster.test.ts` now holds the closed-year case
+directly, asserting the refusal appears and that no skeleton, no checkbox and no
+take-in button are rendered; disabling the barrier fails it.
+
 
 What *was* wrong was the sentence the adviser read. The empty table said "No
 learners are currently assigned to your sections." and stopped — true of their

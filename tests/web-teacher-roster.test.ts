@@ -235,4 +235,38 @@ describe('a class in a school year that is not running yet', () => {
     expect(screen.all('button').some(b => /Take \d+ learner/.test(b.textContent ?? ''))).toBe(false);
     screen.unmount();
   });
+
+  // The live failure of 2026-11-06, reported as "it just keeps loading". Before
+  // the barrier existed the sheet opened on whatever `/sections` returned first
+  // — ordered by `academic_year_id`, a uuid, so it could land on a **closed**
+  // year — and `read_pullable_learners` refuses a closed year through
+  // `may_advise_section`. The fetch's only `catch` set the status line and never
+  // set `answer`, so `candidates` stayed null and BatchSheet drew its skeleton
+  // for ever. A refusal must therefore be a statement, never a spinner.
+  it('states the refusal for a closed year instead of spinning a skeleton for ever', async () => {
+    await db.pg.query(`select set_config('edunexus.actor_id',$1,false)`, [ids.principal]);
+    // The case above may already have closed it, and a closed year is immutable,
+    // so this reaches the state rather than assuming which test ran first.
+    const [state] = await db.pg.query<{ status: string }>(`select status from edunexus.academic_years where id=$1`, [year2026]);
+    if (state!.status !== 'closed') {
+      await db.pg.query(`update edunexus.academic_years set status='closed' where id=$1`, [year2026]);
+      await db.pg.query(`update edunexus.academic_years set status='active' where id=$1`, [year2027]);
+    }
+
+    server.signInAs('teacher');
+    const screen = await mountScreen(Learners as never, server, teacher, { route });
+    await screen.until(m => m.text().includes('Add learner'), 'the adviser action');
+    await screen.click(screen.byText('Add learner', 'button'));
+    // Choose the closed year's class deliberately: it is still one they advise.
+    await screen.until(m => m.text().includes('My class'), 'the class picker');
+    await screen.type(screen.field('My class'), masigla);
+
+    await screen.until(m => m.text().includes('school year is closed'), 'the closed-year refusal');
+    // Nothing is left loading, and nothing is offered to act on.
+    expect(screen.all('.skeleton-table').length).toBe(0);
+    expect(screen.all('.skeleton').length).toBe(0);
+    expect(screen.all('input.batch-check').length).toBe(0);
+    expect(screen.all('button').some(b => /Take \d+ learner/.test(b.textContent ?? ''))).toBe(false);
+    screen.unmount();
+  });
 });
