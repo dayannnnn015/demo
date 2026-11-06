@@ -57,5 +57,6 @@
   "0056_learner_guardian.sql": "0d8b68b45d19877ef73ca9d114ca4296fe15ce0572ad84da84f7ef4d047cb8e2",
   "0057_notifications.sql": "4b3abe24b1c9d76f3e604ba105c19b5dcea5f26a807147fa43fb99eb95fd4fe5",
   "0058_enrollment_notifications.sql": "9c45432e1a81f1a94d44b6663dad42505a874b0de4e80355dad957dd74fe2518",
-  "0059_workflow_notifications.sql": "5d60635349b54b54144cafdeffdfd4a24accdb89e8a83a24c0217131c20f9907"
+  "0059_workflow_notifications.sql": "5d60635349b54b54144cafdeffdfd4a24accdb89e8a83a24c0217131c20f9907",
+  "0060_conditional_promotion_restored.sql": "b0943aa1dbc8bad7c6703ae11e3299b41061fe3d68c54e13ba845737af1dc5ce"
 }

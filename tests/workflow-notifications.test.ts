@@ -179,6 +179,34 @@ describe('promotion outcomes', () => {
 
     expect((await inboxOf(ids.teacher))[0]!.kind).toBe('promotion_returned');
   });
+
+  /**
+   * The regression 0060 fixes, tested here because 0059 is what caused it.
+   *
+   * `0036` widened the outcomes an adviser may endorse to four by replacing
+   * `record_promotion_recommendations`. 0059 replaced the same function again to
+   * add the notification above and restated it **from 0033**, whose three
+   * outcomes did not include `conditionally_promoted` — so from 0059 until 0060
+   * the value was refused by the only function that records it, while the
+   * table's CHECK, next-year placement, the Zod contract, the SF9, the SF10 and
+   * the choice on Promotion all still carried it.
+   */
+  it('accepts a conditionally promoted outcome, which 0059 dropped and 0060 put back', async () => {
+    const [decision] = await db.pg.query<{ version: number }>('select version from edunexus.promotion_decisions where enrollment_id=$1', [enrolment]);
+    const sent = await api.post(`/api/v1/sections/${masigla}/promotion-recommendations`, tokens.teacher,
+      { entries: [{ enrollment_id: enrolment, version: decision!.version, action: 'conditionally_promoted' }],
+        reason: 'Conditionally promoted: two learning areas to make up over the break.' });
+    expect(sent.status, sent.message ?? '').toBe(201);
+    const [saved] = await db.pg.query<{ action: string; status: string }>('select action,status from edunexus.promotion_decisions where enrollment_id=$1', [enrolment]);
+    expect(saved).toMatchObject({ action: 'conditionally_promoted', status: 'recommended' });
+  });
+
+  it('still refuses an outcome that is none of the four', async () => {
+    const [decision] = await db.pg.query<{ version: number }>('select version from edunexus.promotion_decisions where enrollment_id=$1', [enrolment]);
+    const bad = await api.post(`/api/v1/sections/${masigla}/promotion-recommendations`, tokens.teacher,
+      { entries: [{ enrollment_id: enrolment, version: decision!.version, action: 'moved_up' }], reason: 'Trying an outcome the school does not have.' });
+    expect(bad.status).toBe(422);
+  });
 });
 
 describe('the absence-alert gate is still shut', () => {
