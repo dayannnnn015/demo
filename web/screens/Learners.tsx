@@ -151,7 +151,18 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
           rowKey={r => String(r.id)}
           empty={searching
             ? <EmptyState title="No learners match" body="Try a shorter name, or clear the search to see everyone you have access to." />
-            : <EmptyState title="The registry is empty" body={manager ? 'Register the first learner, then enrol them into a section.' : 'No learners are currently assigned to your sections.'} />}
+            : manager
+              ? <EmptyState title="The registry is empty" body="Register the first learner, then enrol them into a section." />
+              // An adviser reads only their own classes, so an empty table here says
+              // nothing about the school's registry — and saying "none assigned" and
+              // stopping sent advisers away believing there was nobody to take in. The
+              // learners the office registered at this grade with no class yet are
+              // waiting behind Add learner, so the empty state points at it.
+              : <EmptyState
+                  title="No learners in your classes yet"
+                  body="You see the learners enrolled in the sections you advise. Learners the office has already registered at your class’s grade, with no class yet, are waiting under Add learner."
+                  action={<button type="button" className="btn" onClick={() => setTaking(true)}><Icon name="enter" size={15} />Add learner</button>}
+                />}
           columns={[
             {
               header: 'Learner',

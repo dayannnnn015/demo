@@ -195,3 +195,42 @@ as it should.
 `tests/web-teacher-roster.test.ts` asserts the access-event count **does not
 move** when a manager opens it, because that is the property that would rot
 silently.
+
+## An adviser whose class is empty, and what the registry says then
+
+Reported 2026-11-06 as "the Learner registry shows nothing for a teacher", with
+the reading that the pullable query was requiring a `section_id` before a learner
+could be taken in. **It was not, and it never has been.** The join in `0054` is
+
+```sql
+left join edunexus.enrollments e on e.learner_id=l.id and e.academic_year_id=y.id
+  and e.record_state='valid' and e.status='enrolled'
+  and e.section_id is null and e.grade_level=s.grade_level
+```
+
+so a learner **with no class** is precisely what the list returns, and an
+enrolment that already has one is excluded rather than required. The whole
+workflow was re-run end to end against the API to be sure: the unplaced learners
+at the grade of a class the teacher advises are listed with LRN and birth date
+and marked *Give them this class*; another grade's are not listed and that
+section is refused `P2600`; taking one in calls `move_enrollment` and so assigns
+the enrolment the office already holds, leaving one learner row and one enrolment
+row; the learner then leaves the available list and a second take-in is refused
+`P2602`; and a manager still reads every learner, placed or not.
+
+**The live cause was the data.** On the demonstration database every one of the
+69 enrolments in the active school year already held a class — `section_id is
+null` matched nothing — so no learner was pullable, which is the list being
+right rather than wrong. Separately, the one real teacher account advised none of
+that year's 30 classes, so row security correctly gave it no learners at all.
+Both are fixed from the office, not in code: the office enrols a learner without
+a section (or carries last year's over on **Next year's classes**), and a manager
+makes the teacher the adviser of a class on **Staff access**.
+
+What *was* wrong was the sentence the adviser read. The empty table said "No
+learners are currently assigned to your sections." and stopped — true of their
+class, silent about the learners waiting at that grade, and so read as "there is
+nobody, and the system is withholding them". An empty table for an adviser now
+names what it is describing, does not call the registry empty (it is not, and an
+adviser cannot see it), and carries **Add learner** inside it. The read scope is
+untouched.

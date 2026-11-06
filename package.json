@@ -1,6 +1,6 @@
 {
   "name": "edunexus",
-  "version": "0.95.2",
+  "version": "0.95.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -18,6 +18,7 @@
     "demo": "tsx scripts/demo.ts",
     "seed:test-data": "tsx --env-file-if-exists=.env scripts/seed-test-data.ts",
     "seed:demo-registry": "tsx --env-file-if-exists=.env scripts/seed-demo-registry.ts",
+    "seed:demo-records": "tsx --env-file-if-exists=.env scripts/seed-demo-records.ts",
     "reset:seeded-data": "tsx --env-file-if-exists=.env scripts/reset-seeded-data.ts",
     "drill:restore": "tsx --env-file-if-exists=.env scripts/restore-drill.ts",
     "drill:revocation": "tsx --env-file-if-exists=.env scripts/drill-revocation.ts",
