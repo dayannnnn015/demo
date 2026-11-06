@@ -181,8 +181,9 @@ Read [staff invitations](docs/staff-invitations.md). A manager records the reque
 - **An inbox is personal**: the row policy answers only rows addressed to the caller, so a principal reads their own and not the school’s. It is the one table where being a manager grants nothing.
 - **The API cannot send one.** `notify` is never granted to `edunexus_app`; only a security-definer writer can.
 - The first emitters are the four roster-submission events: submitted, withdrawn, imported, declined.
+- A bell in the top bar with the unread count, and a centre listing your own, newest first, with mark-one and mark-all read (0.93.0).
 
-Read [notifications](docs/notifications.md). This reverses two settled decisions, on the user’s explicit decision of 2026-11-05, and the reasons are recorded there and in [constraints.md](docs/constraints.md). **Nothing here alerts, messages or notifies on attendance**: the absence-alert gate is untouched and still shut, and no figure is counted, compared or thresholded. There is no screen yet — the bell and the notification centre are the next increment.
+Read [notifications](docs/notifications.md). This reverses two settled decisions, on the user’s explicit decision of 2026-11-05, and the reasons are recorded there and in [constraints.md](docs/constraints.md). **Nothing here alerts, messages or notifies on attendance**: the absence-alert gate is untouched and still shut, and no figure is counted, compared or thresholded. Since 0.93.0 a **bell** in the top bar carries the unread count and opens the notification centre; the count names no record and writes no access row, so it may be polled.
 
 ## What works in the school workspace
 

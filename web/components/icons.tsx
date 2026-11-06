@@ -44,6 +44,7 @@ const paths = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.75h.01" /></>,
   help: <><circle cx="12" cy="12" r="9" /><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.4-2.6 4" /><path d="M12 17.4h.01" /></>,
   alert: <><path d="M10.3 3.9 2.4 17.1A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 16.5h.01" /></>,
+  bell: <><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6" /><path d="M13.7 20a2 2 0 0 1-3.4 0" /></>,
   stop: <><circle cx="12" cy="12" r="9" /><path d="m9 9 6 6M15 9l-6 6" /></>,
   collapse: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 4v16" /><path d="m7.5 10-2 2 2 2" /></>,
   expand: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M10 4v16" /><path d="m5.5 10 2 2-2 2" /></>,

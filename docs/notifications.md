@@ -174,5 +174,40 @@ of the writer it belongs to.
 - **No retention or pruning rule.** Rows accumulate. That is an operational
   question for the deployment owner, not a DepEd policy question, and nothing
   was chosen here by default.
-- **No screen yet.** The bell and the notification centre are the next
-  increment; this one is the substrate and the first emitters.
+## The screen (0.93.0)
+
+A **bell** in the top bar carries the unread count and opens **Notifications**.
+The count is a number, not a dot, and the number is in the accessible label
+too, because a screen reader should not have to infer it from a badge. It
+comes from `GET /notifications/count`, refetches on every navigation and once
+a minute besides, and goes silent on failure rather than interrupting what
+somebody is typing — the count is furniture.
+
+The shell only draws the number; `web/App.tsx` asks for it, which keeps the
+shell presentational and `tests/web-shell.test.ts`-shaped tests able to render
+it without an API.
+
+**A row links to the screen the work is on — but only when the reader may open
+it.** `hiddenFor` hides a screen from a role’s navigation without changing
+what the API allows, and `routeFor` answers *Overview* for a screen a role may
+not open. Roster import is `hiddenFor: ['principal']`, because on this
+school’s division of work the administrative officer imports, and the
+principal is still told a list is waiting — so an unconditional link would
+have landed them on the Overview with no explanation. The row names the screen
+in words instead, and `pointsAt` in the screen is the one place that decides.
+
+The badge borrows the info badge’s three tokens (`--accent-100`,
+`--accent-800`, `--accent-200`) rather than inventing a red the design system
+does not have, so it retunes under `:root[data-scheme='dark']` with everything
+else.
+
+`tests/web-notifications.test.ts` drives it in a real DOM against the real API.
+It also stands in for `tests/web-screens.test.ts`, which `AGENTS.md` describes
+and which **does not exist in this tree** — it was lost with the rest of
+`tests/` in the 0.86.1 recovery, so nothing else renders this route at all.
+
+## What is deliberately still not here
+
+- **No emitter outside roster submissions yet.** Enrollment, the monthly
+  consolidation, promotion outcomes, adviser assignment and the calendar are
+  declared in the vocabulary and emit nothing; each is its own increment.

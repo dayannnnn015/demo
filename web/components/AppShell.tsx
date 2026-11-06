@@ -155,7 +155,7 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
   );
 }
 
-export function AppShell({ me, school, current, context, contextTone, hidden = [], onNavigate, onSignOut, onChangePassword, children }: {
+export function AppShell({ me, school, current, context, contextTone, hidden = [], unread = 0, onNavigate, onSignOut, onChangePassword, children }: {
   me: Row;
   /** The school profile record. The rail states what it reads, never a literal:
    *  this is the same name printed on every official form, and it is editable. */
@@ -168,6 +168,10 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
   /** Screens this person's own assignments rule out, on top of their role.
    *  Kept out of the rail and the command palette alike. */
   hidden?: string[] | undefined;
+  /** How many notifications are unread. The shell only draws it: App.tsx asks
+   *  for the count, which names no record and writes no access row, so it may
+   *  be asked for repeatedly. */
+  unread?: number | undefined;
   onNavigate: (id: string) => void;
   onSignOut: () => void;
   onChangePassword?: (() => void) | undefined;
@@ -324,6 +328,14 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
                 {context}
               </span>
             ) : null}
+            {/* A count rather than a bare dot, and the number is in the
+                label too: a screen reader should not have to infer it from
+                a badge. No learner is named here or on the screen it opens. */}
+            <button type="button" className="bell" onClick={() => onNavigate('notifications')} data-tour="bell"
+              aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications, none unread'}>
+              <Icon name="bell" size={16} />
+              {unread ? <span className="bell-count">{unread > 99 ? '99+' : unread}</span> : null}
+            </button>
             <span className="topbar-sep" aria-hidden="true" />
             <button type="button" className="search-trigger" onClick={() => setPalette(true)} aria-label="Go to a screen" data-tour="palette">
               <Icon name="search" size={15} />

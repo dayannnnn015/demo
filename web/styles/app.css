@@ -406,6 +406,43 @@ code, .mono {
   transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
 .search-trigger:hover { border-color: var(--ink-400); background: var(--sunk); }
+
+/* The bell. A count, not a dot: "3 waiting" is a fact, where a bare dot is
+   only a hint that something is somewhere. Every colour is a token, so it
+   retunes with the theme; the count borrows the info badge's three tokens
+   rather than inventing a red the design system does not have. */
+.bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  background: var(--white);
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.bell:hover { border-color: var(--ink-400); background: var(--sunk); }
+.bell .ico { flex: none; }
+.bell-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 1px solid var(--accent-200);
+  border-radius: 999px;
+  background: var(--accent-100);
+  color: var(--accent-800);
+  font-size: var(--t-10);
+  font-variant-numeric: tabular-nums;
+  line-height: 15px;
+  text-align: center;
+}
 .search-trigger .ico { flex: none; color: var(--ink-400); }
 .search-trigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

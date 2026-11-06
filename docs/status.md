@@ -2,7 +2,7 @@
 
 > ## Branch `notifications` — read this first
 >
-> **Version 0.92.0, migration 0056, branch `notifications`, based on `8780422` (0.91.1).**
+> **Version 0.93.0, migration 0056, branch `notifications`, based on `8780422` (0.91.1).**
 > This is a **separate worktree branch**, created on the user’s instruction so it would
 > not disturb the uncommitted guardian-fields work in the `branch-out` checkout.
 > Not merged and not pushed — the user merges.
@@ -19,16 +19,28 @@
 > 2. **This file will conflict.** It was edited in `branch-out` after this branch was
 >    cut. Keep both: that file’s state for `branch-out`, this block for the branch.
 >
-> **What shipped here:** notifications — the substrate and the four roster emitters.
+> **What shipped here:** notifications, in two commits. **0.92.0** is the substrate
+> and the four roster emitters (migration 0056); **0.93.0** is the bell in the top bar
+> and the notification centre behind it, which changes no endpoint, schema, permission
+> or error code.
 > It reverses two settled decisions by the user’s explicit decision of 2026-11-05;
 > the reasoning is in [notifications.md](notifications.md) and in the top row of
-> [constraints.md](constraints.md). `npm run check` passes: 277 tests in 27 files.
-> **There is no screen yet** — the bell and the notification centre are the next
-> increment, then the remaining emitters, one commit per emitting module.
+> [constraints.md](constraints.md). `npm run check` passes: 282 tests in 28 files.
 >
-> **The single next action on this branch:** build the notification centre screen and
-> the bell (unread count from `GET /notifications/count`, which writes no access row),
-> then the enrollment, attendance-month, promotion and assignment emitters.
+> **The single next action on this branch:** the remaining emitters of the approved
+> first release, one commit per emitting module — enrollment (`place_enrollment`,
+> `move_enrollment`), the monthly consolidation, promotion outcomes, and adviser
+> assignment with the calendar. Each is a `create or replace` of an existing writer
+> plus one `notify` line; every kind they need is already declared in 0056, so none
+> of them needs a new check constraint.
+>
+> **Two gaps found on the way, neither mine to fix here.** `tests/web-screens.test.ts`
+> and `tests/web-shell.test.ts` are described in `AGENTS.md` but **do not exist in this
+> tree** — lost with the rest of `tests/` in the 0.86.1 recovery — so no test renders
+> every route, and `tests/web-notifications.test.ts` stands in for the new screen only.
+> And `AGENTS.md` describes the dark theme as retuning tokens under
+> `@media (prefers-color-scheme: dark)`; in this tree it is `:root[data-scheme='dark']`
+> in `app.css`, resolved in JS by `web/preferences.ts`.
 >
 > Everything below describes `branch-out` and is unchanged by this branch.
 
