@@ -112,11 +112,16 @@ export const routes: Route[] = [
      * was added — the same cards read and write the same `staff_profiles`
      * columns through the same `save_my_profile`, so no migration was needed.
      *
-     * On the rail, unlike My profile, which is `offRail` behind the person's
-     * own name: someone hunting for the text size should find it in the
-     * navigation rather than only under their name in the top bar.
+     * `offRail`, in the account menu beside **My profile**, by the user's
+     * instruction of 2026-11-06. It shipped on the rail for half a day on the
+     * reasoning that someone hunting for the text size should find it in the
+     * navigation; the instruction settles it the other way, and the better
+     * reason is the one the grouping already makes: the rail is the school's
+     * records, and these are one person's own choices, which is exactly what
+     * that menu holds. Ctrl+K still finds it — the palette searches the whole
+     * route table and does not care that a route is `offRail`.
      */
-    id: 'settings', nav: 'Settings', icon: 'settings', group: 'Workspace', built: true, ownHeader: true,
+    id: 'settings', nav: 'Settings', icon: 'settings', group: 'Workspace', built: true, offRail: true, ownHeader: true,
     title: 'Settings & accessibility',
     lede: 'How the workspace looks and behaves for you, on every computer you sign in on.',
     record: 'staff_profiles',

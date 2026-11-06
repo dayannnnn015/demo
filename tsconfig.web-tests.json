@@ -61,6 +61,7 @@
     "tests/web-attendance-rule-home.test.ts",
     "tests/school-profile.test.ts",
     "tests/my-preferences.test.ts",
-    "tests/web-learner-profile.test.ts"
+    "tests/web-learner-profile.test.ts",
+    "tests/web-settings.test.ts"
   ]
 }

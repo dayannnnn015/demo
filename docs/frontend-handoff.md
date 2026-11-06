@@ -302,6 +302,29 @@ Do not compute or display a total, average, percentage or grade anywhere on thes
 Two things this screen does not do. It has no field-level error mapping, because `Editor` cannot express a two-step review; a server rejection goes to the sheet's own status line, and the client enforces the length and required rules so most never reach it. An adviser reads it and changes nothing: the section list is narrowed to the sections they advise, the screen opens on the first of them, and the pick boxes, both schedule actions and the change history are not rendered. The API refuses a section they do not advise with 404 whatever the screen offers.
 
 
+## My profile and Settings (0.92.0, moved 0.92.1)
+
+`web/screens/Settings.tsx` holds the three cards that are a person's own
+choices — `Preferences`, `Accessibility` and `Learning` — and
+`web/screens/Profile.tsx` keeps who they are: identity, picture, signing in and
+their own activity. Both components live where they did; `Settings` reads
+`/me/profile` itself rather than being handed it, because a route is entered
+directly from the account menu, from Ctrl+K and from a bookmarked hash.
+
+**Both routes are `offRail`, and the account menu is a fixed list.** That is the
+part worth knowing before moving anything else there: `ProfileMenu` in
+`web/components/AppShell.tsx` writes its items out by hand — My profile,
+Settings, Change password, Sign out — so a route marked `offRail` disappears
+from the navigation and appears nowhere else unless an item is added there too.
+`tests/web-settings.test.ts` asserts both halves for that reason.
+
+**No preference moved between columns.** The cards read and write the same
+`staff_profiles` columns through the same `save_my_profile`, so a choice made
+before the split is the choice the screen opens with. A person who has never
+chosen anything has **no `staff_profiles` row at all**: `read_my_profile` is
+`stable` and answers with the defaults, and the row appears on the first save —
+which is why a test that reads that table before the first click finds nothing.
+
 ## The learner address and the class-list template (0.88.0)
 
 `profileFields` in `web/record-fields.ts` gained `address`, so it appears on

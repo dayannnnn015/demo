@@ -41,7 +41,7 @@ export const tours: Tour[] = [
       {
         target: 'profile',
         title: 'Your account',
-        body: 'Your name opens **My profile**, **Change password** and **Sign out**. Sign out before leaving a shared computer; closing the tab also ends your session.',
+        body: 'Your name opens **My profile**, **Settings**, **Change password** and **Sign out**. Settings is where the text size, the theme and the accessibility choices live. Sign out before leaving a shared computer; closing the tab also ends your session.',
       },
       {
         title: 'Where to begin',

@@ -1,6 +1,6 @@
 # Where things stand
 
-**Version 0.92.0.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
+**Version 0.92.1.** Branch `branch-out`, from `80d8d7c` (the recovered 0.86.1).
 **Committed on this branch only** through `2c58ac1` (SF9 A4 preview sizing),
 with the local `user.name` and
 `user.email` set to match the branch's existing history. **Not merged anywhere
@@ -58,6 +58,32 @@ panel, by instruction.
 
 ## What shipped in this session
 
+### 0.92.1 — Settings moved into the account menu (no migration)
+
+Asked for directly, and it reverses that one detail of 0.92.0 the same day.
+0.92.0 put the screen on the rail and recorded why — someone hunting for the
+text size should find it in the navigation rather than only under their own
+name. The instruction settles it the other way, and **the better reason is the
+one the grouping already made**: the rail is the school's records, and the
+account menu is the person's own things, which is what Settings holds.
+
+- `offRail: true` on the route, like `profile`. It touches nothing the API
+  allows, and **Ctrl+K still reaches it**, because the palette searches the
+  route table regardless of that flag.
+- The menu item is in `ProfileMenu` (`web/components/AppShell.tsx`), which
+  writes its items out **by hand** — My profile, Settings, Change password,
+  Sign out. So a route going `offRail` disappears from the navigation and
+  appears nowhere else unless an item is added there too. That is why
+  `tests/web-settings.test.ts` asserts the menu item *and* the route flag: a
+  test checking only `offRail` passes with the item missing entirely.
+- The guided tour's *Your account* step listed the menu's items and now names
+  Settings, and both guides say which menu each screen is in. Help that
+  describes a menu it no longer matches is worse than no help.
+
+Both halves of the gate were mutation-tested: removing `offRail` and renaming
+the menu item each fail it.
+
+
 ### 0.92.0 — the guardian pair, an evident editor, two screens (migration 0056)
 
 Four changes asked for together. The gate opening is the one to read first.
@@ -105,10 +131,9 @@ own gate was vacuous by asserting on the closed list.
 
 **My profile and Settings are two screens.** The 0.90.9 specification already
 called them *My profile* and *Settings & Accessibility*. Preferences,
-Accessibility and Learning EDUNEXUS moved to `web/screens/Settings.tsx`, on the
-rail rather than `offRail`, because someone hunting for the text size should
-find it in the navigation. **No preference moved, changed or was added** — same
-cards, same `staff_profiles` columns, same `save_my_profile`, no migration.
+Accessibility and Learning EDUNEXUS moved to `web/screens/Settings.tsx`. **No
+preference moved, changed or was added** — same cards, same `staff_profiles`
+columns, same `save_my_profile`, no migration.
 
 `tests/registry-guardian.test.ts` (12 cases) and
 `tests/web-learner-profile.test.ts` (16) hold it; both new interface gates were

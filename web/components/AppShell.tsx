@@ -73,7 +73,7 @@ function useDismiss(open: boolean, close: () => void) {
   return wrap;
 }
 
-function ProfileMenu({ me, onSignOut, onChangePassword, onProfile }: { me: Row; onSignOut: () => void; onChangePassword?: (() => void) | undefined; onProfile: () => void }) {
+function ProfileMenu({ me, onSignOut, onChangePassword, onProfile, onSettings }: { me: Row; onSignOut: () => void; onChangePassword?: (() => void) | undefined; onProfile: () => void; onSettings: () => void }) {
   const [open, setOpen] = useState(false);
   const wrap = useDismiss(open, () => setOpen(false));
   const name = String(me.display_name);
@@ -95,6 +95,14 @@ function ProfileMenu({ me, onSignOut, onChangePassword, onProfile }: { me: Row; 
           </div>
           <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onProfile(); }}>
             <Icon name="user" size={16} />My profile
+          </button>
+          {/* Settings sits here rather than on the rail, by the user's
+              instruction of 2026-11-06: it belongs with the person, beside
+              their own profile and their own password, not among the school's
+              records. It is still reached by Ctrl+K, which searches the whole
+              route table and does not care that a route is `offRail`. */}
+          <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onSettings(); }}>
+            <Icon name="settings" size={16} />Settings
           </button>
           {onChangePassword ? (
             <button type="button" className="menu-item" role="menuitem" onClick={() => { setOpen(false); onChangePassword(); }}>
@@ -330,7 +338,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
               <span>Go to a screen</span>
               <kbd className="kbd">Ctrl K</kbd>
             </button>
-            <ProfileMenu me={me} onSignOut={onSignOut} onChangePassword={onChangePassword} onProfile={() => onNavigate('profile')} />
+            <ProfileMenu me={me} onSignOut={onSignOut} onChangePassword={onChangePassword} onProfile={() => onNavigate('profile')} onSettings={() => onNavigate('settings')} />
           </div>
         </header>
         <HelpContext.Provider value={helpValue}>
