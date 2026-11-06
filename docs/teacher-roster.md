@@ -99,6 +99,58 @@ returns nothing for an authorised caller is a symptom, not a null case.
 | `P2603` `LEARNER_OTHER_GRADE` | Registered at another grade this year |
 | `P2604` `VERSION_CONFLICT` | The list was stale: read it again and take them in from it. This is what stops two advisers both claiming one unplaced learner |
 
+### A school year that is not running yet (0.95.2)
+
+The school reported that **no learner appeared after the principal created the
+new school year**, and the verification separated three things that looked like
+one.
+
+**The empty list was right.** With no search, `read_pullable_learners` offers
+only learners who already hold an enrolment *in that school year*, at that
+section's grade, with no class. A year just created holds no enrolments at all,
+so the list is empty until the office carries last year's learners over
+(`POST /academic-years/:source/next-year-classes`, which needs approved
+end-of-year outcomes) or registers them. A search of two characters or more does
+find a learner with no enrolment that year, and answers `how: 'enrol'` — that
+path was never broken.
+
+**The writes behind the sheet were not right.** The sheet sets the first day to
+`clamp(today, starts_on, ends_on)`, which for a year that has not begun is its
+`starts_on` — a future date. The two writes then disagree about it:
+
+- taking in a learner the office has registered is a `move_enrollment`, which
+  refuses a future-dated movement, so every such take-in came back
+  `409 RULE_VIOLATION`;
+- registering, or taking in a learner who holds no enrolment that year, is a
+  `place_enrollment`, which has **no** future-date check, so the same date
+  succeeded and wrote a future-dated enrolment.
+
+One refusal and one silent success for the same first day on the same sheet.
+**The school builds its classes only once the year is activated** (decided
+2026-11-06), so `web/screens/MyClass.tsx` refuses up front instead: `barrier()`
+names the reason — not activated, closed, or not yet begun — and while it holds,
+neither write is offered and **nothing is read**, because the list names
+learners outside the adviser's own class and naming one writes a
+`record_access_events` row.
+
+The backend is untouched. `move_enrollment`'s rule stands as `0048` wrote it;
+if advisers are meant to section a year in advance, that is a migration and a
+decision, not a screen change.
+
+**And the class picker named no year.** It listed every section the adviser
+advises — `/sections` has no year filter — ordered by `order by
+academic_year_id`, a uuid and so not chronological, and opened on whichever
+sorted first. An adviser advising in two years could not tell which class they
+were looking at. The sheet now reads `/academic-years` with `/sections`, prints
+the year in each option, sorts newest year first, and opens on a class that can
+actually be built. The empty state no longer claims the class is full: it says
+what an empty list means and names the office step that fills it.
+
+`tests/web-teacher-roster.test.ts` covers all three in a real DOM against the
+real API: the year named on every option and the opening choice, the unactivated
+year refused with no take-in offered and no access row written, and an activated
+year that has not begun refused with its start date.
+
 ### The three capabilities coexist
 
 Required explicitly, and tested: an adviser may take learners in, register new
