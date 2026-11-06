@@ -2,8 +2,13 @@
 
 > ## The hosted database is a demonstration registry, and live is at migration 0059 — read this first
 >
-> **Version 0.95.1. Branch `branch-out`. The live database was wiped and reseeded
-> on 2026-11-06, and migrations 0053–0059 were applied to it.**
+> **Version 0.95.2, committed on branch `master`. The live database was wiped and
+> reseeded on 2026-11-06, and migrations 0053–0059 were applied to it.**
+>
+> **0.95.2 is a workspace-only fix and is NOT deployed.** Live still serves
+> 0.95.1. It changes no endpoint, schema, permission, error code or migration,
+> so the live database needs nothing: it needs a deploy, and on this project a
+> push does not deploy — see the Git-link note below.
 >
 > **Live is at migration 0059 and 0.95.1 is deployed and verified** (194/194
 > `npm run smoke` checks against `https://edunexus-balili.vercel.app`). The
@@ -154,23 +159,28 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Apply migrations 0053 through 0059, then deploy 0.95.0.** The notification
-merge is committed as `e47ccd5`; merging or pushing beyond this branch is not
-done, by instruction.
+**Deploy 0.95.2.** It is committed, `npm run check` passes (32 files, 324
+tests), and it needs no migration — the live database is already at 0059 and
+this release touches only `web/`. Deploy it with `vercel --prod` from this
+checkout, because the Vercel project has no Git link and **a push does not
+deploy** (the note at the top of this file has the project id and the one
+dashboard action that would fix it for good). Then `npm run smoke`.
 
-The live database is at **0052** and the deployed app is still **0.86.1**, so
-nothing from 0.87.0 onwards is on live. **Apply all migrations before
-deploying.** 0053 is purely additive. 0054 replaces `place_enrollment` and
-`move_enrollment` with one authorisation line changed in each and their 0048
-signatures intact, so the running 0.86.1 behaves identically under it — a
-manager still passes every check exactly as before.
-
-> **The caution from the earlier session still stands.** 0049 replaced
-> `commit_next_year_placement` to ignore any section on an entry and enrol with
-> none, while the deployed 0.86.1 screen still draws learners into sections and
-> sends them. **Do not open Next year's classes on live until this ships.**
+The migration backlog named here in earlier sessions is **done**: 0053–0059 were
+applied to live on 2026-11-06, and the caution about opening Next year's classes
+against a 0.86.1 build is spent with it.
 
 ## Waiting on the user
+
+**Are advisers meant to section the new school year in advance?** 0.95.2 took the
+answer the user gave for *this* release — the school builds its classes only once
+the principal has activated the year — and enforced it in the workspace, leaving
+`move_enrollment`'s refusal of a future-dated movement exactly as `0048` wrote
+it. If sectioning actually happens in May, before classes open, that gate is the
+wrong answer: `move_enrollment` then needs a narrow allowance for a section
+assignment dated at or after a not-yet-started year's `starts_on`, as a new
+migration and a recorded decision. Worth asking the principal once, because the
+screen now states the rule in words and the school will read it as policy.
 
 **Should the learner's Academic history part link to that screen?** 0.91.1 gave
 it a signpost and no link, because the shortcut was deliberately removed from
@@ -181,6 +191,35 @@ anchor in `web/screens/LearnerProfile.tsx` and one assertion in
 is the user's to make, not the next agent's.
 
 ## What shipped in this session
+
+### 0.95.2 — the adviser's class sheet refuses a year that is not running (no migration)
+
+The school reported that **no learner appeared on Add learner after the principal
+created the new school year**. Verified end to end against the real API, and it
+was three things rather than one:
+
+- **The empty list was correct.** `read_pullable_learners` offers only learners
+  already registered *into that year* at that grade with no class, and a year
+  just created holds none, so the office's carry-over comes first. The search
+  path was never broken — it finds a learner with no enrolment that year and
+  answers `how: 'enrol'`.
+- **The take-in was genuinely broken.** The sheet's first day for a year that
+  has not begun is its `starts_on`, a future date: `move_enrollment` refuses a
+  future-dated movement (`409`), while `place_enrollment` has no such check and
+  silently wrote a future-dated enrolment. One refusal and one silent success
+  for the same date on the same sheet.
+- **The class picker named no year**, listed every section the adviser advises,
+  and opened on whichever sorted first under `order by academic_year_id` — a
+  uuid, so not chronological.
+
+The user chose the frontend fix, so **the backend is untouched**: `MyClass.tsx`
+refuses an unactivated, closed or not-yet-begun year up front, offers neither
+write while it holds, and reads nothing for such a class (the list names
+learners, and naming one writes a `record_access_events` row). The picker now
+reads `/academic-years` with `/sections`, names the year in every option, sorts
+newest first and opens on a class that can be built; the empty state says what
+an empty list means instead of claiming the class is full. Decision recorded in
+`docs/constraints.md`; detail in `docs/teacher-roster.md`.
 
 ### 0.91.1 — one learner, read in three parts (no migration)
 

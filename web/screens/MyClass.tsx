@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useState } from 'react';
-import type { Api, Page, Row } from '../api';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
+import type { Api, Page } from '../api';
 import { message, query } from '../api';
 import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
@@ -8,7 +8,7 @@ import { clamp } from '../dates';
 import { sectionName } from '../components/scope';
 import { LearnerFields, blankLearner, learnerProblems, toLearnerProfile, type LearnerDraft } from './LateLearner';
 import {
-  Badge, Callout, Cell, Select, StatusLine, Task, Unrecorded, gradeName, idle, localToday, type Status,
+  Badge, Callout, Cell, Select, StatusLine, Task, Unrecorded, gradeName, idle, localToday, yearName, type Status,
 } from '../components/primitives';
 
 /**
@@ -41,13 +41,56 @@ type Pullable = {
 
 const fullName = (p: Pullable) => `${p.last_name}, ${p.first_name}${p.name_extension ? ` ${p.name_extension}` : ''}${p.middle_name ? ` ${p.middle_name}` : ''}`;
 
+/**
+ * Why this class cannot be built yet, in the school's own words, or `null`.
+ *
+ * The school builds its classes only once the principal has **activated** the
+ * school year (decided 2026-11-06), and the API agrees with that twice over —
+ * which is the reason this is a refusal stated up front rather than one the
+ * adviser discovers by clicking:
+ *
+ * - Giving a class to a learner the office has already registered into a year
+ *   that has not begun goes through `move_enrollment`, which refuses a movement
+ *   dated in the future, so every such take-in comes back `409`. That is the
+ *   whole of the case the office prepares for: a year carried over from last
+ *   year's outcomes holds nothing but learners with no class.
+ * - Enrolling a learner who holds no enrolment that year goes through
+ *   `place_enrollment`, which has **no** future-date check, so the same first
+ *   day on the same sheet succeeds and writes a future-dated enrolment.
+ *
+ * One refusal and one silent success for the same date is worse than neither,
+ * so neither is offered. Nothing is read for such a class either: the list
+ * names learners, and naming one writes a `record_access_events` row.
+ */
+function barrier(section: Section): { title: string; body: ReactNode } | null {
+  if (section.status === 'draft') return {
+    title: `The ${yearName(section)} school year has not been activated yet`,
+    body: <>
+      Its classes are still being planned, and no learner is taken into one until it begins. A principal activates a school year
+      on <b>School years &amp; sections</b>.
+    </>,
+  };
+  if (section.status === 'closed') return {
+    title: `The ${yearName(section)} school year is closed`,
+    body: <>A closed year’s records cannot be changed. Choose the year the school is running.</>,
+  };
+  if (localToday() < section.starts_on) return {
+    title: `The ${yearName(section)} school year has not started yet`,
+    body: <>
+      Classes begin on <span className="mono">{section.starts_on}</span>. A learner is taken into a class from a day that has come, never from one still
+      ahead, so this waits until then.
+    </>,
+  };
+  return null;
+}
+
 export function MyClassSheet({ api, onClose, onDone }: {
   api: Api;
   onClose: (written: number) => void;
   onDone: (text: string) => void;
 }) {
   const id = useId();
-  const [sections, setSections] = useState<Row[] | null>(null);
+  const [classes, setClasses] = useState<Section[] | null>(null);
   const [sectionId, setSectionId] = useState('');
   const [search, setSearch] = useState('');
   const [asked, setAsked] = useState('');
@@ -59,34 +102,56 @@ export function MyClassSheet({ api, onClose, onDone }: {
   const again = useCallback(() => setBeat(n => n + 1), []);
 
   // Only the sections this adviser advises: that is what `/sections` answers
-  // for them, by row security rather than by a filter applied here.
+  // for them, by row security rather than by a filter applied here. The school
+  // years are read with them, because a class is only ever a class **of a
+  // year**: an adviser who advises in two of them is offered the same grade and
+  // name twice, `/sections` orders by `academic_year_id` — a uuid, so not
+  // chronological — and the row itself says nothing about which year it is. So
+  // the year is joined on here, printed in the option, sorted newest first, and
+  // it is what decides whether the class can be built at all.
   useEffect(() => {
     let live = true;
-    void api<Page>(`/sections${query({ limit: 100 })}`)
-      .then(page => {
+    // `/academic-years` takes no pagination: a school has a handful of years.
+    void Promise.all([api<Page>(`/sections${query({ limit: 100 })}`), api<Page>('/academic-years')])
+      .then(([sections, years]) => {
         if (!live) return;
-        setSections(page.items);
-        setSectionId(current => (page.items.some(s => s.id === current) ? current : String(page.items[0]?.id ?? '')));
+        const byYear = new Map(years.items.map(y => [String(y.id), y]));
+        const rows = sections.items.flatMap((s): Section[] => {
+          const y = byYear.get(String(s.academic_year_id));
+          return y ? [{
+            id: String(s.id), name: String(s.name), grade_level: Number(s.grade_level), academic_year_id: String(s.academic_year_id),
+            start_year: Number(y.start_year), status: String(y.status), starts_on: String(y.starts_on), ends_on: String(y.ends_on),
+          }] : [];
+        }).sort((a, b) => b.start_year - a.start_year || a.grade_level - b.grade_level || a.name.localeCompare(b.name));
+        setClasses(rows);
+        // Open on a class that can actually be built, not on whichever uuid sorted first.
+        const opening = rows.find(s => !barrier(s)) ?? rows[0];
+        setSectionId(current => (rows.some(s => s.id === current) ? current : String(opening?.id ?? '')));
       })
-      .catch(error => { if (live) { setSections([]); setStatus({ kind: 'error', text: message(error) }); } });
+      .catch(error => { if (live) { setClasses([]); setStatus({ kind: 'error', text: message(error) }); } });
     return () => { live = false; };
   }, [api]);
 
+  const chosen = classes?.find(s => s.id === sectionId);
+  const shut = chosen ? barrier(chosen) : null;
+
   useEffect(() => {
-    if (!sectionId) { setAnswer(null); return; }
+    if (!sectionId || !chosen || shut) { setAnswer(null); return; }
     let live = true;
     setAnswer(null);
     void api<{ section: Section; items: Pullable[] }>(`/sections/${sectionId}/pullable-learners${query({ ...(asked ? { search: asked } : {}), limit: 50 })}`)
       .then(a => { if (live) setAnswer(a); })
       .catch(error => { if (live) setStatus({ kind: 'error', text: message(error) }); });
     return () => { live = false; };
-  }, [api, sectionId, asked, beat]);
+  }, [api, sectionId, Boolean(chosen), shut !== null, asked, beat]);
 
-  // The first day in the class: today, kept inside the school year.
+  // The first day in the class: today, kept inside the school year. Read from
+  // the chosen class rather than from the list, so a class whose list is never
+  // fetched still has one.
   useEffect(() => {
-    if (!answer) return;
-    setOn(clamp(localToday(), answer.section.starts_on, answer.section.ends_on));
-  }, [answer?.section.id]);
+    if (!chosen) return;
+    setOn(clamp(localToday(), chosen.starts_on, chosen.ends_on));
+  }, [chosen?.id]);
 
   const reread = async () => {
     const a = await api<{ section: Section; items: Pullable[] }>(`/sections/${sectionId}/pullable-learners${query({ ...(asked ? { search: asked } : {}), limit: 50 })}`);
@@ -119,24 +184,29 @@ export function MyClassSheet({ api, onClose, onDone }: {
         <div className="card-tools">
           <div className="field inline">
             <label className="label" htmlFor={`${id}-section`}>My class</label>
-            <Select id={`${id}-section`} value={sectionId} onChange={event => setSectionId(event.target.value)} disabled={!sections?.length}>
-              {(sections ?? []).map(s => <option key={String(s.id)} value={String(s.id)}>{sectionName(s)}</option>)}
+            <Select id={`${id}-section`} value={sectionId} onChange={event => setSectionId(event.target.value)} disabled={!classes?.length}>
+              {(classes ?? []).map(s => (
+                <option key={s.id} value={s.id}>{sectionName(s)} — {yearName(s)}</option>
+              ))}
             </Select>
           </div>
-          <div className="field inline">
-            <label className="label" htmlFor={`${id}-on`}>First day in the class</label>
-            <input id={`${id}-on`} type="date" className="date-input" value={on}
-              min={answer?.section.starts_on ?? ''} max={answer?.section.ends_on ?? ''} onChange={event => setOn(event.target.value)} />
-          </div>
+          {chosen && !shut ? (
+            <div className="field inline">
+              <label className="label" htmlFor={`${id}-on`}>First day in the class</label>
+              <input id={`${id}-on`} type="date" className="date-input" value={on}
+                min={chosen.starts_on} max={chosen.ends_on} onChange={event => setOn(event.target.value)} />
+            </div>
+          ) : null}
         </div>
-        {sections !== null && !sections.length ? (
+        {classes !== null && !classes.length ? (
           <Callout tone="info" title="You advise no class yet">
             A principal or administrative officer assigns advisers to classes on <b>Staff access</b>. Once a class is yours, its learners appear here.
           </Callout>
         ) : null}
+        {shut ? <Callout tone="attention" title={shut.title}>{shut.body}</Callout> : null}
       </Task>
 
-      {sectionId ? (
+      {sectionId && !shut ? (
         <>
           <Task title="2. Who is waiting" note="Registered for this year, at this class’s grade, with no class yet">
             <form
@@ -168,7 +238,12 @@ export function MyClassSheet({ api, onClose, onDone }: {
               <Callout tone="info" title={asked ? 'Nobody matches that search' : 'Nobody is waiting for this class'}>
                 {asked
                   ? 'Try a shorter name, or part of the LRN. Only a learner in no class, or with no enrolment this school year, can be taken in.'
-                  : 'Every learner registered at this grade is already in a class. If a learner should be here and is not, ask the office to register them at this grade, or register a new learner below.'}
+                  : <>
+                      This list holds only the learners the office has already registered <b>into this school year</b>, at this class’s grade, with no class yet — so
+                      an empty list means either that every one of them is in a class already, or that none has been registered at this grade yet. For a school year
+                      that has just begun, a principal or administrative officer carries last year’s learners over on <b>Next year’s classes</b>, or registers them
+                      on <b>Learner registry</b> and <b>Roster import</b>. A learner returning to the school is found by searching their name or LRN above.
+                    </>}
               </Callout>
             }
             verb={count => (count === 1 ? 'Take 1 learner into my class' : `Take ${count} learners into my class`)}
@@ -201,10 +276,10 @@ export function MyClassSheet({ api, onClose, onDone }: {
         </>
       ) : null}
 
-      {registering && answer ? (
+      {registering && chosen && !shut ? (
         <RegisterIntoClass
           api={api}
-          section={answer.section}
+          section={chosen}
           on={on}
           onClose={() => setRegistering(false)}
           onDone={text => { setRegistering(false); again(); onDone(text); }}

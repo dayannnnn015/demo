@@ -8,6 +8,14 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.95.2', date: '2026-11-06',
+    items: [
+      'On {learners}, **Add learner** now names the school year of each of your classes under **My class**, and opens on the year the school is running rather than on whichever class happened to be first.',
+      'A class in a school year the principal has not activated yet, or one that has not begun, now says so and offers nothing — instead of showing an empty list and then refusing the take-in when you clicked it.',
+      'When no learner is waiting, the sheet no longer claims your class is full. It says what an empty list actually means: either everybody registered at that grade is in a class, or nobody has been registered into that school year yet, which the office does on **Next year’s classes**.',
+    ],
+  },
+  {
     version: '0.93.0', date: '2026-11-06',
     items: [
       'There is now a **bell** in the top bar, with the number of notifications you have not read. It opens a popout without leaving the screen.',

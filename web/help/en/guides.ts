@@ -122,6 +122,8 @@ export const guides: Guide[] = [
     steps: [
       'You see your own learners only. A learner who moves out of your section leaves your list.',
       '**Add learner** builds your class from the learners the office has already registered. Choose the class, and the learners registered for your grade with no class yet are listed; tick the ones who are yours and take them in.',
+      'Each class under **My class** names its school year, because you may advise one in more than one. A class is built only once the principal has activated that year and it has begun — until then the sheet says so and offers nothing, since a learner is taken into a class from a day that has come.',
+      'An empty list in a year that has just started usually means nobody has been registered into it yet, not that your class is full: the office carries last year’s learners over on **Next year’s classes** first.',
       'Taking a learner in never makes a second record for them — it is the record the office already holds, given your class. A learner already in somebody else’s class is not offered: a principal or administrative officer moves a learner between classes.',
       'The search there also finds a learner with no enrolment this school year, such as one returning to the school, so they need not be keyed in again.',
       '**Register a new learner into my class** is for a child the school has never held a record for at all. The registry is checked first, so if a learner with the same name and birth date is already on it you take that learner in instead.',

@@ -20,9 +20,21 @@ import { routes } from '../web/routes';
 let db: TestDatabase;
 let server: ServerApi;
 const year2026 = '00000000-0000-4000-9000-000000000001';
+/** The year after it, drafted but not activated: the case an adviser meets every May. */
+const year2027 = '00000000-0000-4000-9000-000000000002';
 const masigla = '00000000-0000-4000-9000-00000000000a';
 const narra = '00000000-0000-4000-9000-00000000000b';
+const mabuhay = '00000000-0000-4000-9000-00000000000c';
 let unplaced = '';
+
+/** Four consecutive quarters, which `guard_year` requires before a year can be activated. */
+const quarters = (year: string, from: number) => db.pg.query(
+  `insert into edunexus.reporting_periods(academic_year_id,ordinal,name,starts_on,ends_on) values
+    ($1,1,'First Quarter',($2||'-06-01')::date,($2||'-08-31')::date),
+    ($1,2,'Second Quarter',($2||'-09-01')::date,($2||'-11-30')::date),
+    ($1,3,'Third Quarter',($2||'-12-01')::date,($3||'-01-31')::date),
+    ($1,4,'Fourth Quarter',($3||'-02-01')::date,($3||'-03-31')::date)`,
+  [year, String(from), String(from + 1)]);
 
 const teacher = { user_id: ids.teacher, role: 'teacher', display_name: 'Teacher' };
 const principal = { user_id: ids.principal, role: 'principal', display_name: 'Principal' };
@@ -34,9 +46,16 @@ beforeAll(async () => {
   server = await serverApi(db);
   await db.pg.query(`select set_config('edunexus.actor_id',$1,false)`, [ids.principal]);
   await db.pg.query(`select set_config('edunexus.request_id',$1,false)`, ['00000000-0000-4000-7000-000000000001']);
-  await db.pg.query(`insert into edunexus.academic_years(id,start_year,starts_on,ends_on,status) values($1,2026,'2026-06-01','2027-03-31','draft')`, [year2026]);
+  await db.pg.query(`insert into edunexus.academic_years(id,start_year,starts_on,ends_on,status) values
+    ($1,2026,'2026-06-01','2027-03-31','draft'),($2,2027,'2027-06-01','2028-03-31','draft')`, [year2026, year2027]);
+  // 2026 is the year the school is running: an adviser builds a class only in an
+  // activated year, so the screen's own gate needs one to let anything through.
+  await quarters(year2026, 2026);
+  await quarters(year2027, 2027);
+  await db.pg.query(`update edunexus.academic_years set status='active' where id=$1`, [year2026]);
   await db.pg.query(`insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values
-    ($1,$3,3,'Masigla',$4),($2,$3,3,'Narra',$5)`, [masigla, narra, year2026, ids.teacher, ids.otherTeacher]);
+    ($1,$4,3,'Masigla',$5),($2,$4,3,'Narra',$6),($3,$7,4,'Mabuhay',$5)`,
+    [masigla, narra, mabuhay, year2026, ids.teacher, ids.otherTeacher, year2027]);
   await db.pg.query(`insert into edunexus.learners(id,lrn,first_name,last_name,sex,birth_date) values
     ('00000000-0000-4000-9001-000000000001','136170000001','Ana','Reyes','female','2017-05-02'),
     ('00000000-0000-4000-9001-000000000002','136170000002','Ben','Lacsamana','male','2017-03-11')`);
@@ -126,6 +145,78 @@ describe('school-wide encoding oversight', () => {
     const after = await db.pg.query<{ n: string }>('select count(*) n from edunexus.record_access_events');
     // The whole reason this view is counts rather than a list.
     expect(Number(after[0]!.n)).toBe(Number(before[0]!.n));
+    screen.unmount();
+  });
+});
+
+/**
+ * A class in a school year the principal has not activated.
+ *
+ * This is what the school met: the principal created next year, an adviser
+ * opened **Add learner**, and no learner appeared — correctly, because nobody is
+ * registered into a year that has not begun, but with nothing on the screen
+ * saying so. Worse, the two writes behind the sheet disagree about the first
+ * day: giving a class to a learner the office has registered is a
+ * `move_enrollment`, which refuses a future date, while enrolling one who holds
+ * no enrolment is a `place_enrollment`, which does not. So the school builds its
+ * classes only once the year is activated (decided 2026-11-06), and the sheet
+ * says that before anything is clicked.
+ */
+describe('a class in a school year that is not running yet', () => {
+  it('names the school year of every class, and opens on the one the school is running', async () => {
+    server.signInAs('teacher');
+    const screen = await mountScreen(Learners as never, server, teacher, { route });
+    await screen.until(m => m.text().includes('Add learner'), 'the adviser action');
+    await screen.click(screen.byText('Add learner', 'button'));
+    await screen.until(m => m.text().includes('Masigla'), 'the class picker');
+    // Both classes are the adviser's, and each option says which year it belongs to.
+    const options = screen.all('option').map(o => o.textContent ?? '');
+    expect(options).toContain('Grade 3 · Masigla — 2026–2027');
+    expect(options).toContain('Grade 4 · Mabuhay — 2027–2028');
+    // `/sections` orders by a uuid, so the opening choice has to be the year's, not the list's.
+    expect(screen.field('My class')?.value).toBe(masigla);
+    screen.unmount();
+  });
+
+  it('refuses the unactivated year up front, offers no take-in, and reads no learner for it', async () => {
+    server.signInAs('teacher');
+    const screen = await mountScreen(Learners as never, server, teacher, { route });
+    await screen.until(m => m.text().includes('Add learner'), 'the adviser action');
+    await screen.click(screen.byText('Add learner', 'button'));
+    // The sheet opens on the running year and reads its list, which is logged as
+    // it should be. Counted from here, so what is asserted is the switch alone.
+    // Ana was taken in by the test above, so the running year's list is empty —
+    // and an empty list is still a read, and still logged.
+    await screen.until(m => m.text().includes('Nobody is waiting for this class'), 'the running year’s list');
+    const before = await db.pg.query<{ n: string }>(`select count(*) n from edunexus.record_access_events where resource='pullableList'`);
+    await screen.type(screen.field('My class'), mabuhay);
+    await screen.until(m => m.text().includes('has not been activated yet'), 'the refusal');
+
+    const text = screen.text();
+    expect(text).toContain('A principal activates a school year');
+    // Neither write is offered: not the take-in, and not the registration either.
+    expect(screen.all('button').some(b => /Take \d+ learner/.test(b.textContent ?? ''))).toBe(false);
+    expect(text).not.toContain('Register a new learner into my class');
+    expect(text).not.toContain('First day in the class');
+    // And nothing was read for it: the list names learners, and naming one is logged.
+    const after = await db.pg.query<{ n: string }>(`select count(*) n from edunexus.record_access_events where resource='pullableList'`);
+    expect(Number(after[0]!.n)).toBe(Number(before[0]!.n));
+    screen.unmount();
+  });
+
+  it('refuses an activated year whose classes have not begun, which is where the 409 came from', async () => {
+    // The principal closes the year that ended and activates the new one, before June.
+    await db.pg.query(`select set_config('edunexus.actor_id',$1,false)`, [ids.principal]);
+    await db.pg.query(`update edunexus.academic_years set status='closed' where id=$1`, [year2026]);
+    await db.pg.query(`update edunexus.academic_years set status='active' where id=$1`, [year2027]);
+
+    server.signInAs('teacher');
+    const screen = await mountScreen(Learners as never, server, teacher, { route });
+    await screen.until(m => m.text().includes('Add learner'), 'the adviser action');
+    await screen.click(screen.byText('Add learner', 'button'));
+    await screen.until(m => m.text().includes('has not started yet'), 'the refusal');
+    expect(screen.text()).toContain('2027-06-01');
+    expect(screen.all('button').some(b => /Take \d+ learner/.test(b.textContent ?? ''))).toBe(false);
     screen.unmount();
   });
 });

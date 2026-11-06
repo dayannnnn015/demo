@@ -466,11 +466,25 @@ with `reasoned={false}`** — one request per ticked learner, which is what that
 primitive is for, and enrolment writes take no free-text reason, so the reason
 box is turned off rather than asked for and ignored.
 
-Four things it owes the person, each the reason something looks as it does:
+Five things it owes the person, each the reason something looks as it does:
 
-- **It names the class, never "the registry".** An adviser with two sections
-  chooses which, and the list is that class's grade and year. The picker holds
-  the sections `/sections` answered — row security, not a filter here.
+- **It names the class, never "the registry" — and names the class's school
+  year.** An adviser with two sections chooses which, and the list is that
+  class's grade and year. The picker holds the sections `/sections` answered —
+  row security, not a filter here — but `/sections` has no year filter and
+  orders by `academic_year_id`, a uuid and so not chronological, so the sheet
+  reads `/academic-years` alongside it, prints the year in every option, sorts
+  newest year first, and opens on a class that can actually be built (0.95.2).
+- **It refuses a school year that is not running, before anything is clicked.**
+  `barrier()` names the reason — the principal has not activated the year, it is
+  closed, or its classes have not begun — and while it holds, neither write is
+  offered and no list is fetched, because the list names learners outside the
+  adviser's own class and naming one writes a `record_access_events` row. This
+  is not politeness: the first day the sheet would send is the year's
+  `starts_on`, which `move_enrollment` refuses as future-dated (`409`) while
+  `place_enrollment` accepts without checking, so the same date was refused by
+  one write and silently taken by the other. The school builds classes once the
+  year is activated (decided 2026-11-06); the backend is untouched (0.95.2).
 - **It says what will happen to each learner**: *Give them this class* when they
   already hold an enrolment with no class, *Enrol them here* when they hold none
   this year. The two are different writes and the person should know which.
