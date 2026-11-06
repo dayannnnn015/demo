@@ -2595,6 +2595,7 @@ a.btn { text-decoration: none; }
 .grid-form td.grade-cell input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 .grid-form td.grade-cell input[type='number']::-webkit-outer-spin-button,
 .grid-form td.grade-cell input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+.grid-form td.remark-cell { width: 7rem; }
 .grid-form .field-error { font-size: var(--t-11); }
 
 /*

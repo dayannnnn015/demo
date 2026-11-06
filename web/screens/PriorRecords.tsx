@@ -617,7 +617,7 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
                         id={id(`subjects.${index}.${key}`)} value={row[key]} error={bad[`subjects.${index}.${key}`]} onChange={next => setSubject(index, key, next)} />
                     </td>
                   ))}
-                  <td>
+                  <td className="remark-cell">
                     <Control compact field={{ key: `remark-${index}`, label: `${row.name || `Area ${index + 1}`} remark`, optional: true, options: [['', '—'], ['passed', 'Passed'], ['failed', 'Failed']] }}
                       id={id(`subjects.${index}.remark`)} value={row.remark} error={bad[`subjects.${index}.remark`]} onChange={next => setSubject(index, 'remark', next)} />
                   </td>

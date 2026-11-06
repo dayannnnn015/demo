@@ -13,6 +13,9 @@ inventing hunks that were never a working state. Its message says so.
 [docs/constraints.md](constraints.md) is the authority. The decisions table this
 file used to carry lives there; this file is a pointer, not a second changelog.
 
+The prior-records learning-area grid now gives the Remark select enough width to
+show its full options. TypeScript validation passed.
+
 ## The single next action
 
 **Apply migrations 0053 to 0056, then deploy.** All four are the user's.
