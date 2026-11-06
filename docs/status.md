@@ -2,7 +2,7 @@
 
 > ## Branch `notifications` — read this first
 >
-> **Version 0.94.0, migrations 0056 and 0057, branch `notifications`, based on `8780422` (0.91.1).**
+> **Version 0.95.0, migrations 0056–0058, branch `notifications`, based on `8780422` (0.91.1).**
 > This is a **separate worktree branch**, created on the user’s instruction so it would
 > not disturb the uncommitted guardian-fields work in the `branch-out` checkout.
 > Not merged and not pushed — the user merges.
@@ -23,21 +23,34 @@
 > and the four roster emitters (migration 0056); **0.93.0** is the bell in the top bar
 > and the notification centre behind it, which changes no endpoint, schema, permission
 > or error code; **0.94.0** adds migration 0057, the enrollment and class-assignment
-> emitters.
+> emitters; **0.95.0** adds migration 0058, the monthly consolidation, promotion
+> outcome and calendar emitters.
 > It reverses two settled decisions by the user’s explicit decision of 2026-11-05;
 > the reasoning is in [notifications.md](notifications.md) and in the top row of
-> [constraints.md](constraints.md). `npm run check` passes: 288 tests in 29 files.
+> [constraints.md](constraints.md). `npm run check` passes: 297 tests in 30 files.
 >
-> **The single next action on this branch:** the remaining emitters of the approved
-> first release, one commit per group — the monthly consolidation, promotion
-> outcomes, and adviser assignment with the calendar, then next year’s placement.
-> Every kind they need is already declared in 0056, so none needs a new check
-> constraint. **Read the 2026-11-06 decision in constraints.md first:** emit at the
-> intent boundary, and check whether a writer is ever called in a loop before
-> putting a `notify` in it — next year’s placement is loop-shaped like the import
-> and must emit once, not per learner. One gap is open and named in
-> notifications.md: an adviser pulling or registering a learner with no enrolment
-> this year reaches `place_enrollment` and so notifies nobody.
+> **The approved first release is built**, except for the three things below, each
+> named in notifications.md with its reason.
+>
+> **The single next action on this branch is a decision, not code:**
+> `adviser_assigned`, `adviser_removed`, `year_activated` and `year_closed` cannot
+> be emitted, because a section’s adviser and a year’s status are set by **plain
+> SQL in `src/modules/foundation/service.ts`**, not by a `security definer`
+> function — there is nothing to `create or replace`. Closing it means a new
+> writer function for those core 0001 tables, which is its own increment and
+> changes a write path everything else depends on. The other way, granting
+> `notify` to `edunexus_app`, **was refused** and is recorded as a decision: it
+> would let the API forge a notification. Ask the user which they want before
+> building either.
+>
+> **Two smaller gaps, both safe to leave:** an adviser pulling or registering a
+> learner who holds *no* enrolment this year reaches `place_enrollment` and so
+> notifies nobody; and `next_year_placed` has a writer and could be done, but is
+> loop-shaped like the import and must emit once, not per learner.
+>
+> **Read the 2026-11-06 decisions in constraints.md before adding any emitter:**
+> emit at the intent boundary, and check whether the writer is ever called in a
+> loop first.
 >
 > **Two repository gaps found on the way, neither mine to fix here.** `tests/web-screens.test.ts`
 > and `tests/web-shell.test.ts` are described in `AGENTS.md` but **do not exist in this

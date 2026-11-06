@@ -243,7 +243,52 @@ A row carries `learner_id` so a screen can link to the record. It still names
 nobody: an id is not a name, and following the link is what writes the privacy
 access row.
 
+## The monthly consolidation, promotion outcomes and the calendar (0058)
+
+| Event | Who is told | Kind |
+|---|---|---|
+| A month is submitted | Every manager. `monthCommit` is manager-only, so the office submits and the *other* manager is told | `month_submitted` |
+| A month is locked | The adviser whose class it is | `month_locked` |
+| A month is returned, or a locked one reopened | The adviser whose class it is | `month_returned` |
+| Outcomes are endorsed | Every manager, once for the batch, with a count | `promotion_endorsed` |
+| Outcomes are approved or returned | The section’s adviser, with a count | `promotion_approved` / `promotion_returned` |
+| The school calendar changes | Every adviser of that year | `calendar_changed` |
+| One section’s calendar changes | That section’s adviser | `calendar_changed` |
+
+`reopen` has no kind of its own, deliberately: a locked month reopened is a
+month back on the adviser’s desk, which is what `month_returned` says. A mixed
+batch of promotion decisions reports as *returned*, for the same reason the
+`promotion_events` row’s own `kind` does — something needs doing.
+
+**The attendance three carry no attendance figure.** That is the condition the
+user’s 2026-11-05 ruling came with, and it is tested rather than asserted: one
+case checks every notification any emitter has written, for payload keys
+outside 0056’s closed list and for the words *absent*, *present*, *absence*,
+*percent*, *rate*, *average* and *consecutive*. If a future emitter ever puts a
+figure in one, that case fails.
+
+The month workflow had **no test at all** in this tree before 0058 — its own
+were lost with the rest of `tests/` in the 0.86.1 recovery — so reaching a
+submittable month (an active year with reporting periods, a configured June, a
+marked register) is most of the fixture in
+`tests/workflow-notifications.test.ts`.
+
 ## What is deliberately still not here
+
+- **`adviser_assigned` and `adviser_removed` cannot be emitted yet.** A
+  section’s adviser is set by plain SQL in `src/modules/foundation/service.ts`
+  — `insert into edunexus.sections` and `update edunexus.sections set …
+  adviser_user_id=…` — not by a `security definer` function, so there is
+  nothing to `create or replace`. The two ways to close it are a new writer
+  function for `sections`, which is a change to a core 0001 table’s write path
+  and its own increment, or granting `notify` to `edunexus_app` — which would
+  destroy the property that only a writer reporting its own change can send a
+  notification. **The second is not a trade worth making for a convenience**,
+  so the kinds stay declared and unused.
+- **`year_activated`, `year_closed` and `next_year_placed` are not emitted.**
+  Year status is set by the same plain SQL as the adviser, so it has the same
+  blocker. Next year’s placement has a writer and could be done, and it is the
+  same loop-shaped problem as the import: it must emit once, not per learner.
 
 - **One known gap in the enrollment group.** An adviser pulling or registering
   a learner who holds *no* enrolment this year reaches `place_enrollment`

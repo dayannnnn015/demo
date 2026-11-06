@@ -180,7 +180,8 @@ Read [staff invitations](docs/staff-invitations.md). A manager records the reque
 - **No notification names a learner.** The payload admits a closed list of keys and the database refuses any other.
 - **An inbox is personal**: the row policy answers only rows addressed to the caller, so a principal reads their own and not the school’s. It is the one table where being a manager grants nothing.
 - **The API cannot send one.** `notify` is never granted to `edunexus_app`; only a security-definer writer can.
-- Emitters: the four roster-submission events, and enrollment — an import (once, with a count), a move, a withdrawal, a re-entry (0.94.0).
+- Emitters: the four roster-submission events; enrollment — an import (once, with a count), a move, a withdrawal, a re-entry (0.94.0); and the monthly consolidation, promotion outcomes and the instructional calendar (0.95.0).
+- **No notification carries an attendance figure.** The absence-alert gate is untouched: a month notification says a month moved, never how often anyone was absent.
 - A bell in the top bar with the unread count, and a centre listing your own, newest first, with mark-one and mark-all read (0.93.0).
 
 Read [notifications](docs/notifications.md). This reverses two settled decisions, on the user’s explicit decision of 2026-11-05, and the reasons are recorded there and in [constraints.md](docs/constraints.md). **Nothing here alerts, messages or notifies on attendance**: the absence-alert gate is untouched and still shut, and no figure is counted, compared or thresholded. Since 0.93.0 a **bell** in the top bar carries the unread count and opens the notification centre; the count names no record and writes no access row, so it may be polled.
