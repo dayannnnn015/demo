@@ -75,12 +75,12 @@ file used to carry lives there; this file is a pointer, not a second changelog.
 
 ## The single next action
 
-**Apply migrations 0053 and 0054, then deploy 0.90.3.** Both are the user's.
-The tree is committed (`e0ab9a3`); merging and pushing are not done, by
-instruction.
+**Apply migrations 0053 through 0059, then deploy 0.95.0.** The notification
+merge is committed as `e47ccd5`; merging or pushing beyond this branch is not
+done, by instruction.
 
 The live database is at **0052** and the deployed app is still **0.86.1**, so
-nothing from 0.87.0 onwards is on live. **Apply both migrations before
+nothing from 0.87.0 onwards is on live. **Apply all migrations before
 deploying.** 0053 is purely additive. 0054 replaces `place_enrollment` and
 `move_enrollment` with one authorisation line changed in each and their 0048
 signatures intact, so the running 0.86.1 behaves identically under it — a
