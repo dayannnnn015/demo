@@ -1,5 +1,60 @@
 # Where things stand
 
+> ## The hosted database is a demonstration registry, and live is at migration 0059 — read this first
+>
+> **Version 0.95.1. Branch `branch-out`. The live database was wiped and reseeded
+> on 2026-11-06, and migrations 0053–0059 were applied to it.**
+>
+> **Live is now at migration 0059. The deployed app is still 0.86.1, so it is
+> behind the schema — deploying 0.95.1 is the next action and it is the user's.**
+> The migrations were applied because the seed could not run without them: the
+> registry writer inserts `address`, `guardian_name` and `guardian_contact`
+> (0053, 0056) and live was at 0052, and the adviser pull the demonstration needs
+> *is* 0054.
+>
+> **What the hosted database holds now:** the 5 real staff accounts with their
+> roles, credentials, invitations and profiles; the real school profile; one
+> synthetic principal, `demo.setup@balili-es.invalid`, that every seeded record is
+> attributed to; the active school year **2025–2026** with three terms; one class
+> per grade Kinder–Grade 6, all seven advised by the real teacher account; **80
+> learner profiles**, 70 of them enrolled (10 a grade) and 10 registered with no
+> enrolment; and a `seeded_data_notice` row, so the seeded banner shows and
+> `reset:seeded-data` can still run. **No promotion, placement, attendance mark,
+> grade, report card, subject, calendar or attendance rule exists** — those were
+> left for the user to demonstrate, and the subject catalogue and attendance rule
+> are the school's to record rather than ours to invent.
+>
+> The wipe removed 893 learners, 893 enrolments, 78,699 attendance marks, 136,618
+> audit rows and 31 synthetic staff across 66 tables. Nothing real was lost: every
+> row in the wiped tables was authored by a synthetic account or was an audit
+> trail *about* fake learners.
+>
+> **Why the source year is 2025–2026 and not the current one, why there are
+> classes at all when "learner profiles only" was asked for, and why one teacher
+> advises all seven**, are each a schema constraint rather than a preference, and
+> all three are written down in [demo-registry.md](demo-registry.md). Read it
+> before changing the seed; each reason is the kind that gets "corrected" away.
+>
+> ### The defect the rehearsal found, which is live and not ours
+>
+> **Next year's classes does not work at real scale.** `record_access_events` has
+> `CHECK (cardinality(record_ids) <= 100)`; `nextYearCommit` writes two ids per
+> learner, so it is refused above **fifty** learners in one request, and
+> `nextYearPreview` writes one per learner, so it is refused above **one hundred**.
+> At the school's real roll of ~897 neither works for a whole year, and per grade
+> (~130) is still over the cap. The fix is to chunk the ids into batches of 100 in
+> `src/modules/next-year/service.ts`, **not** to widen the CHECK. It was reported
+> rather than fixed because it is a code increment, not data preparation. **For the
+> demonstration it does not bite**: at ten learners a grade, the screen's own grade
+> filter sends 20 ids.
+>
+> ### The single next action
+>
+> **Deploy 0.95.1**, so the deployed app matches the 0059 schema. Then, if the user
+> wants it, fix the `record_access_events` chunking as its own increment.
+>
+> Everything below describes the branch before this and is unchanged by it.
+
 > ## Branch `notifications` — read this first
 >
 > **Version 0.95.0, migrations 0057–0059, merged into `branch-out`.**
