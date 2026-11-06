@@ -6,6 +6,11 @@
 > The notification work is now reconciled with `0056_learner_guardian.sql`; the
 > current tree is the merged worktree.
 >
+> **Latest increment:** the synthetic demo seed now uses the authorized
+> report-card and adviser workflows, so `npm run demo` can populate its
+> report data without bypassing role controls. Full `npm run check` passes
+> (321 tests).
+>
 > **Two things to know before merging.**
 >
 > 1. **The migration number was reconciled.** `branch-out` already had

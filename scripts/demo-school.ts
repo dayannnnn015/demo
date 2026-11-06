@@ -63,7 +63,7 @@ export async function demoSchool() {
     await db.pg.query('insert into edunexus.reporting_periods(id,academic_year_id,ordinal,name,starts_on,ends_on) values($1,$2,$3,$4,$5,$6)', [id, year, n, `Demo term ${n}`, from, to]);
   }
   const sections = { g1: randomUUID(), g2: randomUUID(), k: randomUUID(), g5: randomUUID() };
-  await db.pg.query("insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,1,'Demo Narra',$3),($4,$2,2,'Demo Molave',$5),($6,$2,0,'Demo Sampaguita',null),($7,$2,5,'Demo Acacia',null)",
+  await db.pg.query("insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$2,1,'Demo Narra',$3),($4,$2,2,'Demo Molave',$5),($6,$2,0,'Demo Sampaguita',$3),($7,$2,5,'Demo Acacia',null)",
     [sections.g1, year, ids.teacher, sections.g2, ids.otherTeacher, sections.k, sections.g5]);
   await db.pg.query("update edunexus.academic_years set status='active' where id=$1", [year]);
 
@@ -168,16 +168,21 @@ export async function demoSchool() {
     const subject = await principal.post('/subjects', { code, name, kind: 'learning_area', grade_levels: [5], active: true, reason });
     g5.push((await principal.post(`/sections/${sections.g5}/subjects`, { subject_id: subject.id, subject_version: subject.version, display_order: g5.length * 10 + 10, reason })).id);
   }
-  for (const [o, offering] of g5.entries()) {
-    await principal.post(`/section-subjects/${offering}/report-grades`, { reporting_period_id: ended, reason: 'Transcribed from the demo class record.',
-      entries: roster.g5!.slice(0, o === 3 ? 6 : 8).map((id, i) => ({ enrollment_id: id, grade: 78 + ((i * 5 + o * 7) % 19), version: 0 })) });
+  for (const [i, enrollmentId] of roster.g5!.entries()) {
+    await principal.post(`/enrollments/${enrollmentId}/report-card`, {
+      grades: g5.flatMap((offering, o) => i < (o === 3 ? 6 : 8)
+        ? [{ offering_id: offering, reporting_period_id: ended, grade: 78 + ((i * 5 + o * 7) % 19), version: 0 }]
+        : []),
+      summary: null,
+      values: i < 5 ? [{ reporting_period_id: ended, ratings: { MD1: 'AO', MD2: i % 2 ? 'SO' : 'AO', MT1: 'SO', MT2: 'AO', MK1: 'AO', MB1: 'SO', MB2: i % 3 ? 'AO' : 'RO' }, version: 0 }] : [],
+      notes: [],
+      reason: 'Transcribed from the demo class record.',
+    });
   }
-  await principal.post(`/sections/${sections.g5}/report-values`, { reporting_period_id: ended, reason: 'Observed values from the demo class record.',
-    entries: roster.g5!.slice(0, 5).map((id, i) => ({ enrollment_id: id, ratings: { MD1: 'AO', MD2: i % 2 ? 'SO' : 'AO', MT1: 'SO', MT2: 'AO', MK1: 'AO', MB1: 'SO', MB2: i % 3 ? 'AO' : 'RO' }, version: 0 })) });
 
   // Kindergarten's outcomes, most approved, and next school year's sections, so promotion and next year's classes have something to show.
   const outcomes = roster.k!.map((id, i) => ({ enrollment_id: id, action: i === 7 ? 'retained' : 'promoted', version: 0 }));
-  await principal.post(`/sections/${sections.k}/promotion-recommendations`, { entries: outcomes, reason: 'Demo outcomes, not a school decision.' });
+  await adviser.post(`/sections/${sections.k}/promotion-recommendations`, { entries: outcomes, reason: 'Demo outcomes, not a school decision.' });
   await principal.post(`/sections/${sections.k}/promotion-decisions`, { entries: outcomes.slice(0, 8).map(e => ({ enrollment_id: e.enrollment_id, decision: 'approved', version: 1 })), reason: 'Demo approval, not a school decision.' });
   const next = await principal.post('/academic-years', { start_year: startYear + 1, starts_on: `${startYear + 1}-06-08`, ends_on: `${startYear + 2}-03-31` });
   for (const [grade, name] of [[0, 'Demo Sampaguita'], [1, 'Demo Narra'], [1, 'Demo Ilang-ilang'], [2, 'Demo Molave'], [3, 'Demo Acacia']] as const) await principal.post('/sections', { academic_year_id: next.id, grade_level: grade, name });
