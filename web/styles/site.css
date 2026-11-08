@@ -286,7 +286,7 @@ main:focus { outline: none; }
 /* Notices, newest first. */
 .notice-list { display: grid; gap: var(--s3); }
 .notice { position: relative; padding: var(--s5); border-radius: var(--radius-lg); background: var(--white); border: 1px solid var(--line); transition: translate .3s var(--ease-out), box-shadow .3s, border-color .3s; }
-.notice:hover { translate: 0 -3px; box-shadow: var(--shadow); border-color: #c7d5e5; }
+.notice:hover { box-shadow: var(--shadow); border-color: #c7d5e5; }
 .notice h3 { margin-top: var(--s2); font-size: 1.2rem; font-weight: 700; }
 .notice h3 a { color: var(--ink); text-decoration: none; }
 .notice h3 a::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
@@ -397,61 +397,39 @@ main:focus { outline: none; }
 
 /* ============================================================== Motion */
 
-/* The home page's opening, under two seconds and once: the sun rises behind
-   the far ridge, the ridges settle from far to near, the pines rise along the
-   middle ridge, the terraces are drawn in, and the words come up after. */
+/* The home page's opening, under two seconds and only on the page a visitor
+   arrives at (.opening): the picture settles and the words come up after.
+   Moving from page to page is still — no cross-fade, no sliding heading, no
+   gliding scroll — because opening a notice should show the notice, not a
+   performance (the UI notes of 8 November, note 6). */
 @media (prefers-reduced-motion: no-preference) {
 
-  .hero-art img { animation: art-in 1.6s var(--ease-out) both; }
-  .hero-gov { animation: copy-in .9s var(--ease-out) .2s both; }
-  .hero-name .line > span { animation: line-up 1s var(--ease-out) .3s both; }
-  .hero-name .line-sub > span { animation-delay: .45s; }
-  .today-badge { animation: copy-in .9s var(--ease-out) .75s both; }
-  .today-pulse { animation: ping 1.8s ease-out 1.6s 3; }
-  .quick .tile { animation: card-in .9s var(--ease-out) both; }
-  .quick .tile:nth-child(1) { animation-delay: .55s; } .quick .tile:nth-child(2) { animation-delay: .65s; } .quick .tile:nth-child(3) { animation-delay: .75s; } .quick .tile:nth-child(4) { animation-delay: .85s; }
-
-  .page-head h1, .page-head-inner > p { animation: copy-in .8s var(--ease-out) both; }
-  .page-head h1 { animation-delay: .05s; }
-  .page-head-inner > p:last-child { animation-delay: .15s; }
-
-  /* Pages cross-fade where the browser offers a view transition. */
-  main { view-transition-name: page; }
-  ::view-transition-old(page) { animation: fade-out .18s ease-in both; }
-  ::view-transition-new(page) { animation: page-in .45s var(--ease-out) both; }
+  .opening .hero-art img { animation: art-in 1.6s var(--ease-out) both; }
+  .opening .hero-gov { animation: copy-in .9s var(--ease-out) .2s both; }
+  .opening .hero-name .line > span { animation: line-up 1s var(--ease-out) .3s both; }
+  .opening .hero-name .line-sub > span { animation-delay: .45s; }
+  .opening .today-badge { animation: copy-in .9s var(--ease-out) .75s both; }
+  .opening .today-pulse { animation: ping 1.8s ease-out 1.6s 3; }
+  .opening .quick .tile { animation: card-in .9s var(--ease-out) both; }
+  .opening .quick .tile:nth-child(1) { animation-delay: .55s; } .opening .quick .tile:nth-child(2) { animation-delay: .65s; } .opening .quick .tile:nth-child(3) { animation-delay: .75s; } .opening .quick .tile:nth-child(4) { animation-delay: .85s; }
 }
 
-@keyframes fade-in { from { opacity: 0; } }
-@keyframes fade-out { to { opacity: 0; } }
-@keyframes sunrise { from { translate: 0 150px; opacity: .25; } }
-@keyframes ridge-in { from { translate: 0 70px; opacity: 0; } }
-@keyframes pine-up { from { scale: 1 0; opacity: 0; } }
-@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes flag { 50% { scale: .82 1; } }
 @keyframes copy-in { from { translate: 0 18px; opacity: 0; } }
 @keyframes line-up { from { translate: 0 105%; } }
 @keyframes card-in { from { translate: 0 36px; opacity: 0; scale: .97; } }
 @keyframes ping { to { box-shadow: 0 0 0 10px rgb(0 0 0 / 0%); } }
 @keyframes art-in { from { opacity: 0; scale: 1.04; } }
-@keyframes page-in { from { translate: 0 14px; opacity: 0; } }
 
-/* Tied to scrolling, where the browser can: the valley's layers part, the
-   mist drifts, the words lift away, and each section settles into place as it
-   arrives. Decoration only, so a browser without it simply shows the page. */
+/* Tied to scrolling, where the browser can: the header gains its shadow, and on
+   the page a visitor arrived at each section settles into place as it arrives.
+   Decoration only, so a browser without it simply shows the page. */
 @supports ((animation-timeline: view()) and (animation-range: entry)) {
   @media (prefers-reduced-motion: no-preference) {
-    .hero-copy { animation: lift-away linear both; animation-timeline: scroll(root); animation-range: 10vh 80vh; }
     .site-header { animation: header-settle linear both; animation-timeline: scroll(root); animation-range: 0 120px; }
-
-    .reveal { animation: settle linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+    /* Sections settle in as they are scrolled to only on the page a visitor arrived at. */
+    .opening .reveal { animation: settle linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
   }
 }
-@keyframes part-far { to { translate: 0 90px; } }
-@keyframes part-mid { to { translate: 0 45px; } }
-@keyframes drift-high { to { translate: 160px 40px; } }
-@keyframes drift-low { to { translate: -140px 20px; } }
-@keyframes sun-sink { to { translate: 0 120px; } }
-@keyframes lift-away { to { translate: 0 -60px; opacity: .15; } }
 @keyframes header-settle { to { box-shadow: 0 8px 30px rgb(0 0 0 / 35%); } }
 @keyframes settle { from { translate: 0 32px; opacity: 0; } }
 

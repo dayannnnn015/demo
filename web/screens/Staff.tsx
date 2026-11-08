@@ -7,8 +7,7 @@ import { Icon } from '../components/icons';
 import { InviteList } from './InviteBatch';
 import {
   Badge, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, Pager, Select, Table, Task,
-  Unrecorded, sentence, value, type Field, type Status,
-} from '../components/primitives';
+  Unrecorded, sentence, value, type Field, type Status, Spinner } from '../components/primitives';
 import { Affects } from '../components/affects';
 import { Avatar, type Look } from '../components/avatar';
 import { fullPicture } from './Profile';
@@ -235,7 +234,7 @@ function Advises({ api, teacher, year, sections, setStatus, reload }: { api: Api
           {closed ? <p className="muted">{yearName(year)} is closed; its advisers can no longer change.</p> : (
             <div className="form-actions">
               <button type="button" className="btn" disabled={busy || (!add.length && !release.length)} aria-busy={busy} onClick={() => (taken.length ? setAsking(true) : void save())}>
-                {busy ? 'Saving…' : 'Save sections'}
+                {busy ? <><Spinner />Saving…</> : 'Save sections'}
               </button>
               {add.length || release.length ? <button type="button" className="btn ghost" disabled={busy} onClick={() => setChosen(mine)}>Undo changes</button> : null}
             </div>

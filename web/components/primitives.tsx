@@ -60,6 +60,40 @@ export function Unrecorded({ label = 'Not recorded' }: { label?: string }) {
   return <span className="unrecorded">{label}</span>;
 }
 
+/**
+ * A small turning mark for something under way: a button that is saving, a
+ * start screen. Drawn in CSS, never an image, and still under reduced motion.
+ */
+export function Spinner() {
+  return <span className="btn-mark" aria-hidden="true" />;
+}
+
+/**
+ * Something is being read. A skeleton is drawn in the shape of what is coming,
+ * and says so to a screen reader, which cannot see the shape.
+ */
+function Loading({ className, children }: { className: string; children: ReactNode }) {
+  return <div className={className} role="status" aria-busy="true"><span className="sr-only">Loading…</span>{children}</div>;
+}
+
+/** A record's facts, as label and value pairs, still being read. */
+export function FactsSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <Loading className="facts skeleton-facts">
+      {Array.from({ length: count }, (_, i) => <div key={i} aria-hidden="true"><span className="skeleton short" /><span className="skeleton" /></div>)}
+    </Loading>
+  );
+}
+
+/** A card's body of text or controls, still being read. */
+export function BlockSkeleton({ lines = 3 }: { lines?: number }) {
+  return (
+    <Loading className="skeleton-block">
+      {Array.from({ length: lines }, (_, i) => <span key={i} aria-hidden="true" className={`skeleton${i === lines - 1 ? ' half' : ''}`} />)}
+    </Loading>
+  );
+}
+
 /** The workspace prints: a section list is carried to a classroom on paper. */
 export function PrintButton({ label = 'Print' }: { label?: string }) {
   return (
@@ -352,7 +386,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
         ))}
       </div>
       <div className="form-actions">
-        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : submitLabel}</button>
+        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Saving…</> : submitLabel}</button>
         {note}
       </div>
     </form>
@@ -437,15 +471,15 @@ export type Column<T> = { header: string; cell: (row: T) => ReactNode; numeric?:
  */
 export function TableSkeleton({ columns = 4, rows = 4 }: { columns?: number; rows?: number }) {
   return (
-    <div className="skeleton-table" aria-hidden="true">
+    <Loading className="skeleton-table">
       {Array.from({ length: rows + 1 }, (_, row) => (
-        <div className="skeleton-row" key={row}>
+        <div className="skeleton-row" key={row} aria-hidden="true">
           {Array.from({ length: columns }, (_, column) => (
             <span className={`skeleton${column === 0 ? ' s2' : ''}`} key={column} />
           ))}
         </div>
       ))}
-    </div>
+    </Loading>
   );
 }
 
@@ -465,7 +499,7 @@ const cellClass = <T,>(column: Column<T>) => [column.numeric ? 'numeric' : '', c
  * Only then does it join the tab order, named, so a keyboard can reach the
  * hidden columns; a table that fits adds no stop.
  */
-export function ScrollArea({ className = 'table-wrap', label = 'Table, scrolls sideways', children }: { className?: string; label?: string; children: ReactNode }) {
+export function ScrollArea({ className = 'table-wrap', label = 'Table, scrolls sideways', busy, children }: { className?: string; label?: string; busy?: boolean; children: ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(false);
   useEffect(() => {
@@ -479,7 +513,7 @@ export function ScrollArea({ className = 'table-wrap', label = 'Table, scrolls s
     if (element.firstElementChild) watch.observe(element.firstElementChild);
     return () => watch.disconnect();
   }, []);
-  return <div ref={box} className={className} {...(wide ? { tabIndex: 0, role: 'region', 'aria-label': label } : {})}>{children}</div>;
+  return <div ref={box} className={className} aria-busy={busy || undefined} inert={busy || undefined} {...(wide ? { tabIndex: 0, role: 'region', 'aria-label': label } : {})}>{children}</div>;
 }
 
 export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', actionsLabel = 'Actions', rowKey, loading, stack }: {
@@ -498,11 +532,19 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
 }) {
   const scope = useId();
   const [open, setOpen] = useState<string | null>(null);
-  if (loading) return <TableSkeleton columns={columns.length + (detail ? 1 : 0)} />;
-  if (!rows.length) return <>{empty ?? <EmptyState title="Nothing here yet" body="Records you add will appear in this list." />}</>;
+  // A list read again — after a save, a filter or a colleague's change — stays on
+  // screen, dimmed and out of reach, until the fresh rows arrive (the UI notes of
+  // 8 November). Dropping it to a skeleton closed the open row and threw the page
+  // back to the top on every save.
+  const shown = useRef<T[]>([]);
+  if (!loading) shown.current = rows;
+  const refreshing = Boolean(loading) && shown.current.length > 0;
+  if (loading && !refreshing) return <TableSkeleton columns={columns.length + (detail ? 1 : 0)} />;
+  const list = refreshing ? shown.current : rows;
+  if (!list.length) return <>{empty ?? <EmptyState title="Nothing here yet" body="Records you add will appear in this list." />}</>;
   const span = columns.length + (detail ? 1 : 0);
   return (
-    <ScrollArea className={stack ? 'table-wrap stack' : 'table-wrap'}>
+    <ScrollArea className={`table-wrap${stack ? ' stack' : ''}${refreshing ? ' refreshing' : ''}`} busy={refreshing}>
       <table>
         <thead>
           <tr>
@@ -511,7 +553,7 @@ export function Table<T>({ rows, columns, empty, detail, detailLabel = 'Edit', a
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => {
+          {list.map(row => {
             const key = rowKey(row);
             const expanded = open === key;
             const panel = `${scope}-${key}`;

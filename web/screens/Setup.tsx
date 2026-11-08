@@ -6,7 +6,7 @@ import { Confirm, Sheet } from '../components/overlay';
 import { Icon } from '../components/icons';
 import {
   Badge, Button, Callout, Editor, EmptyState, FormSheet, PageHeader, Pager, Select, StatusLine, Table,
-  TableSkeleton, gradeName, idle, sentence, shown, value, yearName, type Field, type Status,
+  FactsSkeleton, TableSkeleton, gradeName, idle, sentence, shown, value, yearName, type Field, type Status,
 } from '../components/primitives';
 
 import { AddSections, AssignAdvisers } from './SetupBatch';
@@ -33,20 +33,28 @@ const yearTone = (status: unknown): Tone => (status === 'active' ? 'good' : stat
  */
 export function School({ api, me, manager, setStatus, reload, token, route }: Props) {
   const [school, setSchool] = useState<Row | null>(null);
+  const [failed, setFailed] = useState('');
   const [editing, setEditing] = useState(false);
-  useEffect(() => { void api<Row>('/school').then(setSchool).catch(() => setSchool(null)); }, [api, token]);
+  useEffect(() => { void api<Row>('/school').then(row => { setSchool(row); setFailed(''); }).catch(error => setFailed(message(error))); }, [api, token]);
 
   return (
     <>
-      <PageHeader
-        route={route}
-        actions={manager && school
-          ? <button type="button" className="btn" onClick={() => setEditing(true)} data-tour="school-edit"><Icon name="scores" size={15} />Edit details</button>
-          : undefined}
-      />
+      <PageHeader route={route} />
       <div className="card">
+        <div className="card-head">
+          <div>
+            <h2>The school’s details</h2>
+            <p className="card-note">Printed at the top of every SF2, SF4, SF9 and SF10.</p>
+          </div>
+          {manager && school ? (
+            <div className="card-head-actions">
+              <button type="button" className="btn" onClick={() => setEditing(true)} data-tour="school-edit"><Icon name="scores" size={15} />Edit details</button>
+            </div>
+          ) : null}
+        </div>
         <div className="card-body">
-          {!school ? <><span className="skeleton" /><span className="skeleton half" /></> : (
+          {failed && !school ? <Callout tone="stopped" title="The school’s details could not be read">{failed}</Callout>
+            : !school ? <FactsSkeleton count={8} /> : (
             <dl className="facts">
               {schoolFields.map(field => (
                 <div key={field.key}>

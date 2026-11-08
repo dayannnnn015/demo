@@ -10,8 +10,7 @@ import { DayRuleCard } from './DayRule';
 import { Sheet } from '../components/overlay';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, Select, StatusLine, Table, TableSkeleton,
-  Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status,
-} from '../components/primitives';
+  Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status, Spinner } from '../components/primitives';
 import { Affects } from '../components/affects';
 
 type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -455,7 +454,7 @@ function FillRange({ api, year, onClose, onDone }: { api: Api; year: Row; onClos
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Reading…' : 'Review the range'}</button>
+            <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Reading…</> : 'Review the range'}</button>
           </div>
         </form>
       )}

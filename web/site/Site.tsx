@@ -37,8 +37,6 @@ export function Link({ to, go, className, children, label }: { to: string; go: G
   return <a href={to} className={className} onClick={click} aria-label={label}>{children}</a>;
 }
 
-type Transitioning = Document & { startViewTransition?: (update: () => void) => unknown };
-
 export function Site() {
   const [path, setPath] = useState(pathOf);
   const [site, setSite] = useState<PublicSite | null>(null);
@@ -46,6 +44,8 @@ export function Site() {
   const [menu, setMenu] = useState(false);
   const [activeNav, setActiveNav] = useState('/');
   const [announcementBackground, setAnnouncementBackground] = useState('/');
+  // The home page's opening plays once, on the page the visitor arrived at; moving between pages is still.
+  const [opening, setOpening] = useState(true);
   const main = useRef<HTMLElement>(null);
 
   const fetchSite = useCallback(() => {
@@ -54,6 +54,8 @@ export function Site() {
   }, []);
   useEffect(fetchSite, [fetchSite]);
 
+  // Opening a notice, or any page, changes it at once (the UI notes of 8 November, note 6). It used to cross-fade
+  // the whole page and slide the new one up while the notice's panel opened over it.
   const go: Go = useCallback(to => {
     const currentPath = pathOf();
     const openingAnnouncement = to.startsWith('/announcements/') && !currentPath.startsWith('/announcements/');
@@ -63,14 +65,8 @@ export function Site() {
       setAnnouncementBackground(announcementOrigin);
     }
     if (to !== location.pathname) history.pushState(null, '', to);
-    const apply = () => {
-      flushSync(() => { setPath(to); setMenu(false); });
-      if (!openingAnnouncement && !closingAnnouncement) scrollToPageTarget(to);
-    };
-    // A soft cross-fade between pages where the browser offers one, and none for anyone who asked for less motion.
-    const doc = document as Transitioning;
-    if (doc.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) doc.startViewTransition(apply);
-    else apply();
+    flushSync(() => { setPath(to); setMenu(false); setOpening(false); });
+    if (!openingAnnouncement && !closingAnnouncement) scrollToPageTarget(to);
     // Tell a screen reader the page changed, the way a full load would.
     requestAnimationFrame(() => main.current?.focus({ preventScroll: true }));
   }, []);
@@ -80,6 +76,7 @@ export function Site() {
       const returningToAnnouncementList = next === announcementOrigin;
       setPath(next);
       setMenu(false);
+      setOpening(false);
       if (!returningToAnnouncementList) scrollToPageTarget(next);
     };
     window.addEventListener('popstate', back);
@@ -134,7 +131,7 @@ export function Site() {
   const current = (to: string) => activeNav === to || (to === '/about' && activeNav === '/contact');
 
   return (
-    <div className="site">
+    <div className={opening ? 'site opening' : 'site'}>
       <a className="skip-link" href="#content">Skip to the content</a>
       {site?.seeded ? (
         <div className="test-ribbon" role="note">

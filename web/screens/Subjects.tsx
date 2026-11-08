@@ -5,7 +5,7 @@ import type { Route } from '../routes';
 import { Icon } from '../components/icons';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
 import {
-  Badge, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, PrintButton, Select, Table,
+  Badge, Button, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, PrintButton, Select, Table,
   Task, Unrecorded, gradeName, type Field, type Status,
 } from '../components/primitives';
 import { cardFor, disputedFor, formName, gradesOf, lineOf, reportCardAreas, type ReportCardArea } from '../learning-areas';
@@ -82,14 +82,23 @@ async function collect<T>(api: Api, path: string, params: Record<string, string 
   throw new Error('The list is longer than this screen can read.');
 }
 
-const reasonField: Field = { key: 'reason', label: 'Reason', type: 'textarea', minLength: 10, maxLength: 500, wide: true, hint: '10–500 characters on one line, kept in the permanent history of this change.' };
+/**
+ * The reason a catalog or offering change is journalled with, written by the
+ * screen rather than asked for (the UI notes of 8 November, decision U-D2).
+ * The API still requires 10–500 characters on one line; this says truthfully
+ * what was done and where, and the journal keeps who, when, before and after.
+ */
+export function systemReason(what: string, details: string[] = []) {
+  const text = `${what} on Subjects & offerings${details.length ? `: ${details.join('; ')}` : ''}.`.replace(/\s+/g, ' ');
+  return text.length > 500 ? `${text.slice(0, 499)}…` : text;
+}
+
 const subjectFields = (creating: boolean): Field[] => [
   ...(creating ? [{ key: 'code', label: 'Code', maxLength: 24, pattern: '[A-Za-z][A-Za-z0-9_-]{0,23}', hint: 'Starts with a letter; letters, digits, _ and -. Stored in capitals and never changed afterwards.' }] : []),
   { key: 'name', label: 'Name', maxLength: 120 },
   { key: 'kind', label: 'Kind', options: [['learning_area', kindName.learning_area], ['developmental_domain', kindName.developmental_domain]] },
   { key: 'active', label: 'In the catalog', options: [['true', 'Available for new offerings'], ['false', 'Archived']] },
   { key: 'grade_levels', label: 'Applies to', type: 'checkboxes', options: grades, wide: true, hint: 'The grade levels this subject may be offered to. It says nothing about how a grade is computed.' },
-  reasonField,
 ];
 
 /** Converts the editor's strings back into the types the API takes. */
@@ -205,7 +214,7 @@ function AddReportCardAreas({ api, catalog, onClose }: { api: Api; catalog: Subj
       intro={(
         <Callout tone="info" title="Copied from the school’s own forms">
           These are the learning areas printed on the school’s report cards for Grades 1 to 6, and on DepEd’s SF10 as revised in 2025 under DepEd Order No. 10, s. 2024.
-          Nothing is added until you tick it, and each one is recorded under your name with the reason below. Codes are permanent; names and grades can be revised later.
+          Nothing is added until you tick it, and each one is recorded under your name, with what was added and when. Codes are permanent; names and grades can be revised later.
           No Kindergarten card has been supplied, so none is proposed for Kindergarten.
         </Callout>
       )}
@@ -214,9 +223,10 @@ function AddReportCardAreas({ api, catalog, onClose }: { api: Api; catalog: Subj
       empty={null}
       verb={n => (n === 1 ? 'Add 1 subject' : `Add ${n} subjects`)}
       past="Added"
-      send={(code, reason) => {
+      reasoned={false}
+      send={code => {
         const area = reportCardAreas.find(a => a.code === code)!;
-        return api('/subjects', 'POST', { code, name: area.name, kind: 'learning_area', grade_levels: gradesOf(area), active: true, reason });
+        return api('/subjects', 'POST', { code, name: area.name, kind: 'learning_area', grade_levels: gradesOf(area), active: true, reason: systemReason('Added from the report-card learning areas') });
       }}
       reread={async () => setCurrent((await collect<Subject>(api, '/subjects', { active: 'all' })).items)}
       onClose={onClose}
@@ -272,7 +282,8 @@ function OfferReportCard({ api, sections, grade, catalog: opened, onClose }: { a
       empty={<EmptyState title={`No ${gradeName(grade)} card has been supplied`} body="There is no set to offer from. Offer this section’s subjects one at a time." />}
       verb={n => (n === 1 ? 'Offer 1 subject' : `Offer ${n} subjects`)}
       past="Offered"
-      send={async (code, reason) => {
+      reasoned={false}
+      send={async code => {
         const area = reportCardAreas.find(a => a.code === code)!;
         const subject = catalog.find(s => s.code === code)!;
         // One request per class, in order, so a refusal names the class it
@@ -281,7 +292,10 @@ function OfferReportCard({ api, sections, grade, catalog: opened, onClose }: { a
         for (const target of sections) {
           const held = (existing ?? []).some(o => o.subject_id === subject.id && String(o.section_id) === String(target.id));
           if (held) continue;
-          await api(`/sections/${String(target.id)}/subjects`, 'POST', { subject_id: subject.id, subject_version: subject.version, display_order: lineOf(area, grade), reason });
+          await api(`/sections/${String(target.id)}/subjects`, 'POST', {
+            subject_id: subject.id, subject_version: subject.version, display_order: lineOf(area, grade),
+            reason: systemReason(`Offered to ${sectionName(target)} from the ${gradeName(grade)} report card`),
+          });
         }
       }}
       // Both halves go stale: a catalog revision refuses the pinned version, and another manager may have offered a subject meanwhile.
@@ -363,11 +377,15 @@ function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }
           <>
             <Editor
               fields={subjectFields(false)}
-              initial={{ ...row, reason: '' }}
+              initial={row}
               submitLabel="Save this revision"
               setStatus={setStatus}
               onSaved={reload}
-              onSubmit={data => api(`/subjects/${row.id}`, 'PATCH', { ...subjectBody(data), version: row.version })}
+              onSubmit={data => {
+                const body = subjectBody(data);
+                const what = changed(row, body as Partial<Subject>);
+                return api(`/subjects/${row.id}`, 'PATCH', { ...body, version: row.version, reason: systemReason(`Revised ${row.code} in the subject catalog`, what) });
+              }}
               note={<span className="muted">Sections already offering <span className="mono">{row.code}</span> keep the revision they chose.</span>}
             />
             <Task title="Revision history" note="Every change, newest first"><SubjectHistory api={api} subject={row} /></Task>
@@ -382,7 +400,7 @@ function Catalog({ api, manager, setStatus, reload, catalog, adding, setAdding }
           submitLabel="Add to the catalog"
           fields={subjectFields(true)}
           initial={{ kind: 'learning_area', active: 'true' }}
-          onSubmit={data => api('/subjects', 'POST', subjectBody(data))}
+          onSubmit={data => api('/subjects', 'POST', { ...subjectBody(data), reason: systemReason('Added to the subject catalog') })}
           onSaved={() => { setAdding(false); reload(); setStatus({ text: 'Subject added to the catalog.', kind: 'done' }); }}
           onClose={() => setAdding(false)}
         />
@@ -461,34 +479,45 @@ function OfferingPanel({ api, offering, current, yearStatus, setStatus, reload }
           fields={[
             { key: 'display_order', label: 'Order in the section', type: 'number', min: 1, max: 999, hint: '1–999. Ties are allowed and fall back to the code.' },
             { key: 'active', label: 'State', options: [['true', 'Offered'], ['false', 'Retired']] },
-            reasonField,
           ]}
-          initial={{ display_order: offering.display_order, active: String(offering.active), reason: '' }}
+          initial={{ display_order: offering.display_order, active: String(offering.active) }}
           submitLabel="Save"
           setStatus={setStatus}
           warning={<Affects what="subjects" />}
           onSaved={reload}
-          onSubmit={data => api(`/section-subjects/${offering.id}`, 'PATCH', {
-            version: offering.version, active: data.active === 'true', display_order: data.display_order,
-            refresh_subject: false, subject_version: null, reason: data.reason,
-          })}
+          onSubmit={data => {
+            const active = data.active === 'true';
+            const order = Number(data.display_order);
+            const what = [
+              ...(order !== offering.display_order ? [`order ${offering.display_order} → ${order}`] : []),
+              ...(active !== offering.active ? [active ? 'reactivated' : 'retired'] : []),
+            ];
+            return api(`/section-subjects/${offering.id}`, 'PATCH', {
+              version: offering.version, active, display_order: data.display_order,
+              refresh_subject: false, subject_version: null, reason: systemReason(`Changed the offering of ${pinned.code}`, what),
+            });
+          }}
         />
       )}
       {behind && yearStatus === 'draft' && current ? (
-        <Task title={`Refresh to catalog version ${current.version}`} note="Draft years only">
-          <Editor
-            fields={[reasonField]}
-            initial={{ reason: '' }}
-            submitLabel="Refresh the pinned details"
+        <div className="offering-refresh">
+          <p className="muted">Refreshing copies the catalog’s version {current.version} of <span className="mono">{pinned.code}</span> into this section.</p>
+          <Affects what="subjects" />
+          <Button
+            label={`Refresh to catalog version ${current.version}`}
+            icon="forward"
             setStatus={setStatus}
-          warning={<Affects what="subjects" />}
-            onSaved={reload}
-            onSubmit={data => api(`/section-subjects/${offering.id}`, 'PATCH', {
-              version: offering.version, active: offering.active, display_order: offering.display_order,
-              refresh_subject: true, subject_version: current.version, reason: data.reason,
-            })}
+            onRun={async () => {
+              await api(`/section-subjects/${offering.id}`, 'PATCH', {
+                version: offering.version, active: offering.active, display_order: offering.display_order,
+                refresh_subject: true, subject_version: current.version,
+                reason: systemReason(`Refreshed the offering of ${pinned.code} from catalog version ${pinned.version} to ${current.version}`),
+              });
+              setStatus({ kind: 'done', text: `${pinned.code} now follows catalog version ${current.version}.` });
+              reload();
+            }}
           />
-        </Task>
+        </div>
       ) : null}
       <Task title="Revision history" note="Every change, newest first"><OfferingHistory api={api} offering={offering} /></Task>
     </>
@@ -676,12 +705,14 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
               hint: `Available catalog subjects that apply to ${gradeName(grade)} and are not already offered here.`,
             },
             { key: 'display_order', label: 'Order in the section', type: 'number', min: 1, max: 999 },
-            reasonField,
           ]}
-          initial={{ display_order: nextOrder, reason: '' }}
+          initial={{ display_order: nextOrder }}
           onSubmit={data => {
             const subject = choosable.find(s => s.id === data.subject_id);
-            return api(`/sections/${section.id}/subjects`, 'POST', { subject_id: data.subject_id, subject_version: subject?.version ?? 1, display_order: data.display_order, reason: data.reason });
+            return api(`/sections/${section.id}/subjects`, 'POST', {
+              subject_id: data.subject_id, subject_version: subject?.version ?? 1, display_order: data.display_order,
+              reason: systemReason(`Offered ${subject?.code ?? 'a subject'} to ${sectionName(section)}`),
+            });
           }}
           onSaved={() => { setOffering(false); reload(); setStatus({ text: 'Subject offered to the section.', kind: 'done' }); }}
           onClose={() => setOffering(false)}

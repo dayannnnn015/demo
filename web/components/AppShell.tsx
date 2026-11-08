@@ -169,7 +169,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
    *  this is the same name printed on every official form, and it is editable. */
   school?: Row | null | undefined;
   current: Route;
-  /** The active school year, or whatever else names the records on screen. */
+  /** The active school year, or whatever else names the records on screen; undefined while it is still being read. */
   context?: string | undefined;
   /** Whether that year is open for new records. Ochre when nothing is. */
   contextTone?: 'active' | 'none' | undefined;
@@ -331,7 +331,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
             {/* The scope every record on screen is filed under. A statement,
                 not a control: a year is activated on the School years screen,
                 where what that means is spelled out. */}
-            {context ? (
+            {context === undefined ? <span className="scope scope-pending" aria-hidden="true"><span className="skeleton" /></span> : context ? (
               <span className={`scope${contextTone === 'none' ? ' none' : ''}`} data-tour="scope">
                 {contextTone === 'none'
                   ? <Icon name="alert" size={14} />

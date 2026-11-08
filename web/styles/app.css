@@ -351,6 +351,7 @@ code, .mono {
   height: 30px;
   padding: 0 var(--s3);
   border: 1px solid var(--line);
+  border-radius: var(--r);
   background: var(--sunk);
   font-size: var(--t-12);
   color: var(--ink-700);
@@ -686,6 +687,19 @@ code, .mono {
 
 /* ---------- Card ---------- */
 
+/*
+  One rule for every box (the UI notes of 8 November, note 11).
+  1. A surface on the page — card, tile, dialog, tour panel — has --r-lg corners
+     and a hairline, and no decorative stripe.
+  2. A box inside a surface — a fold, a callout, a status line, the warning above
+     a save, the error summary, a struck-out figure — has --r-md corners, padding
+     of --s3 by --s4, and, when it carries a message, a 3px left edge in its tone.
+  3. A control has --r corners and one height (34px, or 28px small); a badge or
+     chip has --r-sm.
+  4. Marks that stand in for paper — the unrecorded hatch, the empty mark, the
+     forms themselves — stay square, because the paper they copy is ruled square.
+*/
+
 .card {
   background: var(--white);
   border: 1px solid var(--line);
@@ -708,6 +722,10 @@ code, .mono {
    running off a phone; in a table cell it never does, so an LRN stays whole. */
 .hint .mono, .card-note .mono, .muted .mono { overflow-wrap: anywhere; }
 .card-head > .toolbar { flex: 1; }
+/* A head holding filters lines its actions up with the controls, not with the labels above them. */
+.card-head:has(> .toolbar) { align-items: flex-end; }
+/* The day and month steppers are as tall as the date they step, so the three read as one control. */
+.month-nav > .btn.small { min-height: 34px; min-width: 34px; }
 .card-head-actions { flex: none; display: flex; align-items: center; gap: var(--s2); }
 /* The filter row sits inside the list it filters, above the table's own header. */
 .card-tools { padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); background: var(--sunk); }
@@ -842,9 +860,10 @@ code, .mono {
 */
 .error-summary {
   margin-bottom: var(--s4);
-  padding: var(--s4);
+  padding: var(--s3) var(--s4);
   border: 1px solid var(--red-200);
   border-left: 3px solid var(--red-700);
+  border-radius: var(--r-md);
   background: var(--red-100);
 }
 .error-summary:focus-visible { outline: 2px solid var(--red-700); outline-offset: 2px; }
@@ -979,7 +998,7 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
   Each task is a disclosure, so the reader chooses one instead of scrolling
   past two they did not want.
 */
-.task { border: 1px solid var(--line); background: var(--white); }
+.task { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); overflow: hidden; }
 .task + .task { margin-top: var(--s2); }
 .task > summary {
   display: flex;
@@ -1032,6 +1051,7 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
   gap: var(--s1);
   padding: var(--s3) var(--s4);
   border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
   background-image: var(--hatch-faint);
 }
 .gated-box b { font-size: var(--t-13); font-weight: 650; color: var(--ink-700); }
@@ -1062,7 +1082,7 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .affects {
   display: flex; gap: var(--s3); align-items: flex-start;
   margin-bottom: var(--s4); padding: var(--s3) var(--s4);
-  border: 1px solid var(--amber-200); border-radius: var(--r);
+  border: 1px solid var(--amber-200); border-left: 3px solid var(--amber-700); border-radius: var(--r-md);
   background: var(--amber-100); color: var(--ink-900); font-size: var(--t-13);
 }
 .affects > .ico { flex: none; margin-top: 2px; color: var(--amber-700); }
@@ -1075,8 +1095,9 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .callout {
   display: flex;
   gap: var(--s3);
-  padding: var(--s4);
+  padding: var(--s3) var(--s4);
   border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
   border-radius: var(--r-md);
   background: var(--white);
   font-size: var(--t-13);
@@ -1094,7 +1115,7 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .callout.attention h3, .callout.attention .ico { color: var(--amber-700); }
 /* Temporary, while the database holds seeded records: above every screen and on
    every printed page, so a seeded figure is never read or filed as a real one. */
-.seeded-banner { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s4); padding: var(--s3) var(--s4); background: var(--amber-100); border: 1px solid var(--amber-200); border-left: 3px solid var(--amber-700); color: var(--amber-700); font-size: var(--t-13); }
+.seeded-banner { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s4); padding: var(--s3) var(--s4); background: var(--amber-100); border: 1px solid var(--amber-200); border-left: 3px solid var(--amber-700); border-radius: var(--r-md); color: var(--amber-700); font-size: var(--t-13); }
 .seeded-banner p { margin: 0; }
 .seeded-banner .ico { flex: none; margin-top: 2px; }
 .callout.stopped { background: var(--red-100); border-color: var(--red-200); border-left-color: var(--red-700); color: var(--red-700); }
@@ -1141,9 +1162,10 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .skeleton-row:first-child { background: var(--sunk); border-bottom: 2px solid var(--line-strong); }
 .skeleton-row:last-child { border-bottom: 0; }
 .skeleton {
+  display: block;
   flex: 1;
   height: 9px;
-  border-radius: 0;
+  border-radius: var(--r-sm);
   background: linear-gradient(90deg, var(--line) 25%, var(--sunk) 50%, var(--line) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
@@ -1152,6 +1174,39 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .skeleton.half { flex: 0 0 40%; }
 .card-body > .skeleton + .skeleton { margin-top: var(--s4); }
 @keyframes shimmer { to { background-position: -200% 0; } }
+.skeleton.short { flex: none; width: 38%; }
+.skeleton.title { height: 20px; width: 62%; }
+.skeleton.figure { height: 150px; }
+.skeleton-block { display: grid; gap: var(--s3); padding: var(--s1) 0; }
+.skeleton-facts > div { display: grid; gap: var(--s2); }
+.skeleton-facts .skeleton.short { width: 45%; height: 7px; }
+.skeleton-stack { display: grid; gap: var(--s3); width: min(560px, 100%); }
+.overview-skeleton .tile { gap: var(--s3); }
+.overview-skeleton .tile .skeleton.half { width: 50%; }
+
+/*
+  Loading, said the same way everywhere (the UI notes of 8 November, note 4).
+  A list read again stays on screen, dimmed and out of reach, until its fresh
+  rows arrive. The top bar's *Working…* and a working button's ring (.btn-mark,
+  0.90.1) say that something is under way.
+*/
+.table-wrap.refreshing { opacity: .55; transition: opacity var(--base) var(--ease); }
+
+/* The start screen, while the sign-in service answers and the staff record is read. */
+.starting { min-height: 100dvh; display: grid; place-items: center; padding: var(--s5); background: var(--canvas); }
+.starting-card { display: grid; justify-items: center; gap: var(--s2); width: min(360px, 100%); text-align: center; }
+.starting-card .brand-mark { margin-bottom: var(--s2); }
+.starting-name { font-size: var(--t-18); font-weight: 700; letter-spacing: .02em; color: var(--ink-900); }
+.starting-school { font-size: var(--t-13); color: var(--ink-500); }
+.starting-line { display: inline-flex; align-items: center; gap: var(--s2); margin-top: var(--s4); font-size: var(--t-13); color: var(--ink-500); }
+.starting .status { margin-top: var(--s4); text-align: left; }
+
+/* The year in the top bar, before it has been read: a shape, never a claim. */
+.scope.scope-pending { width: 150px; }
+
+/* Subjects & offerings: refreshing a pinned offering is one press, said first. */
+.offering-refresh { display: grid; justify-items: start; gap: var(--s3); margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line-soft); }
+.offering-refresh .affects { margin-bottom: 0; }
 
 .pager {
   display: flex;
@@ -1176,7 +1231,7 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
 .cell-field.remark { width: 8rem; }
 .cell-field.text textarea { min-width: 18rem; }
 /* A row of tabs for switching what one card records. */
-.segmented { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+.segmented { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-md); overflow: hidden; flex-wrap: wrap; }
 .segmented button { border: 0; background: var(--surface, #fff); padding: var(--s2) var(--s4); font: inherit; font-size: var(--t-13); color: var(--ink-600); cursor: pointer; }
 .segmented button + button { border-left: 1px solid var(--line-strong); }
 .segmented button.active { background: var(--ink-900, #0f1b2a); color: #fff; }
@@ -1370,6 +1425,7 @@ tr.row-panel > td { padding: 0; background: var(--sunk); }
   background: var(--white);
   border: 1px solid var(--line-strong);
   border-top: 3px solid var(--red-700);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   animation: rise var(--base) var(--ease);
 }
@@ -2283,7 +2339,7 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 .tour-ring { fill: none; stroke: var(--accent-500); stroke-width: 3; }
 .tour-panel {
   position: absolute; right: var(--s5); bottom: var(--s5); width: min(400px, calc(100vw - 2 * var(--s4)));
-  padding: var(--s5); border: 1px solid var(--line-strong); border-top: 3px solid var(--accent-700);
+  padding: var(--s5); border: 1px solid var(--line-strong); border-top: 3px solid var(--accent-700); border-radius: var(--r-lg);
   background: var(--white); box-shadow: 0 12px 32px rgba(10, 23, 40, .28);
 }
 .tour-panel:focus { outline: none; }
@@ -2303,7 +2359,6 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 
 /* Getting started: a numbered list of what the records still lack, in the
    accent's quiet tint rather than amber or red, because nothing on it is an alert. */
-.getting-started { border-top: 3px solid var(--accent-700); }
 .gs-tours { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s4); }
 .gs-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; }
 .gs-item { display: flex; gap: var(--s3); padding: var(--s3) 0; border-top: 1px solid var(--line-soft); }
@@ -2667,7 +2722,7 @@ a.btn { text-decoration: none; }
   padding: var(--s4);
   max-width: 28rem;
   border: 1px solid var(--line);
-  border-radius: var(--r);
+  border-radius: var(--r-md);
   background: var(--sunk);
   text-align: center;
   font-size: var(--t-12);

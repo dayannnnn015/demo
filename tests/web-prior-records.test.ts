@@ -187,7 +187,8 @@ describe('the Academic history screen', () => {
     await type(sheet, 'input[name="start_year"]', '2023');
     await type(sheet, 'select[name="grade_level"]', '1');
     await type(sheet, 'input[name="source"], textarea[name="source"]', 'Adviser class record spreadsheet 2023-2024');
-    await type(sheet, 'textarea[name="reason"]', 'Initial historical encoding from the school spreadsheet');
+    // No reason box when adding a year (decision U-D2, 0.103.0): the document named above is where it came from.
+    expect(sheet.querySelector('textarea[name="reason"]')).toBeNull();
     await type(sheet, 'input[name="name-0"]', 'Filipino');
     await type(sheet, 'input[name="final-0"]', '87.5');
     await type(sheet, 'input[name="q1-0"]', '86');
@@ -199,6 +200,7 @@ describe('the Academic history screen', () => {
     const body = save!.body as { year: Record<string, unknown>; subjects: Record<string, unknown>[]; reason: string };
     expect(body.year.start_year).toBe(2023);
     expect(body.year.grade_level).toBe(1);
+    expect(body.reason).toBe('Added the 2023 - 2024 school year, Grade 1, on Academic history, from the document named.');
     // The school defaults to this school, so Balili's own years need no typing.
     expect(body.year.school_name).toBe('Balili Elementary School');
     expect(body.year.school_code).toBe('135617');

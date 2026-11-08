@@ -20,7 +20,10 @@
 > its U1) is kept on the local branch `local/0.87.0-u1` and is being redone on top of this version.
 >
 > **Before any work or deploy: `git fetch` and compare with `origin/master` and the live `/openapi.json`.**
-> **Next:** redo the UI notes plan (`local/0.87.0-u1:docs/ui-notes-plan.md`) against 0.102.2, then its first increment.
+>
+> **0.103.0, the same day: U1 of [the UI notes](ui-notes-plan.md) brought onto 0.102.2.** One rule for boxes; a
+> list read again kept on screen; a still front page; no reason asked when adding a subject, an offering or a
+> historical record (U-D2). No migration. **Next: U2, the learner registry.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >

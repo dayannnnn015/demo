@@ -4,7 +4,7 @@ import type { ScreenProps } from '../routes';
 import { Avatar, Glyph, avatarIcons, avatarTones, type Look } from '../components/avatar';
 import { Icon } from '../components/icons';
 import { Confirm, Sheet } from '../components/overlay';
-import { Callout, PageHeader, StatusLine, TableSkeleton, Unrecorded, gradeName, idle, sentence, type Status } from '../components/primitives';
+import { Callout, PageHeader, StatusLine, TableSkeleton, Unrecorded, gradeName, idle, sentence, type Status, Spinner, BlockSkeleton } from '../components/primitives';
 import type { SessionAuth } from '../api';
 import { MyActivity, NameCorrection, type NameRequest } from './ProfileRecords';
 import { editions } from '../help';
@@ -182,7 +182,7 @@ function Sessions({ api, auth, token }: { api: ScreenProps['api']; auth: Session
         <b>Where you are signed in</b>
         <StatusLine status={status} />
         <p className="muted">Each time EDUNEXUS opened in a new sign-in, lately. Only the browser and system are kept, never where you were.</p>
-        {rows === null ? <p className="muted">Reading…</p> : rows.length ? (
+        {rows === null ? <BlockSkeleton lines={2} /> : rows.length ? (
           <ul className="session-list">
             {rows.map((r, i) => (
               <li key={i}>
@@ -323,7 +323,7 @@ function PictureCard({ api, mine, setStatus, onSaved, onConflict }: {
               </div>
             ) : null}
             <div className="form-actions">
-              <button type="button" className="btn" disabled={!dirty || busy} aria-busy={busy && dirty} onClick={() => void save()}>{busy && dirty ? 'Saving…' : 'Save picture'}</button>
+              <button type="button" className="btn" disabled={!dirty || busy} aria-busy={busy && dirty} onClick={() => void save()}>{busy && dirty ? <><Spinner />Saving…</> : 'Save picture'}</button>
               {dirty ? <button type="button" className="btn ghost" disabled={busy} onClick={() => { setDraft(draftOf(mine.profile)); setLocal(idle); }}>Undo changes</button> : null}
               <button type="button" className="btn secondary" disabled={busy} onClick={() => setUploading(true)}><Icon name="imports" size={15} />{hasPhoto ? 'Change photo' : 'Upload a photo'}</button>
               {hasPhoto ? <button type="button" className="btn ghost danger-text" disabled={busy} onClick={() => setRemoving(true)}>Remove photo</button> : null}
@@ -446,7 +446,7 @@ export function PhotoSheet({ api, version, replacing, onSaved, onClose, onConfli
           </div>
           <p className="muted">Where the camera recorded the photo, and on what device, is not kept: only the framed square is sent.</p>
           <div className="form-actions">
-            <button type="button" className="btn" disabled={held} aria-busy={busy} onClick={() => void send()}>{busy ? 'Saving…' : 'Use this photo'}</button>
+            <button type="button" className="btn" disabled={held} aria-busy={busy} onClick={() => void send()}>{busy ? <><Spinner />Saving…</> : 'Use this photo'}</button>
             <button type="button" className="btn ghost" disabled={busy} onClick={onClose}>Cancel</button>
           </div>
         </>

@@ -6,7 +6,7 @@ import { AppShell } from './components/AppShell';
 import { Notifications } from './screens/Notifications';
 import { BrandMark } from './components/brand';
 import { Sheet } from './components/overlay';
-import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
+import { PageHeader, Spinner, StatusLine, idle, yearName, type Status } from './components/primitives';
 import { available, hiddenByAssignment, routeFor, routes } from './routes';
 import { applyPreferences, followDevice, startScreen, type Preferences } from './preferences';
 
@@ -21,7 +21,8 @@ export function App() {
   const [page, setPage] = useState(currentHash);
   const [status, setStatus] = useState<Status>(idle);
   const [token, setToken] = useState(0);
-  const [year, setYear] = useState<Row | null>(null);
+  // undefined until read: the top bar must not say there is no active year before it has looked.
+  const [year, setYear] = useState<Row | null | undefined>(undefined);
   /** The address and last sign-in on the open session, for My profile to show. */
   const [signedInAs, setSignedInAs] = useState<{ email: string | null; lastSignIn: string | null }>();
   const [school, setSchool] = useState<Row | null>(null);
@@ -157,19 +158,18 @@ export function App() {
     return () => { live = false; clearInterval(timer); };
   }, [me, api, token]);
 
-  // Retrying the staff record after a passing failure shows why, rather than a sign-in form.
-  if (!client || !api || (signedIn && !me && fatal)) {
+  // Retrying the staff record after a passing failure shows why, rather than a sign-in form; once signed in,
+  // the start screen stays up while the staff record is read, instead of the sign-in heading with no form under it.
+  if (!client || !api || (signedIn && !me)) {
     return (
-      <div className="auth">
-        <div className="auth-card">
-          <div className="auth-brand">
-            <span className="brand-mark"><BrandMark size={28} /></span>
-            <span className="brand-text">
-              <b>EDUNEXUS<span className="tag-dev">Dev</span></b>
-              <span>Balili Elementary School</span>
-            </span>
-          </div>
-          <StatusLine status={{ text: fatal || 'Connecting to the sign-in service…', kind: fatal ? 'error' : 'busy' }} />
+      <div className="starting" role="status" aria-live="polite">
+        <div className="starting-card">
+          <span className="brand-mark"><BrandMark size={40} /></span>
+          <b className="starting-name">EDUNEXUS</b>
+          <span className="starting-school">Balili Elementary School</span>
+          {fatal
+            ? <StatusLine status={{ text: fatal, kind: 'error' }} />
+            : <span className="starting-line"><Spinner />{signedIn ? 'Opening your workspace…' : 'Connecting to the sign-in service…'}</span>}
         </div>
       </div>
     );
@@ -206,7 +206,7 @@ export function App() {
         />
       }
       current={route}
-      context={year ? `${yearName(year)} school year` : 'No active school year'}
+      context={year === undefined ? undefined : year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}
       onNavigate={navigate}
       // Signing out leaves the workspace for the school's front page; the session is ended first, so the way back is a fresh sign-in.

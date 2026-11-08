@@ -7,8 +7,7 @@ import { Sheet } from '../components/overlay';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
 import {
   Badge, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, PrintButton, Select, StatusLine, Table, Task as Disclosure,
-  Unrecorded, idle, learnerName, localToday, type Field, type Status,
-} from '../components/primitives';
+  Unrecorded, idle, learnerName, localToday, type Field, type Status, BlockSkeleton, TableSkeleton } from '../components/primitives';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -276,7 +275,7 @@ function TaskHistory({ api, taskId }: { api: Api; taskId: string }) {
     } catch { if (!before) setEvents([]); setCursor(null); }
   };
   useEffect(() => { void load(); }, [taskId]);
-  if (events === null) return <p className="muted">Loading…</p>;
+  if (events === null) return <BlockSkeleton lines={2} />;
   if (!events.length) return <Unrecorded label="No history returned" />;
   return (
     <>
@@ -382,7 +381,7 @@ export function Scores({ api, manager, setStatus, reload, token, route }: Props)
       .catch(() => { setSheet(null); setSheetFailed(true); });
   }, [api, taskId, token, sheetToken]);
 
-  if (scope.years === null) return <><PageHeader route={route} /><div className="card"><div className="card-body"><p className="muted">Loading…</p></div></div></>;
+  if (scope.years === null) return <><PageHeader route={route} /><div className="card"><TableSkeleton columns={4} /></div></>;
 
   const yearStatus = String(scope.year?.status ?? 'draft');
   const closed = yearStatus === 'closed';

@@ -3,7 +3,7 @@ import type { Api, Page, Row } from '../api';
 import { query } from '../api';
 import { actionName, isJournal, recordName } from '../activity';
 import {
-  Badge, EmptyState, PrintButton, Table, TableSkeleton, Unrecorded,
+  Badge, EmptyState, PrintButton, Table, Unrecorded,
   gradeName, localToday, sentence, value, yearName, type Status,
 } from '../components/primitives';
 import { Donut, StatTile, Timeline, type Slice } from '../components/figures';
@@ -141,9 +141,7 @@ export function Overview({ api, me, manager, token }: {
     />
   );
 
-  if (loading) {
-    return <div className="card"><TableSkeleton columns={4} rows={5} /></div>;
-  }
+  if (loading) return <OverviewSkeleton />;
 
   if (!year) {
     return (
@@ -352,5 +350,23 @@ export function Overview({ api, me, manager, token }: {
         </div>
       </div>
     </>
+  );
+}
+
+/** The Overview while it is read, in its own shape: the greeting, the tiles and the cards under them. */
+function OverviewSkeleton() {
+  return (
+    <div className="overview-skeleton" role="status" aria-busy="true">
+      <span className="sr-only">Loading the overview…</span>
+      <div className="greeting" aria-hidden="true">
+        <div className="skeleton-stack"><span className="skeleton short" /><span className="skeleton title" /><span className="skeleton" /></div>
+      </div>
+      <div className="tiles" aria-hidden="true">
+        {Array.from({ length: 5 }, (_, i) => <div className="tile" key={i}><span className="skeleton short" /><span className="skeleton title" /><span className="skeleton half" /></div>)}
+      </div>
+      <div className="split" aria-hidden="true">
+        {Array.from({ length: 3 }, (_, i) => <div className="card" key={i}><div className="card-head"><span className="skeleton half" /></div><div className="card-body"><span className="skeleton figure" /></div></div>)}
+      </div>
+    </div>
   );
 }

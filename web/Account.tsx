@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { message, rememberMe, remembered } from './api';
 import { BrandMark } from './components/brand';
 import { Icon } from './components/icons';
-import { StatusLine, type Status, idle } from './components/primitives';
+import { StatusLine, type Status, idle, Spinner } from './components/primitives';
 
 type Stage = 'loading' | 'signin' | 'set-password' | 'ready';
 
@@ -193,7 +193,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
               </span>
             </label>
             <div className="form-actions">
-              <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+              <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Signing in…</> : 'Sign in'}</button>
               <button type="button" className="btn ghost" disabled={busy} onClick={async () => {
                 const address = email.trim();
                 if (!address) { setStatus({ text: 'Enter your school email first.', kind: 'error' }); return; }
@@ -239,7 +239,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
             <Password id="new-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={newPassword} onChange={setNewPassword} />
             <Password id="confirm-password" label="Confirm password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
             <div className="form-actions">
-              <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : 'Save password'}</button>
+              <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Saving…</> : 'Save password'}</button>
             </div>
             <div className="auth-foot">
               <p>Your password is held by the sign-in service, never by EDUNEXUS. Nobody at the school can read it back to you.</p>
@@ -353,7 +353,7 @@ export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (
         </div>
       ) : null}
       <div className="form-actions">
-        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : 'Change password'}</button>
+        <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Saving…</> : 'Change password'}</button>
       </div>
       <p className="muted">Your password is held by the sign-in service, never by EDUNEXUS. Other devices stay signed in until their session ends.</p>
     </form>

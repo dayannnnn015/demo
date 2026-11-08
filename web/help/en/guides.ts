@@ -326,7 +326,7 @@ export const guides: Guide[] = [
     for: 'manager',
     summary: 'The school’s subject catalog, and what each section is taught, in the order its report card prints them.',
     steps: [
-      '**Add from the report cards** lists the learning areas printed on the school’s Grades 1 to 6 cards. Untick anything the school has not agreed, give a reason, and add them.',
+      '**Add from the report cards** lists the learning areas printed on the school’s Grades 1 to 6 cards. Untick anything the school has not agreed, and add them. The change history records what was added, by whom and when, so no reason is asked for.',
       'Choose a section and **Offer the report-card set** to offer its grade’s card in printed order. In Grade 6, EPP and TLE start unticked: choose the one the section takes.',
       'A subject can also be added or offered one at a time with **Add a subject** and **Offer this subject**.',
     ],

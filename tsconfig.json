@@ -50,6 +50,7 @@
     "tests/web-imports.test.ts",
     "tests/web-late-learner.test.ts",
     "tests/web-learner-profile.test.ts",
+    "tests/web-ui-notes.test.ts",
     "tests/web-learner-record.test.ts",
     "tests/web-learning-areas.test.ts",
     "tests/web-name-requests.test.ts",

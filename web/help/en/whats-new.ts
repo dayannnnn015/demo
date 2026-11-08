@@ -8,6 +8,15 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.103.0', date: '2026-11-08',
+    items: [
+      'Adding, revising or offering a subject on {subjects} no longer asks for a reason, and neither does adding a school year or a Grade 1 credential on {prior-records}. The change history still records what was done, who did it and when. Correcting a year already on record still asks why.',
+      'A list being read again stays on screen, dimmed, instead of disappearing, so a row you opened stays open after you save it.',
+      'Boxes, notes and folds across the screens now have the same corners and spacing.',
+      'On the school’s front page, opening an announcement or another page no longer slides or fades the page.',
+    ],
+  },
+  {
     version: '0.95.3', date: '2026-11-06',
     items: [
       'On {learners}, when none of your classes holds a learner yet, the table no longer just says that none is assigned to your sections. It now tells you that the learners the office has registered at your grade, with no class yet, are waiting under **Add learner** — and offers the button there, so you do not have to know where to look.',

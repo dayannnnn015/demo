@@ -44,7 +44,8 @@ function Demo() {
   const [page, setPage] = useState(currentHash);
   const [status, setStatus] = useState<Status>(idle);
   const [tick, setTick] = useState(0);
-  const [year, setYear] = useState<Row | null>(null);
+  // undefined until read: the top bar must not say there is no active year before it has looked.
+  const [year, setYear] = useState<Row | null | undefined>(undefined);
   const [school, setSchool] = useState<Row | null>(null);
   const api = useMemo(() => demoApi(token), [token]);
   const profile = me?.profile as Preferences | null | undefined;
@@ -103,7 +104,7 @@ function Demo() {
       me={me}
       school={school}
       current={route}
-      context={year ? `${yearName(year)} school year` : 'No active school year'}
+      context={year === undefined ? undefined : year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}
       onNavigate={navigate}
       onSignOut={() => { setToken(''); location.hash = ''; }}

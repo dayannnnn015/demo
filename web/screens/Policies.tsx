@@ -5,7 +5,7 @@ import type { Route } from '../routes';
 import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
-import { Badge, Callout, Cell, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status, ScrollArea } from '../components/primitives';
+import { Badge, Callout, Cell, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, Task, Unrecorded, gradeName, idle, localToday, sentence, yearName, type Status, ScrollArea, Spinner } from '../components/primitives';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -231,7 +231,7 @@ function DraftSheet({ api, draft, onClose, onDone }: { api: Api; draft: Draft | 
           ) : null}
           <ReasonField id={`${id}-reason`} value={reason} onChange={setReason} />
         </div>
-        <div className="form-actions"><button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : draft ? 'Save this revision' : 'Record the draft'}</button></div>
+        <div className="form-actions"><button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Saving…</> : draft ? 'Save this revision' : 'Record the draft'}</button></div>
       </form>
     </Sheet>
   );

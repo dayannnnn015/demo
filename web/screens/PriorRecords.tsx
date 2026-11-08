@@ -403,7 +403,10 @@ function Eligibility({ api, learner, record, school, setStatus, onSaved }: {
     { key: 'testing_center', label: 'Name and address of testing center', optional: true, maxLength: 300 },
     { key: 'remark', label: 'Remark', optional: true, maxLength: 150 },
     { key: 'source', label: 'Document this was copied from', wide: true, minLength: 10, maxLength: 500, hint: 'Which record this came from, so the transcription can be checked later.' },
-    { key: 'reason', label: 'Reason for this change', wide: true, type: 'textarea', minLength: 10, maxLength: 500 },
+    // Recording the credential for the first time asks for no reason: the document it was copied from is the record of
+    // where it came from, and the system writes the journal's reason (the UI notes of 8 November, decision U-D2).
+    // Changing one already recorded is a correction of a learner's record, and still says why.
+    ...(record ? [{ key: 'reason', label: 'Reason for this correction', wide: true, type: 'textarea', minLength: 10, maxLength: 500 }] : []),
   ];
   const initial = record ?? { school_name: school.name, school_code: school.school_code, school_address: school.address };
   return (
@@ -416,7 +419,9 @@ function Eligibility({ api, learner, record, school, setStatus, onSaved }: {
       warning={<Affects what="eligibility" />}
       onSubmit={data => {
         const { reason, ...payload } = data;
-        return api(`/learners/${learner}/eligibility`, 'PATCH', { ...payload, reason, version: record?.version ?? 0 });
+        return api(`/learners/${learner}/eligibility`, 'PATCH', {
+          ...payload, reason: record ? reason : 'Recorded the credential presented for Grade 1 on Academic history, from the document named.', version: record?.version ?? 0,
+        });
       }}
     />
   );
@@ -555,7 +560,9 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
     { key: 'remark', label: 'Remark', optional: true, options: [['', 'Not on the document'], ['passed', 'Passed'], ['failed', 'Failed']] },
     { key: 'source', label: 'Document this was copied from', wide: true, minLength: 10, maxLength: 500,
       hint: 'Which spreadsheet, form or photocopy this year was read out of, so the transcription can be checked later.' },
-    { key: 'reason', label: block ? 'Reason for this correction' : 'Reason for this entry', wide: true, type: 'textarea', minLength: 10, maxLength: 500 },
+    // A new school year asks for no reason (decision U-D2): *Document this was copied from* already says where it came
+    // from, and the system writes the journal's reason. A correction to a year on record still says why.
+    ...(block ? [{ key: 'reason', label: 'Reason for this correction', wide: true, type: 'textarea', minLength: 10, maxLength: 500 }] : []),
   ];
 
   const began = startYear(h('start_year'));
@@ -599,7 +606,7 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
         subject_id: null, code: text(s.code.toUpperCase()), name: s.name.trim(),
         q1: num(s.q1), q2: num(s.q2), q3: num(s.q3), q4: num(s.q4), final: num(s.final), remark: text(s.remark),
       })),
-      reason: h('reason').trim(),
+      reason: block ? h('reason').trim() : `Added the ${schoolYearLabel(began)} school year, Grade ${h('grade_level')}, on Academic history, from the document named.`,
     };
     try {
       if (block) await api(`/prior-years/${block.id}`, 'PATCH', { ...payload, version: block.version });
