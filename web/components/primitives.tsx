@@ -437,7 +437,8 @@ export function Finder({ fields, initial, onApply, onClear, onFieldChange }: {
   initial: Record<string, string>;
   onApply: (values: Record<string, string>) => void;
   onClear?: (() => void) | undefined;
-  onFieldChange?: (key: string, value: string, values: Record<string, string>) => void;
+  /** Told of each change; may answer with adjusted values, for a field that depends on another (a class on its grade). */
+  onFieldChange?: (key: string, value: string, values: Record<string, string>) => Record<string, string> | void;
 }) {
   const scope = useId();
   const [values, setValues] = useState(initial);
@@ -448,8 +449,7 @@ export function Finder({ fields, initial, onApply, onClear, onFieldChange }: {
         {fields.map(field => (
           <Control key={field.key} compact field={field} id={`${scope}-${field.key}`} value={values[field.key] ?? ''} onChange={next => {
             const updated = { ...values, [field.key]: next };
-            setValues(updated);
-            onFieldChange?.(field.key, next, updated);
+            setValues(onFieldChange?.(field.key, next, updated) ?? updated);
           }} />
         ))}
       </div>

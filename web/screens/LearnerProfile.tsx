@@ -7,7 +7,7 @@ import { profileFields } from '../record-fields';
 import { IdentityHistory, LrnCorrection, LrnHistory, ReviewActions } from './Reviews';
 import {
   Badge, Callout, Editor, FormSheet, StatusLine, Table, Task, Unrecorded,
-  gradeName, idle, localToday, sentence, shown, value, type Status,
+  gradeName, idle, learnerName as learnerNameOf, localToday, sentence, shown, value, type Status,
 } from '../components/primitives';
 
 /**
@@ -58,8 +58,33 @@ export function LearnerDetail({ api, learner, manager, setStatus, reload, yearLa
   const id = String(learner.id);
   const placement = (learner.placement as Placement | null) ?? null;
 
+  const initials = [learner.first_name, learner.last_name].map(part => String(part ?? '').trim().charAt(0)).join('').toUpperCase();
   return (
     <>
+      {/*
+        Who this is, before anything else (the UI notes of 8 November, note 9): the name, the LRN and where they are this
+        year, the three things a reader opens a learner to check. Initials only: the workspace holds no photograph of a
+        child, and this does not change that.
+      */}
+      <div className="learner-head">
+        <span className="learner-mark" aria-hidden="true">{initials}</span>
+        <div className="learner-head-text">
+          <b>{learnerNameOf(learner)}</b>
+          <span>
+            {learner.lrn == null ? <Unrecorded label="LRN missing" /> : <span className="mono">LRN {value(learner, 'lrn')}</span>}
+            <span aria-hidden="true"> · </span>
+            {placement
+              ? <>{gradeName(placement.grade_level)}{placement.section_name ? ` · ${placement.section_name}` : null} · {yearLabel(placement.academic_year_id)}{placement.section_name ? null : <> <Badge tone="attention">No section yet</Badge></>}</>
+              : <Unrecorded label="Not enrolled this year" />}
+          </span>
+        </div>
+        {manager && tab === 'profile' ? (
+          <button type="button" className="btn secondary" onClick={() => setEditing(true)}>
+            <Icon name="user" size={15} />Edit profile
+          </button>
+        ) : null}
+      </div>
+
       <div className="segmented" role="tablist" aria-label="What to read about this learner">
         {tabs.map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : undefined} onClick={() => setTab(key)}>{label}</button>
@@ -76,16 +101,9 @@ export function LearnerDetail({ api, learner, manager, setStatus, reload, yearLa
             over the panel, which is the workspace's rule for a form that
             writes a record, and the reviewed workflows stay folded below.
           */}
-          {manager ? (
-            <div className="form-actions sheet-tools">
-              <button type="button" className="btn" onClick={() => setEditing(true)}>
-                <Icon name="user" size={15} />Edit profile
-              </button>
-              <span className="muted">One record per learner: this corrects the one every form reads.</span>
-            </div>
-          ) : null}
-
-          <h3>Personal information</h3>
+          <div className="fact-groups">
+          <section className="fact-group" aria-labelledby={`${id}-personal`}>
+          <h3 id={`${id}-personal`}>Personal information</h3>
           <dl className="facts">
             {/* An LRN the school has not been issued yet is a gap in the record, not a value someone left out. */}
             <div><dt>Learner reference number</dt><dd>{learner.lrn == null ? <Unrecorded label="LRN missing" /> : <span className="mono">{value(learner, 'lrn')}</span>}</dd></div>
@@ -96,15 +114,14 @@ export function LearnerDetail({ api, learner, manager, setStatus, reload, yearLa
             <div><dt>Birth date</dt><dd><span className="mono">{value(learner, 'birth_date')}</span></dd></div>
             <div><dt>Sex as recorded on school forms</dt><dd>{sentence(value(learner, 'sex'))}</dd></div>
           </dl>
+          </section>
 
-          <h3>Address</h3>
+          <section className="fact-group" aria-labelledby={`${id}-address`}>
+          <h3 id={`${id}-address`}>Address</h3>
           <dl className="facts">
             <div><dt>Address</dt><dd>{shown(learner, 'address', 'No address recorded')}</dd></div>
           </dl>
-          <p className="muted">
-            One line, as the school’s own learner information writes it. It is printed on no DepEd form, because none of the forms the school has supplied has a
-            box for it.
-          </p>
+          </section>
 
           {/*
             The parent or guardian, added by migration 0056 on the user's
@@ -114,23 +131,29 @@ export function LearnerDetail({ api, learner, manager, setStatus, reload, yearLa
             invented here would refuse a real family. A guardian nobody has
             written down is unrecorded — never "no guardian".
           */}
-          <h3>Parent or guardian</h3>
+          <section className="fact-group" aria-labelledby={`${id}-guardian`}>
+          <h3 id={`${id}-guardian`}>Parent or guardian</h3>
           <dl className="facts">
             <div><dt>Parent or guardian</dt><dd>{shown(learner, 'guardian_name', 'No guardian recorded')}</dd></div>
             <div><dt>Contact number</dt><dd>{learner.guardian_contact == null || learner.guardian_contact === ''
               ? <Unrecorded label="No number recorded" />
               : <span className="mono">{value(learner, 'guardian_contact')}</span>}</dd></div>
           </dl>
-          <p className="muted">
-            As the school’s own records write them, and the number is kept exactly as it was recorded rather than reformatted. Printed on no DepEd form: none of
-            the forms the school has supplied has a box for either.
-          </p>
+          </section>
+          </div>
 
-          <Callout tone="plain" title="What this record does not hold">
-            Beyond the fields above, EDUNEXUS holds nothing else about a child or their family: no mother tongue, religion or indigenous group, no second guardian,
-            no relationship field, no guardian address or email, and no breakdown of the learner’s address line. These are not blank fields waiting to be filled in
-            — they are not collected, and which of them the school may keep is its own answer to give, in the reviewed field list it still owes.
-          </Callout>
+          {/* The explanations, folded: they answer a question a reader may have, and were four paragraphs between the facts. */}
+          <Task title="What this record does not hold" note="And where the address and guardian print">
+            <p className="muted">
+              Beyond the fields above, EDUNEXUS holds nothing else about a child or their family: no mother tongue, religion or indigenous group, no second
+              guardian, no relationship field, no guardian address or email, and no breakdown of the address line. These are not blank fields waiting to be
+              filled in — they are not collected, and which of them the school may keep is its own answer to give, in the reviewed field list it still owes.
+            </p>
+            <p className="muted">
+              The address is one line, as the school’s own learner information writes it, and the guardian’s number is kept exactly as recorded. Neither prints
+              on a DepEd form: none of the forms the school has supplied has a box for them.
+            </p>
+          </Task>
 
           {manager ? (
             <>

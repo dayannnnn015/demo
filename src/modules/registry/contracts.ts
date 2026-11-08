@@ -37,7 +37,7 @@ export const registrySchemas = {
   // It is a property of an enrolment, not of a learner, so it is matched with a
   // subquery rather than a column; row security on enrollments still applies,
   // which is what keeps a teacher filtering by grade to their own learners.
-  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), grade_level: gradeLevel.optional(), include_linked: z.enum(['true','false']).default('false') }),
+  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), grade_level: gradeLevel.optional(), section_id: uuid.optional(), include_linked: z.enum(['true','false']).default('false') }),
   // A section, or a year and a grade. Giving a section is the older, shorter
   // way of saying all three, since a section has only one year and one grade;
   // giving the year and grade without one enrols a learner who has no class

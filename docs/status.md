@@ -24,7 +24,10 @@
 > **0.103.0, the same day: U1 of [the UI notes](ui-notes-plan.md) brought onto 0.102.2.** One rule for boxes; a
 > list read again kept on screen; a still front page; no reason asked when adding a subject, an offering or a
 > historical record (U-D2). No migration. **Live** the same day as `edunexus-gx8hw8boc`, from a clean worktree of
-> `161f39c`, built first; `npm run smoke` passes all 195 checks. **Next: U2, the learner registry.**
+> `161f39c`, built first; `npm run smoke` passes all 195 checks.
+>
+> **0.104.0, U2: the learner registry.** A **Class** filter (and `section_id` on `GET /learners`), duplicate entries
+> called that, and the learner's profile opening on who they are. No migration. **Next: U3, counts on the rail.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >

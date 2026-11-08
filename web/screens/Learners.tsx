@@ -30,7 +30,8 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
   api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route;
 }) {
   const [rows, setRows] = useState<Page | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({ search: '', birth_date: '', sex: '', grade_level: '' });
+  const blank = { search: '', birth_date: '', sex: '', grade_level: '', section_id: '' };
+  const [filters, setFilters] = useState<Record<string, string>>(blank);
   const [offset, setOffset] = useState(0);
   const [years, setYears] = useState<Row[]>([]);
   const [sections, setSections] = useState<Row[]>([]);
@@ -78,6 +79,15 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
   const sectionLabel = (id: unknown) => String(sections.find(r => r.id === id)?.name ?? 'Unavailable section');
   // The year a registration enrols into. At most one may be active at a time.
   const activeYear = years.find(y => y.status === 'active');
+  // The classes the Class filter offers: this year's, and for an adviser only their own (the UI notes of 8 November,
+  // note 10). An adviser with one class has nothing to choose between, so the filter appears from two. Row security
+  // is what keeps a colleague's class empty for them; this list only keeps it out of the way.
+  const classes = sections
+    .filter(x => activeYear && x.academic_year_id === activeYear.id && (manager || x.adviser_user_id === me.user_id))
+    .filter(x => !manager || !filters.grade_level || String(x.grade_level) === filters.grade_level)
+    .sort((a, b) => Number(a.grade_level) - Number(b.grade_level) || String(a.name).localeCompare(String(b.name)));
+  const offerClasses = manager ? classes.length > 0 : classes.length > 1;
+  const className = (x: Row) => `${gradeName(Number(x.grade_level))} · ${String(x.name)}`;
   const searching = Object.values(filters).some(Boolean);
   const found = rows?.items.length ?? 0;
 
@@ -95,8 +105,8 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
       {manager
         ? null
         : <Callout tone="info" title="You see your own learners">
-            Only the learners enrolled in the sections you advise, in an open school year. <b>Add learner</b> adds a learner the office has already
-            registered, or registers a child the school has never held a record for. Correcting a learner’s details stays with a principal or administrative officer.
+            Only the learners enrolled in the sections you advise, in an open school year. <b>Add learner</b> takes in a learner the office has already
+            registered, or sends a child the school has never held to the office for approval. Correcting a learner’s details stays with a principal or administrative officer.
           </Callout>}
 
       {taking ? (
@@ -112,10 +122,19 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
           <Finder
             initial={filters}
             onApply={next => { setFilters(next); setOffset(0); }}
-            onFieldChange={(key, _next, values) => {
-              if (key === 'grade_level') { setFilters(values); setOffset(0); }
+            onFieldChange={(key, next, values) => {
+              // Both choose from a list, so they apply at once, as the grade always has.
+              // A class of another grade is dropped when the grade changes, so the two never contradict each other.
+              if (key === 'grade_level') {
+                const keep = sections.some(x => String(x.id) === values.section_id && (!next || String(x.grade_level) === next));
+                const adjusted = { ...values, section_id: keep ? values.section_id ?? '' : '' };
+                setFilters(adjusted); setOffset(0);
+                return adjusted;
+              }
+              if (key === 'section_id') { setFilters(values); setOffset(0); }
+              return undefined;
             }}
-            onClear={() => { setFilters({ search: '', birth_date: '', sex: '', grade_level: '' }); setOffset(0); }}
+            onClear={() => { setFilters(blank); setOffset(0); }}
             fields={[
               { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
               { key: 'birth_date', label: 'Birth date', type: 'date', optional: true },
@@ -136,16 +155,23 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
               // widen it with this parameter.
               ...(manager ? [{ key: 'grade_level', label: 'Grade level this year', optional: true, hint: 'Their grade in the active school year.',
                 options: [['', 'Any grade'] as [string, string], ...[0, 1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])] }] satisfies Field[] : []),
+              ...(offerClasses ? [{ key: 'section_id', label: 'Class', optional: true,
+                hint: manager ? 'One class this school year.' : 'One of the classes you advise.',
+                options: [['', manager ? 'Any class' : 'All my classes'] as [string, string], ...classes.map(x => [String(x.id), className(x)] as [string, string])] }] satisfies Field[] : []),
             ]}
           />
           {manager ? (
-            <label className="check-line">
+            // A child registered twice is kept as a duplicate entry pointing at the record that counts. "Linked into
+            // another" was the system's word for it (the UI notes of 8 November, note 5).
+            <label className="check-line" title="A child registered twice: the extra entry is kept, pointing at the record that counts.">
               <input type="checkbox" checked={linked} onChange={event => { setLinked(event.target.checked); setOffset(0); }} />
-              <span>Include records linked into another</span>
+              <span>Show duplicate entries</span>
             </label>
           ) : null}
         </div>
         <Table
+          // Each learner a block on a phone, so an opened profile is as wide as the screen rather than the table.
+          stack
           loading={rows === null}
           rows={rows?.items ?? []}
           rowKey={r => String(r.id)}
@@ -167,7 +193,7 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
             {
               header: 'Learner',
               cell: r => <Cell
-                title={<>{learnerName(r)}{r.merged_into ? <> <Badge tone="info">Linked</Badge></> : null}</>}
+                title={<>{learnerName(r)}{r.merged_into ? <> <Badge tone="info">Duplicate entry</Badge></> : null}</>}
                 // An LRN the school has not been issued yet is a gap in the
                 // record, not a value someone left out.
                 meta={r.lrn == null ? <Unrecorded label="LRN missing" /> : `LRN ${value(r, 'lrn')}`}
@@ -218,8 +244,9 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
             if (manager && row.merged_into) {
               return (
                 <>
-                  <Callout tone="info" title="Linked into another record">
-                    This entry was recorded as the same child as another, which is now the record that counts. It is kept as it was and cannot be edited, given an LRN or enrolled.
+                  <Callout tone="info" title="A duplicate entry">
+                    The same child was registered twice. This entry is kept as it was, pointing at the record that counts, and cannot be edited, given an LRN or
+                    enrolled. Everything about the child is on the other record.
                   </Callout>
                   <ReviewActions>
                     <button type="button" className="btn secondary" onClick={() => setIdentity({ learner: row, action: 'unlink' })}>Reverse this link</button>

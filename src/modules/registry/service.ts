@@ -77,7 +77,11 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
         -- the column says too -- it reads "Not enrolled this year" for everyone.
         and ($9::int is null or exists (select 1 from edunexus.enrollments e where e.learner_id=learners.id and e.grade_level=$9 and e.record_state='valid'
           and e.academic_year_id=(select id from edunexus.academic_years where status='active')))
-        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [words, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true',q.sex ?? null, lrnSearch, q.grade_level ?? null]);
+        -- One class, in the active year, for an adviser who holds two (the UI notes of 8 November, note 10). The
+        -- enrolment is read under row security like the placement above, so naming a colleague's section finds nobody.
+        and ($10::uuid is null or exists (select 1 from edunexus.enrollments e where e.learner_id=learners.id and e.section_id=$10 and e.record_state='valid'
+          and e.academic_year_id=(select id from edunexus.academic_years where status='active')))
+        order by lower(last_name),lower(first_name),id limit $4 offset $5`, [words, q.birth_date ?? null, q.lrn ?? null, q.limit + 1, q.offset,q.include_linked==='true',q.sex ?? null, lrnSearch, q.grade_level ?? null, q.section_id ?? null]);
       const result = page(rows, q.limit, q.offset);
       // The placement names an enrolment, so the access row names it too. One
       // read of the registry stays one audit row either way; leaving the

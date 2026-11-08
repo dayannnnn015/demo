@@ -158,4 +158,28 @@ describe('the scope an adviser cannot widen with the filter', () => {
     expect((await found('?search=Notmine&limit=50')).map(r => r.id)).toEqual([notMine]);
     expect(await found('?search=Notmine&limit=50', tokens.teacher)).toEqual([]);
   });
+
+  // The section filter (the UI notes of 8 November, note 10): an adviser with two classes reads one at a time. It
+  // narrows by the class a learner is in this year, exactly as the Section column reads, and only within what the
+  // caller may read.
+  it('gives an adviser with two classes each class on its own', async () => {
+    expect((await found(`?section_id=${grade3This}&limit=50`, tokens.teacher)).map(r => r.id)).toEqual([current]);
+    expect((await found(`?section_id=${grade4This}&limit=50`, tokens.teacher)).map(r => r.id)).toEqual([promoted]);
+  });
+
+  it('finds nobody when an adviser names a colleague’s class, though a manager finds its learner', async () => {
+    expect(await found(`?section_id=${theirs}&limit=50`, tokens.teacher)).toEqual([]);
+    expect((await found(`?section_id=${theirs}&limit=50`)).map(r => r.id)).toEqual([notMine]);
+  });
+
+  it('reads the active year only, as the Section column does', async () => {
+    // Pia was in last year's Mabini; she is in Rizal now, and the row says Rizal.
+    expect(await found(`?section_id=${grade3Last}&limit=50`)).toEqual([]);
+  });
+
+  it('combines with the other filters, and refuses a section that is not an identifier', async () => {
+    expect((await found(`?section_id=${grade4This}&grade_level=4&limit=50`)).map(r => r.id)).toEqual([promoted]);
+    expect(await found(`?section_id=${grade4This}&grade_level=3&limit=50`)).toEqual([]);
+    expect((await api.get('/api/v1/learners?section_id=not-a-section', tokens.principal)).status).toBe(422);
+  });
 });

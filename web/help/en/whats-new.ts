@@ -8,6 +8,14 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.104.0', date: '2026-11-08',
+    items: [
+      'Advisers with more than one class: {learners} has a **Class** filter that shows one of your classes at a time. Principals and administrative officers can filter by any class too.',
+      'Records of a child registered twice are now called *duplicate entries*: tick **Show duplicate entries** to see them in the list.',
+      'Opening a learner now shows who they are at the top — name, LRN, and grade and class this year — with their details grouped underneath.',
+    ],
+  },
+  {
     version: '0.103.0', date: '2026-11-08',
     items: [
       'Adding, revising or offering a subject on {subjects} no longer asks for a reason, and neither does adding a school year or a Grade 1 credential on {prior-records}. The change history still records what was done, who did it and when. Correcting a year already on record still asks why.',

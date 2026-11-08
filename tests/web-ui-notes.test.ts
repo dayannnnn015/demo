@@ -6,6 +6,7 @@ import { ids, testDatabase, type TestDatabase } from './helpers/database.js';
 import { mount, mountScreen, serverApi, type ServerApi } from './helpers/dom.js';
 import { Subjects } from '../web/screens/Subjects';
 import { PriorRecords } from '../web/screens/PriorRecords';
+import { Learners } from '../web/screens/Learners';
 import { Table } from '../web/components/primitives';
 import { routes } from '../web/routes';
 
@@ -26,7 +27,14 @@ let server: ServerApi;
 const year = '00000000-0000-4000-9000-000000000001';
 const section = '00000000-0000-4000-9000-00000000000a';
 const ana = '00000000-0000-4000-9001-000000000001';
+/** The adviser's second class, and a colleague's: note 10 is about an adviser who holds two. */
+const second = '00000000-0000-4000-9000-00000000000b';
+const colleague = '00000000-0000-4000-9000-00000000000c';
+const ben = '00000000-0000-4000-9001-000000000002';
+const cora = '00000000-0000-4000-9001-000000000003';
 const principal = { user_id: ids.principal, role: 'principal', display_name: 'Principal' };
+const teacher = { user_id: ids.teacher, role: 'teacher', display_name: 'Teacher' };
+const otherTeacher = { user_id: ids.otherTeacher, role: 'teacher', display_name: 'Other Teacher' };
 
 beforeAll(async () => {
   db = await testDatabase();
@@ -40,6 +48,17 @@ beforeAll(async () => {
   await db.pg.query(`insert into edunexus.learners(id,first_name,last_name,sex,birth_date,lrn) values($1,'Ana','Reyes','female','2017-05-02','136170000001')`, [ana]);
   await db.pg.query(`insert into edunexus.enrollments(id,learner_id,academic_year_id,grade_level,section_id,enrolled_on,effective_on,last_reason) values
     ('00000000-0000-4000-9002-000000000001',$1,$2,3,$3,'2026-06-01','2026-06-01','regular')`, [ana, year, section]);
+  await db.pg.query(`insert into edunexus.sections(id,academic_year_id,grade_level,name,adviser_user_id) values($1,$3,4,'B',$4),($2,$3,4,'C',$5)`,
+    [second, colleague, year, ids.teacher, ids.otherTeacher]);
+  await db.pg.query(`insert into edunexus.learners(id,first_name,last_name,sex,birth_date,lrn) values
+    ($1,'Ben','Lacsamana','male','2016-03-11','136170000002'),($2,'Cora','Dizon','female','2016-04-04','136170000003')`, [ben, cora]);
+  await db.pg.query(`insert into edunexus.enrollments(id,learner_id,academic_year_id,grade_level,section_id,enrolled_on,effective_on,last_reason) values
+    ('00000000-0000-4000-9002-000000000002',$1,$3,4,$4,'2026-06-01','2026-06-01','regular'),
+    ('00000000-0000-4000-9002-000000000003',$2,$3,4,$5,'2026-06-01','2026-06-01','regular')`, [ben, cora, year, second, colleague]);
+  // The registry reads placements in the active year, and a year is activated only once its terms are set.
+  await db.pg.query(`insert into edunexus.reporting_periods(academic_year_id,ordinal,name,starts_on,ends_on) values
+    ($1,1,'First','2026-06-01','2026-09-15'),($1,2,'Second','2026-09-16','2026-12-18'),($1,3,'Third','2027-01-04','2027-03-31')`, [year]);
+  await db.pg.query(`update edunexus.academic_years set status='active' where id=$1`, [year]);
 });
 afterAll(async () => { await server.close(); await db.database.close(); });
 
@@ -134,5 +153,58 @@ describe('the front page (note 6)', () => {
     for (const rule of css.match(/^\s*[^@\n{]*\{[^}]*animation: (?:art-in|copy-in|line-up|card-in|ping|settle)[^}]*\}/gm) ?? []) {
       expect(rule.trim(), rule).toMatch(/^\.opening /);
     }
+  });
+});
+
+describe('the learner registry (U2: notes 10, 5 and 9)', () => {
+  const route = routes.find(r => r.id === 'learners')!;
+  const rowNames = (m: Awaited<ReturnType<typeof mountScreen>>) => m.all('tbody tr').map(tr => tr.querySelector('.cell-title')?.textContent ?? '').filter(Boolean);
+
+  it('offers an adviser with two classes each class on its own, and only their own', async () => {
+    server.signInAs('teacher');
+    const m = await mountScreen(Learners as never, server, teacher, { route });
+    await m.until(v => v.text().includes('Lacsamana') && v.text().includes('Reyes'), 'both classes');
+    const pick = m.field('Class') as HTMLSelectElement;
+    expect(pick).toBeInstanceOf(HTMLSelectElement);
+    expect([...pick.options].map(o => o.textContent)).toEqual(['All my classes', 'Grade 3 · A', 'Grade 4 · B']);
+    await m.type(pick, second);
+    await m.until(v => !v.text().includes('Reyes'), 'one class');
+    expect(rowNames(m)).toEqual(['Lacsamana, Ben']);
+    await m.type(pick, '');
+    await m.until(v => v.text().includes('Reyes'), 'both again');
+    m.unmount();
+  });
+
+  it('offers no Class filter to an adviser with one class, who has nothing to choose between', async () => {
+    server.signInAs('otherTeacher');
+    const m = await mountScreen(Learners as never, server, otherTeacher, { route });
+    await m.until(v => v.text().includes('Dizon'), 'their class');
+    expect(m.field('Class')).toBeNull();
+    m.unmount();
+  });
+
+  it('says "duplicate entries" rather than "linked into another"', async () => {
+    server.signInAs('principal');
+    const m = await mountScreen(Learners as never, server, principal, { route });
+    await m.until(v => v.text().includes('Reyes'), 'the registry');
+    expect(m.text()).toContain('Show duplicate entries');
+    expect(m.text()).not.toContain('linked into another');
+    m.unmount();
+  });
+
+  it('opens a learner on who they are: the name, the LRN and the class this year', async () => {
+    server.signInAs('principal');
+    const m = await mountScreen(Learners as never, server, principal, { route });
+    await m.until(v => v.text().includes('Reyes'), 'the registry');
+    const row = m.all('tbody tr').find(tr => (tr.textContent ?? '').includes('Reyes'))!;
+    await m.click(row.querySelector<HTMLElement>('button.row-toggle'));
+    await m.until(v => v.all('.learner-head').length > 0, 'the profile');
+    const head = m.all('.learner-head')[0]!.textContent ?? '';
+    expect(head).toContain('Reyes, Ana');
+    expect(head).toContain('LRN 136170000001');
+    expect(head).toContain('Grade 3 · A');
+    // The explanations are folded, not gone.
+    expect(m.all('details.task > summary').some(x => (x.textContent ?? '').includes('What this record does not hold'))).toBe(true);
+    m.unmount();
   });
 });
