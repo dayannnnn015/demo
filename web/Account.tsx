@@ -73,7 +73,11 @@ export function offerToSave(email: string, password: string) {
  * Sign-in and invitation completion.
  * Supabase owns passwords and refresh tokens; this only drives its client.
  */
-export function Account({ client, onReady }: { client: SupabaseClient; onReady: () => void }) {
+export function Account({ client, onReady, framed = true }: {
+  client: SupabaseClient; onReady: () => void;
+  /** False inside the front page's Staff portal panel (0.106.0): the card alone, since the page around it is the front page. */
+  framed?: boolean;
+}) {
   const [stage, setStage] = useState<Stage>('loading');
   const [status, setStatus] = useState<Status>({ text: 'Connecting to the sign-in service…', kind: 'busy' });
   const [busy, setBusy] = useState(false);
@@ -127,22 +131,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
     try { await run(); } catch (error) { fail(error); } finally { setBusy(false); }
   };
 
-  return (
-    <div className="auth">
-      {/* The front page's painted hillside, from this origin. It shows no person; the words are the school's. */}
-      <section className="auth-art">
-        <picture>
-          <source media="(max-width: 760px)" srcSet="/images/hero-balili-v1-phone.webp" type="image/webp" />
-          <img src="/images/hero-balili-v1-1200.webp" width="1200" height="533" alt="" decoding="async" />
-        </picture>
-        <div className="auth-art-copy">
-          <p className="auth-gov">Republic of the Philippines · Department of Education</p>
-          <p className="auth-school">Balili Elementary School</p>
-          <p className="auth-place">La Trinidad, Benguet</p>
-        </div>
-      </section>
-      <main className="auth-panel">
-      <a className="auth-back" href="/">← The school’s front page</a>
+  const card = (
       <div className="auth-card">
         <div className="auth-brand">
           <span className="brand-mark"><BrandMark size={30} /></span>
@@ -247,6 +236,25 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
           </form>
         ) : null}
       </div>
+  );
+  if (!framed) return <div className="auth-embed">{card}</div>;
+  return (
+    <div className="auth">
+      {/* The front page's painted hillside, from this origin. It shows no person; the words are the school's. */}
+      <section className="auth-art">
+        <picture>
+          <source media="(max-width: 760px)" srcSet="/images/hero-balili-v1-phone.webp" type="image/webp" />
+          <img src="/images/hero-balili-v1-1200.webp" width="1200" height="533" alt="" decoding="async" />
+        </picture>
+        <div className="auth-art-copy">
+          <p className="auth-gov">Republic of the Philippines · Department of Education</p>
+          <p className="auth-school">Balili Elementary School</p>
+          <p className="auth-place">La Trinidad, Benguet</p>
+        </div>
+      </section>
+      <main className="auth-panel">
+      <a className="auth-back" href="/">← The school’s front page</a>
+      {card}
       </main>
     </div>
   );

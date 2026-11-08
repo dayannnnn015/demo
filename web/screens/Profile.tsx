@@ -74,6 +74,8 @@ export function Profile(props: ScreenProps) {
     <>
       <PageHeader route={route} />
       <Identity mine={mine} picture={picture} api={api} onChanged={() => void load().catch(() => undefined)} />
+      {/* Side by side on a wide screen: two short cards were a long column (the UI notes of 8 November, note 9). */}
+      <div className="profile-grid">
       <PictureCard api={api} mine={mine} setStatus={setStatus} onSaved={saved} onConflict={reread} />
       <div className="card" data-tour="profile-security">
         <div className="card-head"><div>
@@ -107,6 +109,7 @@ export function Profile(props: ScreenProps) {
           </div>
           <Sessions api={api} auth={account?.auth} token={token} />
         </div>
+      </div>
       </div>
       <MyActivity api={api} token={token} />
     </>

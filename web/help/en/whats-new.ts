@@ -8,6 +8,14 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.106.0', date: '2026-11-09',
+    items: [
+      'On the school’s front page, **Staff portal** now opens the sign-in over the page instead of leaving it. Signing in takes you straight into EDUNEXUS, and **Keep me signed in** and your browser’s saved password work as before.',
+      'Opening a colleague on {staff} now shows who they are first: their picture, permission level, position and the classes they advise.',
+      'On {profile}, your picture and your sign-in details sit side by side on a wide screen.',
+    ],
+  },
+  {
     version: '0.105.0', date: '2026-11-08',
     items: [
       'Principals and administrative officers: a number beside **Admissions** in the sidebar says how many class lists from advisers are waiting for you, from any screen. **Promotion** shows the endorsed outcomes waiting for approval, and **Staff access** the name or position corrections you may decide.',

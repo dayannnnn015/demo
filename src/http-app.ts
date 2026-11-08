@@ -163,9 +163,11 @@ export function createApp(deps: Dependencies) {
     res.json({ data, requestId: res.locals.requestId });
   });
   if (deps.publicAuth) {
-    // The public front page. It talks to this origin only: no sign-in service, no third party.
+    // The public front page. It talks to this origin only: no sign-in service, no third party. Since 0.106.0 it may
+    // frame one thing, this origin's own /app, which is how Staff portal opens the workspace's sign-in over the page
+    // (the UI notes of 8 November, note 7). The sign-in code and the call to the sign-in service stay in /app.
     app.get(['/', '/announcements', '/announcements/:id', '/calendar', '/faq', '/about', '/contact'], (_req, res) => {
-      res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+      res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
       // Kept out of search engines until the school goes live with real records (see the runbooks).
       if (process.env.EDUNEXUS_SITE_INDEX !== 'yes') res.setHeader('X-Robots-Tag', 'noindex, nofollow');
@@ -183,7 +185,9 @@ export function createApp(deps: Dependencies) {
       // the brand mark is a vector redraw, both for this reason. Every file on the
       // list is one this repository ships, and nothing user-supplied is ever
       // served from here. Adding to the list needs a decision in constraints.md.
-      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+      // Framed by this origin and no other (0.106.0): the front page's Staff portal panel holds the sign-in, and helmet's
+      // X-Frame-Options: SAMEORIGIN says the same for older browsers. Another site still cannot frame the workspace.
+      res.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self' ${deps.publicAuth!.url}; base-uri 'none'; form-action 'none'; frame-ancestors 'self'`);
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.type('html').send(appPage());
     });

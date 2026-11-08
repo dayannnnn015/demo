@@ -100,7 +100,7 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
             { header: 'Access', cell: r => r.active ? <Badge tone="good">Active</Badge> : <Badge tone="stopped">Suspended</Badge> },
           ]}
           detail={row => {
-            if (me.role !== 'principal' && row.role !== 'teacher') return <p className="muted">Only a principal can change an administrative account.</p>;
+            if (me.role !== 'principal' && row.role !== 'teacher') return <><StaffHead row={row} year={year} sections={sections} /><p className="muted">Only a principal can change an administrative account.</p></>;
             // The SF4 prints each adviser's position and specialization beside their section.
             const fields: Field[] = [nameField,
               { key: 'position', label: 'Position', optional: true, maxLength: 120, hint: 'As the SF4 prints it, for example Teacher III or Master Teacher II.' },
@@ -111,6 +111,7 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
             );
             return (
               <>
+                <StaffHead row={row} year={year} sections={sections} />
                 {row.user_id === me.user_id ? <p className="muted">You cannot change your own permission level or access.</p> : null}
                 <StaffPhoto api={api} row={row} own={row.user_id === me.user_id} setStatus={setStatus} reload={reload} />
                 {row.role === 'teacher' && row.active && year && sections ? <Advises api={api} teacher={row} year={year} sections={sections} setStatus={setStatus} reload={reload} /> : null}
@@ -139,6 +140,34 @@ export function Staff({ api, me, setStatus, reload, token, route }: Props & { me
         />
       ) : null}
     </>
+  );
+}
+
+/**
+ * Who a colleague is, at the top of their row (the UI notes of 8 November, note 9): their picture or initials, name,
+ * permission level, position and specialization as the forms print them, the classes they advise in the year chosen
+ * above, and whether their access is on. Everything here is already on the row or on the year's sections; nothing is
+ * read for it, and nothing about a learner appears.
+ */
+function StaffHead({ row, year, sections }: { row: Row; year: Row | undefined | null; sections: Row[] | null | undefined }) {
+  const look = row.avatar as Look | null;
+  const position = [row.position, row.specialization].filter(Boolean).map(String).join(' · ');
+  const advises = (sections ?? []).filter(x => x.adviser_user_id === row.user_id)
+    .sort((a, b) => Number(a.grade_level) - Number(b.grade_level) || String(a.name).localeCompare(String(b.name)));
+  return (
+    <div className="staff-head">
+      <Avatar name={value(row, 'display_name')} look={look} size="lg" />
+      <div className="staff-head-text">
+        <b>{value(row, 'display_name')}</b>
+        <span>{sentence(value(row, 'role'))}{position ? ` · ${position}` : null}{position ? null : <> · <Unrecorded label="Position not set" /></>}</span>
+        {row.role === 'teacher' ? (
+          <span>{advises.length
+            ? <>Adviser of {advises.map(x => `${gradeName(Number(x.grade_level))} · ${String(x.name)}`).join(', ')}{year ? ` in ${yearName(year)}` : ''}</>
+            : <>Advises no class{year ? ` in ${yearName(year)}` : ''}</>}</span>
+        ) : null}
+      </div>
+      {row.active ? <Badge tone="good">Access active</Badge> : <Badge tone="stopped">Access suspended</Badge>}
+    </div>
   );
 }
 

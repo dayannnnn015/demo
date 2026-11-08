@@ -35,7 +35,12 @@
 > applied to the hosted database** (Claude Code's permission check refuses `npm run db:migrate`). Live stays 0.104.0,
 > which needs nothing from 0069. To release: `! npm run db:migrate`, then build in a clean worktree, `npx vercel --prod
 > --scope joshs-projects-47d7b071`, `npm run smoke`. **Do not deploy 0.105.0 before 0069 is applied**: its readiness check
-> requires `read_waiting_counts()`. **Next: U4, profiles and the Staff portal.**
+> requires `read_waiting_counts()`.
+>
+> **0.106.0, U4: Staff portal and staff profiles.** Staff portal opens the workspace's sign-in in a same-origin frame
+> over the front page (U-D3 as amended, 9 November); a colleague's row opens on who they are. No migration of its own,
+> but it carries 0.105.0, so **it too waits on migration 0069** before it can be deployed. **Next: U5, Next year's
+> classes and the test pass.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >

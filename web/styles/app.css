@@ -2766,3 +2766,21 @@ a.btn { text-decoration: none; }
 .app[data-rail='collapsed'] .nav-item { position: relative; }
 .app[data-rail='collapsed'] .nav-item .nav-count { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 15px; padding: 0 4px; font-size: var(--t-10); }
 @media print { .nav-count { display: none; } }
+
+/* The sign-in card alone, inside the front page's Staff portal panel (0.106.0): the panel is the frame, so no art,
+   no shadow and no second border. */
+.auth-embed { min-height: 100dvh; display: grid; align-content: start; justify-items: center; padding: var(--s5) var(--s5) var(--s6); background: var(--white); }
+.auth-embed .auth-card { width: min(420px, 100%); padding: 0; border: 0; box-shadow: none; background: none; }
+.auth-embed .auth-card h1 { font-size: var(--t-20); }
+
+/* My profile: the picture and the signing-in cards side by side on a wide screen (the UI notes of 8 November, note 9). */
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: var(--s4); align-items: start; margin-top: var(--s4); }
+.profile-grid > .card { margin: 0; }
+.profile-grid + .card { margin-top: var(--s4); }
+@media (max-width: 520px) { .profile-grid { grid-template-columns: 1fr; } }
+
+/* A colleague on Staff access, before the form that edits them. */
+.staff-head { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); padding-bottom: var(--s4); border-bottom: 1px solid var(--line-soft); }
+.staff-head-text { flex: 1; min-width: 200px; display: grid; gap: 2px; }
+.staff-head-text b { font-size: var(--t-16); font-weight: 650; color: var(--ink-900); }
+.staff-head-text > span { font-size: var(--t-13); color: var(--ink-600); }

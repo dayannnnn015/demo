@@ -46,6 +46,8 @@ export function Site() {
   const [announcementBackground, setAnnouncementBackground] = useState('/');
   // The home page's opening plays once, on the page the visitor arrived at; moving between pages is still.
   const [opening, setOpening] = useState(true);
+  // Staff portal opens the workspace's sign-in over this page rather than leaving it (the UI notes of 8 November, note 7).
+  const [portal, setPortal] = useState(false);
   const main = useRef<HTMLElement>(null);
 
   const fetchSite = useCallback(() => {
@@ -158,12 +160,19 @@ export function Site() {
                 <li key={to}><Link to={to} go={go} className={current(to) ? 'active' : undefined}>{label}</Link></li>
               ))}
             </ul>
-            <a className="portal-link" href="/app"><SiteIcon name="lock" size={15} />Staff portal</a>
+            {/* Still a link to /app, so a new tab or no script lands on the sign-in page; a plain click opens it over this page. */}
+            <a className="portal-link" href="/app" onClick={event => {
+              if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              setMenu(false);
+              setPortal(true);
+            }}><SiteIcon name="lock" size={15} />Staff portal</a>
           </nav>
         </div>
       </header>
       <main id="content" ref={main} tabIndex={-1}>{page}</main>
       <Footer site={site} name={name} go={go} />
+      {portal ? <StaffPortal onClose={() => setPortal(false)} /> : null}
     </div>
   );
 }
@@ -227,6 +236,40 @@ function Footer({ site, name, go }: { site: PublicSite | null; name: string; go:
         <span>Records kept with <a href="/app">EDUNEXUS</a></span>
       </div>
     </footer>
+  );
+}
+
+/**
+ * The workspace's own sign-in, over the front page (the UI notes of 8 November, note 7).
+ *
+ * A frame of this origin's /app, not a copy of the form: the sign-in code and the call to the sign-in service stay in
+ * the workspace, and this page's content policy gains only `frame-src 'self'`. The frame shares this tab's session
+ * store, so a sign-in there moves the tab into the workspace already signed in, with "Keep me signed in", the browser's
+ * password saving and the recovery link all as they are on the sign-in page.
+ */
+function StaffPortal({ onClose }: { onClose: () => void }) {
+  const close = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const body = document.body;
+    const previous = body.style.overflow;
+    body.style.overflow = 'hidden';
+    close.current?.focus();
+    return () => { document.removeEventListener('keydown', onKey); body.style.overflow = previous; opener?.focus?.(); };
+  }, [onClose]);
+  return (
+    <div className="portal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="portal-dialog" role="dialog" aria-modal="true" aria-labelledby="portal-title">
+        <div className="portal-head">
+          <h2 id="portal-title">Staff sign-in</h2>
+          <button ref={close} type="button" className="announcement-dialog-close" onClick={onClose} aria-label="Close staff sign-in"><SiteIcon name="close" size={20} /></button>
+        </div>
+        <iframe className="portal-frame" src="/app?embed=signin" title="Sign in to EDUNEXUS" />
+        <p className="portal-foot">For the school’s staff. <a href="/app">Open the sign-in page instead</a></p>
+      </div>
+    </div>
   );
 }
 

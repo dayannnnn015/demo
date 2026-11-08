@@ -465,3 +465,17 @@ main:focus { outline: none; }
   .faq-more { position: static; }
 }
 @media (prefers-reduced-motion: reduce) { .faq-item > summary svg { transition: none; } }
+
+/* Staff portal: the workspace's own sign-in, framed over this page (the UI notes of 8 November, note 7). */
+.portal-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: clamp(12px, 4vw, 48px); background: rgb(7 27 51 / 72%); }
+.portal-dialog { width: min(100%, 480px); max-height: calc(100dvh - 24px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-lg); }
+.portal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s3) var(--s3) var(--s5); border-bottom: 1px solid var(--line); }
+.portal-head h2 { margin: 0; font: 700 1rem var(--font-display); color: var(--ink); }
+.portal-head .announcement-dialog-close { position: static; }
+.portal-frame { display: block; width: 100%; height: min(640px, calc(100dvh - 160px)); border: 0; background: var(--paper); }
+.portal-foot { margin: 0; padding: var(--s3) var(--s5); border-top: 1px solid var(--line); font-size: .85rem; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .portal-backdrop { padding: 0; place-items: stretch; }
+  .portal-dialog { width: 100%; max-height: 100dvh; border-radius: 0; }
+  .portal-frame { height: calc(100dvh - 120px); }
+}

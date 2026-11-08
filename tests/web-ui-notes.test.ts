@@ -7,6 +7,7 @@ import { mount, mountScreen, serverApi, type ServerApi } from './helpers/dom.js'
 import { Subjects } from '../web/screens/Subjects';
 import { PriorRecords } from '../web/screens/PriorRecords';
 import { Learners } from '../web/screens/Learners';
+import { Staff } from '../web/screens/Staff';
 import { Table } from '../web/components/primitives';
 import { routes } from '../web/routes';
 
@@ -205,6 +206,22 @@ describe('the learner registry (U2: notes 10, 5 and 9)', () => {
     expect(head).toContain('Grade 3 · A');
     // The explanations are folded, not gone.
     expect(m.all('details.task > summary').some(x => (x.textContent ?? '').includes('What this record does not hold'))).toBe(true);
+    m.unmount();
+  });
+});
+
+describe('a colleague on Staff access (U4: note 9)', () => {
+  it('opens on who they are: name, permission level, position and the classes they advise', async () => {
+    server.signInAs('principal');
+    const m = await mountScreen(Staff as never, server, principal, { route: routes.find(r => r.id === 'staff')! });
+    await m.until(v => v.all('tbody tr button.row-toggle').length > 0 && v.text().includes('Teacher'), 'the staff list');
+    const row = m.all('tbody tr').find(tr => tr.querySelector('.person b')?.textContent === 'Teacher')!;
+    await m.click(row.querySelector<HTMLElement>('button.row-toggle'));
+    await m.until(v => v.all('.staff-head').length > 0, 'the colleague’s header');
+    const head = (m.all('.staff-head')[0]!.textContent ?? '').replace(/\s+/g, ' ');
+    expect(head).toContain('Teacher');
+    expect(head).toContain('Adviser of Grade 3 · A, Grade 4 · B');
+    expect(head).toContain('Access active');
     m.unmount();
   });
 });

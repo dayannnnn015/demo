@@ -11,6 +11,18 @@ import { available, hiddenByAssignment, routeFor, routes } from './routes';
 import { applyPreferences, followDevice, startScreen, type Preferences } from './preferences';
 
 // A screen may carry its own filter after `?`, as the access log does; the route is what precedes it.
+/**
+ * Inside the front page's Staff portal panel (0.106.0, the UI notes of 8 November, note 7): `/app?embed=signin`, framed
+ * by this origin and no other (the workspace's frame-ancestors is 'self'). The panel shows the sign-in card alone, and a
+ * sign-in moves the whole tab into the workspace. Framed or not is checked too, so the address opened on its own is
+ * simply the workspace.
+ */
+const embedded = (() => {
+  try { return new URLSearchParams(location.search).get('embed') === 'signin' && window.top !== window.self; } catch { return false; }
+})();
+/** Leave the panel for the workspace: the tab's session store is shared with the frame, so /app opens signed in. */
+const enterWorkspace = () => { try { window.top!.location.assign('/app'); } catch { location.assign('/app'); } };
+
 const currentHash = () => location.hash.replace(/^#\/?/, '').replace(/\?.*$/, '') || 'overview';
 
 export function App() {
@@ -94,7 +106,8 @@ export function App() {
   // What the person chose on My profile, applied to the whole page; signing out puts the defaults back,
   // so a shared machine does not show the next person someone else's dark theme or large text.
   const profile = me?.profile as Preferences | null | undefined;
-  useEffect(() => { applyPreferences(profile ?? null); }, [profile]);
+  // Inside the front page's Staff portal panel the sign-in is light, like the always-light page around it.
+  useEffect(() => { applyPreferences(embedded ? { theme: 'light' } as Preferences : profile ?? null); }, [profile]);
   useEffect(() => followDevice(), []);
 
   // The shell's own furniture: the year the top bar names, and the school the
@@ -191,6 +204,7 @@ export function App() {
       </div>
     );
   }
+  if (embedded) return <Account client={client} framed={false} onReady={enterWorkspace} />;
   if (!me) return <Account client={client} onReady={() => { setFatal(''); setSignedIn(true); }} />;
 
   const manager = me.role !== 'teacher';
