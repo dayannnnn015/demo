@@ -1,5 +1,27 @@
 # Where things stand
 
+> ## 8 November: 0.102.2 recovered from production — read this first
+>
+> **Production serves 0.102.2, and the hosted database is at migration 0068.** Neither was on GitHub: 0.95.4
+> through 0.102.2 were deployed on 6–7 November with `vercel --prod` from a working copy that was never pushed.
+> Commit `0a236a3` recovers that source from deployment `dpl_C9UEZjPc4C28xaM3qmqDegzHVbQ2` (`edunexus-h461k2r6a`)
+> through the Vercel deployment-files API: 318 files, each checked against its SHA-1, and all 68 migrations
+> matching the checksums recorded in `edunexus_meta.migrations` on the hosted database.
+>
+> **Missing, and not recoverable from Vercel:** the tests and docs written for 0.95.4–0.102.2 (`.vercelignore`
+> keeps `tests/` and `docs/` out of every upload). `CHANGELOG.md` was deployed and describes every one of those
+> releases. Fourteen 0.95.3 tests asserted behaviour those releases changed on purpose; each was updated to the new
+> behaviour with the changelog entry that changed it named in the test (0.95.5, 0.98.0, 0.99.0, 0.100.0, 0.101.0).
+> Whoever holds the 0.102.2 working copy should push its `tests/` and `docs/`, or say it is gone.
+>
+> **A wrong deploy, corrected the same day.** On 8 November a Claude Code session working in an older checkout
+> (0.86.1, never pushed) deployed its own 0.87.0 over live 0.102.2 for about an hour; nothing in the database was
+> touched. `edunexus-h461k2r6a` (0.102.2) was promoted back to production. That 0.87.0 work (the UI notes plan and
+> its U1) is kept on the local branch `local/0.87.0-u1` and is being redone on top of this version.
+>
+> **Before any work or deploy: `git fetch` and compare with `origin/master` and the live `/openapi.json`.**
+> **Next:** redo the UI notes plan (`local/0.87.0-u1:docs/ui-notes-plan.md`) against 0.102.2, then its first increment.
+
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >
 > **Version 0.95.3, merged to `master` and pushed as `aed5294` on 2026-11-06. The live database was wiped and

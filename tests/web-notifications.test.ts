@@ -104,8 +104,8 @@ describe('the notification centre', () => {
     await screen.click(screen.byText('Everything', 'button'));
     await screen.until(m => m.text().includes('class list is waiting'), 'the roster notification');
     // Roster import is hiddenFor principal, and routeFor would answer Overview
-    // for it, so the row says where the work is instead of linking there.
-    expect(screen.text()).toContain('On Roster import');
+    // for it, so the row says whose work it is instead of linking there (0.95.5).
+    expect(screen.text()).toContain('The administrative officer imports it');
     expect(screen.all('a[href="#/imports"]')).toHaveLength(0);
   });
 
@@ -124,8 +124,9 @@ describe('the notification centre', () => {
     const screen = await mountScreen(Notifications as never, server, teacher);
     await screen.until(m => m.text().includes('needs correcting'), 'the declined notification');
     expect(screen.all('a[href="#/imports"]').length).toBeGreaterThan(0);
-    // And the manager who declined it is not named to them: staff_read is
-    // own-row-or-manager, so this is the row policy answering, not a gap.
-    expect(screen.text()).toContain('Not shown to you');
+    // The manager who declined it is named since 0.101.0, through a function that answers only for the caller's
+    // own notification; staff_read is unchanged, so this names nobody else.
+    expect(screen.text()).toContain('Administrative Officer');
+    expect(screen.text()).not.toContain('Not shown to you');
   });
 });

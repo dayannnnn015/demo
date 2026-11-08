@@ -117,7 +117,8 @@ describe('an empty school is a beginning, not a failure', () => {
     // design and the copy is what makes the screen still work.
     server.signInAs('teacher');
     await expect(server.api('/roster-imports/template')).rejects.toThrow(/principal or administrative officer/i);
-    expect(ROSTER_HEADER).toBe('lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address');
+    // Nine columns since 0.100.0: each row may carry its own grade, last.
+    expect(ROSTER_HEADER).toBe('lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address,grade_level');
     // And the manager-only route agrees with that copy, so the two never drift.
     server.signInAs('officer');
     const served = await server.api<unknown>('/roster-imports/template');

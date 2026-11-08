@@ -155,13 +155,14 @@ describe('the roster emitters', () => {
     const [latest] = await inbox(tokens.teacher);
     expect(latest!.kind).toBe('roster_imported');
     expect((latest!.payload as Record<string, unknown>).decision).toBe('accepted');
-    // Who did it is left unnamed, and that is the existing boundary rather than
-    // a gap: `staff_read` in 0001 is own-row-or-manager, so a teacher cannot
-    // read a manager's staff row and the join answers null. Naming the manager
-    // here would mean widening a teacher's read of staff to make a notification
-    // read better, which is the one trade AGENTS.md refuses outright.
+    // Named since 0.101.0 (migration 0066), by `notification_actor_name`, which
+    // answers only for a notification addressed to the caller. `staff_read` is
+    // untouched: the adviser learns the one name that acted on their own inbox
+    // row, and still cannot read the officer's staff record.
     expect(latest!.actor_user_id).toBe(ids.officer);
-    expect(latest!.actor_name).toBeNull();
+    expect(latest!.actor_name).toBe('Administrative Officer');
+    const staff = await api.get('/api/v1/staff?limit=100', tokens.teacher);
+    expect(JSON.stringify(staff.data ?? null)).not.toContain('Administrative Officer');
     // A manager reads the same column and does get a name, so the column works
     // and it is the row policy underneath that decides.
     const [forManager] = await inbox(tokens.principal);

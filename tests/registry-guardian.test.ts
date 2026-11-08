@@ -83,8 +83,12 @@ describe('the learner’s parent or guardian', () => {
       '(074) 422-1234 / 0917 555 0101', // both, which is what a school keeps
     ];
     let lrn = 136170000100;
-    for (const contact of shapes) {
-      const made = await register(learner({ lrn: String(++lrn), guardian_contact: contact }));
+    // A different child for each number: since 0.98.0 (migration 0062) the same name and birth date is refused as
+    // the same child, which is the duplicate check working, not the contact field failing.
+    const names = [['Gina', 'Abad'], ['Hector', 'Bello'], ['Ines', 'Cruz'], ['Jose', 'Dizon'], ['Karla', 'Esteban'], ['Leo', 'Flores']];
+    for (const [i, contact] of shapes.entries()) {
+      const [first_name, last_name] = names[i]!;
+      const made = await register(learner({ lrn: String(++lrn), first_name, last_name, guardian_contact: contact }));
       expect(made.status, `${contact}: ${made.message ?? ''}`).toBe(201);
       // Byte for byte. Nothing normalised to +63, nothing stripped to digits:
       // the number a school can dial is the number it wrote down.
@@ -201,22 +205,20 @@ describe('the learner’s parent or guardian', () => {
 });
 
 describe('an adviser registering a new learner', () => {
-  it('may record the guardian for a child the school has never held', async () => {
-    // The one place an adviser writes these: `register_learner_into_section`,
-    // replaced in 0056 for the two keys. They are the person with the number in
-    // front of them. It widens nothing else — they still cannot correct a
-    // profile, so they cannot change a guardian once the record exists.
+  it('can no longer record a guardian, since registering a learner directly was withdrawn', async () => {
+    // 0.99.0 (migration 0063): every learner an adviser brings in is approved by the office first, so the grant on
+    // `register_learner_into_section` is withdrawn. That was an adviser's only way to record a guardian, and the
+    // class-list template has no guardian columns, so a guardian is now a manager's field. Asserted, as the
+    // changelog promised, rather than left to be found.
     const made = await api.post(`/api/v1/sections/${section}/learners`, tokens.teacher, {
       first_name: 'Fe', middle_name: null, last_name: 'Tabangay', name_extension: null,
       birth_date: '2017-08-14', sex: 'female', lrn: '136170000700',
       guardian_name: 'Luz Tabangay (aunt)', guardian_contact: '0918 222 3344',
       enrolled_on: '2026-06-01',
     });
-    expect(made.status, made.message ?? '').toBe(201);
-    const [row] = await db.pg.query<{ guardian_name: string; guardian_contact: string }>(
-      `select guardian_name,guardian_contact from edunexus.learners where lrn='136170000700'`);
-    expect(row!.guardian_name).toBe('Luz Tabangay (aunt)');
-    expect(row!.guardian_contact).toBe('0918 222 3344');
+    expect(made.status, made.message ?? '').toBe(403);
+    const rows = await db.pg.query(`select 1 from edunexus.learners where lrn='136170000700'`);
+    expect(rows).toHaveLength(0);
   });
 
   it('still cannot send a field the gate blocks, because the writer denies unknown keys', async () => {

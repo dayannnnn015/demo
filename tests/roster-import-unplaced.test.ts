@@ -108,11 +108,16 @@ describe('importing onto the registry with no class yet', () => {
     expect(grades.find(g => g.grade_level === 6)?.enrolled).toBe(2);
   });
 
-  it('refuses a file with neither a section nor a year and grade, rather than guessing', async () => {
+  it('refuses a file with neither a section nor a year, and a row with no grade on its own line, rather than guessing', async () => {
     const sent = await api.post('/api/v1/roster-imports/preview', tokens.officer, { ...onto, csv: csv([row(30)]) });
     expect(sent.status).toBe(422);
     const bare = await api.post('/api/v1/roster-imports/preview', tokens.officer, { ...onto, section_id: null, academic_year_id: year2026, csv: csv([row(30)]) });
-    expect(bare.status).toBe(422);
+    // Since 0.100.0 a file may name no grade, because each row may carry its own. A row with neither is refused on
+    // its own line, so nothing is guessed and nothing can be committed.
+    expect(bare.status).toBe(201);
+    expect(bare.data.can_commit).toBe(false);
+    expect(bare.data.preview_id).toBeNull();
+    expect(bare.data.issues).toEqual([expect.objectContaining({ row: 1, field: 'grade_level', code: 'GRADE_REQUIRED' })]);
   });
 
   it('refuses a section that contradicts the year or grade sent with it', async () => {

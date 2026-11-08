@@ -174,7 +174,8 @@ describe('taking a learner in', () => {
   });
 
   it('refuses a stale version, so two advisers cannot both claim one unplaced learner', async () => {
-    const fresh = await register(10); await enrol(fresh, 3, null);
+    // A name no earlier learner's words are part of: since 0.98.0 the office's registration refuses a likely duplicate.
+    const fresh = await register(10, { first_name: 'Stale', last_name: 'Claimant' }); await enrol(fresh, 3, null);
     const listed = (await pullable(masigla, tokens.teacher)).data.items as { learner_id: string; enrollment_version: number }[];
     const row = listed.find(i => i.learner_id === fresh)!;
     const first = await pull(masigla, tokens.teacher, { learner_id: fresh, version: row.enrollment_version });
@@ -199,31 +200,22 @@ describe('taking a learner in', () => {
 });
 
 describe('an adviser registering a new learner', () => {
-  it('creates the learner and enrols them into their own class in one step', async () => {
-    const made = await api.post(`/api/v1/sections/${masigla}/learners`, tokens.teacher,
-      { ...learner(20, { first_name: 'Brand', last_name: 'New', address: 'Purok 4, Balili' }), enrolled_on: '2026-06-15' });
-    expect(made.status, made.message ?? '').toBe(201);
-    const learnerRow = made.data.learner as { id: string; address: string | null };
-    const enrollment = made.data.enrollment as { section_id: string; grade_level: number };
-    expect(enrollment.section_id).toBe(masigla);
-    expect(enrollment.grade_level).toBe(3);
-    expect(learnerRow.address).toBe('Purok 4, Balili');
-    // The adviser can read the learner they just registered, through the ordinary row policy.
-    expect((await api.get(`/api/v1/learners/${learnerRow.id}`, tokens.teacher)).status).toBe(200);
-  });
-
-  it('refuses a second record for a child already on the registry, and says to take them in instead', async () => {
-    const made = await api.post(`/api/v1/sections/${masigla}/learners`, tokens.teacher,
-      { ...learner(21, { first_name: 'Pull1', last_name: 'Candidate1' }), enrolled_on: '2026-06-15' });
-    expect(made.status).toBe(409);
-    expect(made.code).toBe('LEARNER_ALREADY_ON_REGISTRY');
-    expect(made.message).toMatch(/Take that learner into your class/);
-  });
-
-  it('refuses a duplicate LRN, as the registry does', async () => {
-    const made = await api.post(`/api/v1/sections/${masigla}/learners`, tokens.teacher,
-      { ...learner(1, { first_name: 'Different', last_name: 'Child', birth_date: '2016-01-01' }), enrolled_on: '2026-06-15' });
-    expect(made.status).toBe(409);
+  it('is refused outright since 0.99.0: every learner an adviser brings in is approved by the office first', async () => {
+    // Migration 0063 withdrew the grant on `register_learner_into_section` rather than dropping it, so one line
+    // puts it back if the school changes its mind. Until then a new child, a child already on the registry and a
+    // duplicate LRN are all the same answer, and none of them writes anything: the adviser sends a one-row class
+    // list instead, which the office reviews.
+    const tries = [
+      learner(20, { first_name: 'Brand', last_name: 'New', address: 'Purok 4, Balili' }),
+      learner(21, { first_name: 'Pull1', last_name: 'Candidate1' }),
+      learner(1, { first_name: 'Different', last_name: 'Child', birth_date: '2016-01-01' }),
+    ];
+    for (const body of tries) {
+      const made = await api.post(`/api/v1/sections/${masigla}/learners`, tokens.teacher, { ...body, enrolled_on: '2026-06-15' });
+      expect(made.status, made.message ?? '').toBe(403);
+    }
+    const written = await db.pg.query(`select 1 from edunexus.learners where last_name in ('New','Child')`);
+    expect(written).toHaveLength(0);
   });
 
   it('refuses a section the caller does not advise', async () => {

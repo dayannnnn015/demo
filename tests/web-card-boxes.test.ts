@@ -105,7 +105,10 @@ describe('the year a historical record began', () => {
   it('accepts any school year from 1990, and its hint does not read as a floor', () => {
     const screen = readFileSync('web/screens/PriorRecords.tsx', 'utf8');
     const field = /\{ key: 'start_year',[\s\S]*?\},/.exec(screen)?.[0] ?? '';
-    expect(field).toContain('min: 1990');
+    // Since 0.95.4–0.102.2 the year is typed as four digits beside the year it ended, so the floor is the
+    // server's: the contract refuses anything before 1990.
+    expect(field).toContain("pattern: '[0-9]{4}'");
+    expect(readFileSync('src/modules/prior-records/contracts.ts', 'utf8')).toMatch(/start_year:z\.number\(\)\.int\(\)\.min\(1990/);
     // The hint used 2024 as its worked example, and an example in the position
     // of a rule reads as one. The server's own range is 1990 to this year.
     expect(field).not.toMatch(/2024/);

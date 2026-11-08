@@ -212,13 +212,15 @@ describe('what the profile shows', () => {
     }
   });
 
-  it('is not ahead of the class-list template, which still carries eight columns', () => {
+  it('is not ahead of the class-list template, which carries nine columns and still no guardian', () => {
     // A guard against this screen drifting away from the import. The guardian
     // pair was added to the *record* (0056) and deliberately NOT to the
     // published template, so a class list imports as it always did and the
     // guardian is typed per learner. If the template ever gains the two
     // columns, this is the line that says so.
-    expect(ROSTER_HEADER.split(',')).toEqual(['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address']);
+    // 0.100.0 added grade_level, one grade per learner; the guardian pair is still not a column (0.99.0 records
+    // that an adviser therefore cannot supply one, and that adding them would be the school's decision).
+    expect(ROSTER_HEADER.split(',')).toEqual(['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address', 'grade_level']);
   });
 });
 

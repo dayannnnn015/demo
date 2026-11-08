@@ -34,10 +34,11 @@ async function filled(rows: (string | number)[][], sheetName = 'Class list') {
 }
 
 describe('the generated class-list template', () => {
-  it('carries the header the API publishes, with address last', async () => {
+  it('carries the header the API publishes, with the grade last and the address before it', async () => {
     const rows = await readXlsxRows((await built().bytes()).buffer as ArrayBuffer, 'Class list');
     expect(rows[2]).toEqual(columns);
-    expect(columns[columns.length - 1]).toBe('address');
+    // 0.100.0: each learner carries their own grade, in a ninth column after the address.
+    expect(columns.slice(-2)).toEqual(['address', 'grade_level']);
   });
 
   it('keeps the LRN and birth-date columns as text, in the empty rows as well', async () => {
@@ -87,15 +88,15 @@ describe('reading a filled-in class list', () => {
   it('hands the API the typed cells, with an address holding commas quoted', async () => {
     const address = 'Purok 4, Balili, La Trinidad, Benguet';
     const file = await filled([
-      ['136170000001', 'Ana', 'Bautista', 'Reyes', '', '2017-05-02', 'female', address],
-      ['136170000002', 'Ben', '', 'Lacsamana', '', '2015-03-11', 'male', ''],
+      ['136170000001', 'Ana', 'Bautista', 'Reyes', '', '2017-05-02', 'female', address, '3'],
+      ['136170000002', 'Ben', '', 'Lacsamana', '', '2015-03-11', 'male', '', ''],
     ]);
     const csv = await rosterFileText(file);
     const lines = csv.trim().split('\r\n');
     expect(lines[0]).toBe(ROSTER_HEADER);
     // Quoted, or the commas in the address would make the row eight columns too wide.
-    expect(lines[1]).toBe(`136170000001,Ana,Bautista,Reyes,,2017-05-02,female,"${address}"`);
-    expect(lines[2]).toBe('136170000002,Ben,,Lacsamana,,2015-03-11,male,');
+    expect(lines[1]).toBe(`136170000001,Ana,Bautista,Reyes,,2017-05-02,female,"${address}",3`);
+    expect(lines[2]).toBe('136170000002,Ben,,Lacsamana,,2015-03-11,male,,');
   });
 
   it('reads the Class list sheet by name, so the notes sheet never shifts the columns', async () => {
