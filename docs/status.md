@@ -27,7 +27,8 @@
 > `161f39c`, built first; `npm run smoke` passes all 195 checks.
 >
 > **0.104.0, U2: the learner registry.** A **Class** filter (and `section_id` on `GET /learners`), duplicate entries
-> called that, and the learner's profile opening on who they are. No migration. **Next: U3, counts on the rail.**
+> called that, and the learner's profile opening on who they are. No migration. **Live** as `edunexus-k78v8uw2y` from a
+> clean worktree of `90dec93`; `npm run smoke` passes all 195 checks. **Next: U3, counts on the rail.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >
