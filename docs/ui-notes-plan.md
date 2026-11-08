@@ -32,4 +32,17 @@ U-D1 to U-D5, recorded in [constraints](constraints.md) on 8 November.
 | U2 | 0.104.0 | 10, 5, 9 (learners) | **Shipped 8 November.** **The learner registry.** Section filter; duplicates in plain words; the learner's profile reviewed. |
 | U3 | 0.105.0 | 8 | **Shipped 8 November.** **Counts on the rail.** A number on Admissions and the other approval screens. |
 | U4 | 0.106.0 | 9 (users), 7 | **Shipped 9 November.** **Profiles and the Staff portal.** |
-| U5 | 0.107.0 | 2, then all | **Next year's classes, and the test pass.** |
+| U5 | 0.107.0 | 2, then all | **Shipped 9 November.** **Next year's classes, and the test pass.** |
+
+## The test pass (9 November, 0.107.0)
+
+Every rail screen with My profile and Settings — 25 for the principal, 12 for an adviser — at 1366 and 390 px, light and dark, under axe's WCAG 2.1 AA rules in `npm run demo`, then the new open states (a learner's profile with its folds, a colleague's header on Staff access, a pressed grade card with its groups open, the collapsed rail with a count) and the front page with a notice open. No violation, no page wider than the screen, no page error and no console message. The Staff portal panel was checked on the real server under the production content policy during U4 (9 November): no content-policy violation and no console message; axe was not run inside the frame.
+
+Found and fixed across U1–U5, each in the release that made it:
+
+- **U1.** The top bar said *No active school year* before it had read the year; School profile could shimmer for ever on a failed read; the sign-in heading flashed with no form after signing in.
+- **U2.** On a phone the registry's open profile ran off the right edge with the table; rows now stack. The adviser's note and both guides described behaviour from before 0.99.0 and 2026-11-05.
+- **U4.** The framed sign-in followed a dark device inside the always-light front page.
+- **U5.** The screen's description still promised a random draw; waiting work was drawn in red; a filter note squeezed beside its button; two steps could show as current at once.
+
+**Still not deployed:** 0.105.0 onward waits on migration 0069 (see [status](status.md)).

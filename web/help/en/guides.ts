@@ -225,10 +225,11 @@ export const guides: Guide[] = [
   },
   {
     route: 'next-year',
-    summary: 'Enrolling this year’s learners into next year from their approved outcomes, with sections drawn evenly.',
+    summary: 'Carrying this year’s learners into next year’s grades from their approved outcomes; classes are assigned afterwards.',
     steps: [
-      'First approve every outcome on {report-cards}, and create next year and its sections on {years}.',
-      'The screen shows where every learner goes: promoted learners up a grade, retained learners in the same one. Grade 6 completers, learners who left, and anyone waiting on an approved outcome are listed with the reason.',
+      'First approve every outcome on {report-cards}, and create next year on {years}. The three steps at the top say where you are.',
+      'Each grade next year has a card with how many move into it, boys and girls. Press a card to see only that grade’s learners; press it again for every grade.',
+      'Below, the learners are grouped by the grade they move to. Promoted learners go up a grade and retained learners stay. Under *Not carried forward*, Grade 6 completers, learners who left, and anyone waiting on an approved outcome are grouped by why.',
       'Nobody is given a class here. Each learner is enrolled at their next grade with no section, and sits in the registry that way until a class is assigned — which is a change to that enrolment, not a second one.',
       '**Print the list** to check, then **Enrol** them with a reason. Everyone is enrolled at once, or nobody is. Do it outside register hours.',
     ],

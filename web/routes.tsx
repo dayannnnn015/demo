@@ -208,7 +208,7 @@ export const routes: Route[] = [
   {
     id: 'next-year', nav: 'Next year’s classes', icon: 'forward', group: 'Learners', manager: true, built: true, ownHeader: true,
     title: 'Next year’s classes',
-    lede: 'Enrol this year’s learners into next year from their approved outcomes, sections drawn at random.',
+    lede: 'Carry this year’s learners into next year’s grades from their approved outcomes; classes are assigned afterwards.',
     record: 'enrollments, next_year_placements', feeds: 'SF2, SF4',
     render: p => <NextYear {...p} />,
   },

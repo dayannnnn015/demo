@@ -8,6 +8,13 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.107.0', date: '2026-11-09',
+    items: [
+      '{next-year} is easier to read: three steps at the top say where the year stands, each grade next year has a card with its boys and girls, and the learners are grouped by the grade they move to.',
+      'The learners not carried forward are grouped by why, and the ones waiting on an outcome point you to {report-cards}.',
+    ],
+  },
+  {
     version: '0.106.0', date: '2026-11-09',
     items: [
       'On the school’s front page, **Staff portal** now opens the sign-in over the page instead of leaving it. Signing in takes you straight into EDUNEXUS, and **Keep me signed in** and your browser’s saved password work as before.',

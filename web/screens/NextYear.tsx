@@ -7,7 +7,7 @@ import { PrintCopy } from '../components/print';
 import { SeededNotice } from '../components/seeded';
 import { Icon } from '../components/icons';
 import { StatTile } from '../components/figures';
-import { Badge, Callout, Cell, EmptyState, PageHeader, Select, StatusLine, Table, TableSkeleton, gradeName, learnerName, localToday, type Status } from '../components/primitives';
+import { Badge, Callout, Cell, EmptyState, PageHeader, Select, Spinner, StatusLine, Table, TableSkeleton, Task, gradeName, learnerName, localToday, type Status } from '../components/primitives';
 import { hashParams } from './OutcomeQueue';
 
 type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -29,14 +29,15 @@ type Preview = {
 const idle: Status = { kind: 'idle', text: '' };
 const yearLabel = (start: number) => `${start}–${start + 1}`;
 const outcomeWord = { promoted: 'Promoted', conditionally_promoted: 'Conditionally promoted', retained: 'Retained', remedial: 'Remedial' } as const;
-const why = (u: Preview['unplaced'][number]) => ({
-  left: 'Left during the year',
-  no_outcome: 'No outcome recorded',
-  not_approved: 'Outcome not approved yet',
-  remedial: 'Remedial: placed after the remedial class',
-  completer: 'Completed Grade 6',
-  already_enrolled: 'Already enrolled next year',
-})[u.reason];
+/** Why a learner is not carried forward, in the order a manager acts on them: the ones waiting on someone first. */
+const reasonInfo: Record<Reason, { title: string; note: string; act?: boolean }> = {
+  not_approved: { title: 'Outcome not approved yet', note: 'Endorsed, waiting on the principal or administrative officer', act: true },
+  no_outcome: { title: 'No outcome recorded', note: 'The adviser has not endorsed one', act: true },
+  remedial: { title: 'Remedial', note: 'Placed once the remedial class decides', act: true },
+  already_enrolled: { title: 'Already enrolled next year', note: 'Nothing to do' },
+  completer: { title: 'Completed Grade 6', note: 'Elementary school done' },
+  left: { title: 'Left during the year', note: 'Withdrawn or transferred out' },
+};
 /** This year's class, or a plain statement that they were never given one. */
 const fromClass = (l: Learner) => `${gradeName(l.from_grade)}${l.from_section ? ` · ${l.from_section}` : ' · no section'}`;
 
@@ -58,6 +59,8 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
   const [stale, setStale] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [printing, setPrinting] = useState(false);
+  // One grade card pressed narrows the list; null shows every grade.
+  const [focus, setFocus] = useState<number | null>(null);
   const id = useId();
 
   useEffect(() => {
@@ -92,114 +95,169 @@ export function NextYear({ api, me, setStatus, token, route }: Props) {
   if (!source) return <><PageHeader route={route} /><div className="card"><EmptyState title="No school year yet" body="Next year’s classes come from a school year’s approved outcomes. Create the year first." /></div></>;
 
   const count = (...reasons: Reason[]) => preview?.unplaced.filter(u => reasons.includes(u.reason)).length ?? 0;
-  const shown = preview?.placements ?? [];
+  // A grade card pressed narrows the list to that grade; pressed again, every grade.
+  const shown = (preview?.placements ?? []).filter(p => focus === null || p.to_grade === focus);
+  const groups = (preview?.grades ?? []).filter(g => focus === null || g.grade_level === focus)
+    .map(g => ({ grade: g, list: shown.filter(p => p.to_grade === g.grade_level) }))
+    .filter(g => g.list.length);
+  const waitingOn = count('no_outcome', 'not_approved', 'remedial');
+  // Where the year stands, as three steps (the UI notes of 8 November, note 2). Counted, never estimated.
+  const enrolledBefore = (preview?.runs ?? []).reduce((sum, r) => sum + Number(r.placed), 0);
+  // Enrolling the learners already decided is possible while others wait, so the third step is "ready" rather than current then.
+  const steps: { title: string; note: string; state: 'done' | 'now' | 'ready' | 'later' }[] = [
+    { title: 'Choose the year', note: target ? `${yearLabel(Number(source.start_year))} into ${yearLabel(Number(target.start_year))}` : `No ${yearLabel(Number(source.start_year) + 1)} year yet`, state: target ? 'done' : 'now' },
+    { title: 'Check who moves up', note: !preview ? 'Reading the outcomes…' : waitingOn ? `${waitingOn} still waiting on an outcome` : 'Every outcome is decided', state: !target ? 'later' : preview && !waitingOn ? 'done' : 'now' },
+    { title: 'Enrol', note: preview?.placements.length ? `${preview.placements.length} ready to enrol` : enrolledBefore ? `${enrolledBefore} enrolled already` : 'Nobody to enrol yet', state: !preview ? 'later' : preview.placements.length ? (waitingOn ? 'ready' : 'now') : enrolledBefore ? 'done' : 'later' },
+  ];
+  const reasonGroups = (Object.keys(reasonInfo) as Reason[])
+    .map(reason => ({ reason, list: (preview?.unplaced ?? []).filter(u => u.reason === reason) }))
+    .filter(g => g.list.length);
 
   return (
     <>
       <PageHeader route={route} actions={preview?.placements.length
         ? <button type="button" className="btn" onClick={() => setEnrolling(true)}><Icon name="enter" size={15} />Enrol {preview.placements.length} {preview.placements.length === 1 ? 'learner' : 'learners'}</button>
         : null} />
+
+      <ol className="steps" aria-label="Where next year’s classes stand">
+        {steps.map((step, i) => (
+          <li key={step.title} className={`step ${step.state}`} aria-current={step.state === 'now' ? 'step' : undefined}>
+            <span className="step-mark" aria-hidden="true">{step.state === 'done' ? <Icon name="check" size={14} /> : i + 1}</span>
+            <span className="step-text"><b>{step.title}</b><span>{step.note}</span></span>
+          </li>
+        ))}
+      </ol>
+
       <div className="card">
         <div className="card-head">
           <div className="toolbar">
             <div className="field">
               <label className="label" htmlFor={`${id}-year`}>From the school year</label>
-              <Select id={`${id}-year`} value={sourceId} onChange={e => setSourceId(e.target.value)}>
+              <Select id={`${id}-year`} value={sourceId} onChange={e => { setSourceId(e.target.value); setFocus(null); }}>
                 {years.map(y => <option key={String(y.id)} value={String(y.id)}>{yearLabel(Number(y.start_year))}</option>)}
               </Select>
             </div>
             <div className="field">
               <label className="label" htmlFor={`${id}-grade`}>Grade next year</label>
-              <Select id={`${id}-grade`} value={grade} onChange={e => setGrade(e.target.value)}>
+              <Select id={`${id}-grade`} value={grade} onChange={e => { setGrade(e.target.value); setFocus(null); }}>
                 <option value="">Every grade</option>
                 {[0, 1, 2, 3, 4, 5, 6].map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
               </Select>
             </div>
-            {preview?.placements.length ? <button type="button" className="btn ghost" onClick={() => setPrinting(true)}><Icon name="print" size={15} />Print the list</button> : null}
+            {preview?.placements.length ? <button type="button" className="btn secondary" onClick={() => setPrinting(true)}><Icon name="print" size={15} />Print the list</button> : null}
           </div>
-          <p className="card-note">Each learner goes where their approved outcome on <b>Report cards → Promotion</b> leads: promoted or conditionally promoted up a grade, retained in the same one. Nobody is given a section here — a learner is taken into a class afterwards, and until then they sit in the registry at their new grade with no section.</p>
+          <p className="card-note">Each learner moves to the grade their approved outcome on <b>Promotion</b> leads to. No class is chosen here: they wait in the registry at their new grade until an adviser takes them in.</p>
         </div>
         {!target ? (
           <div className="card-body"><Callout tone="attention" title={`No ${yearLabel(Number(source.start_year) + 1)} school year yet`}>Create the {yearLabel(Number(source.start_year) + 1)} school year and its sections on <b>School years &amp; sections</b>, then come back here.</Callout></div>
         ) : failed ? (
-          <div className="card-body"><Callout tone="stopped" title="The classes could not be drawn">{failed}</Callout></div>
+          <div className="card-body"><Callout tone="stopped" title="The classes could not be read">{failed}</Callout></div>
         ) : !preview ? (
           <div className="card-body"><TableSkeleton columns={5} /></div>
         ) : null}
       </div>
+
       {target && preview && !failed ? (
-          <>
-            <div className="tiles">
-              <StatTile label="To enrol" value={preview.placements.length} meta={`into ${yearLabel(preview.target_year.start_year)}, from ${preview.target_year.starts_on}`} accent={0} />
-              <StatTile label="Completed Grade 6" value={count('completer')} meta="Not placed: elementary school done" accent={1} />
-              <StatTile label="Waiting on an outcome" value={count('no_outcome', 'not_approved', 'remedial')} meta="Remedial, or not approved yet" accent={2} />
-              <StatTile label="Already enrolled" value={count('already_enrolled')} meta={`in ${yearLabel(preview.target_year.start_year)}`} accent={3} />
+        <>
+          <div className="tiles">
+            <StatTile label="To enrol" value={preview.placements.length} meta={`into ${yearLabel(preview.target_year.start_year)}, from ${preview.target_year.starts_on}`} accent={0} />
+            <StatTile label="Completed Grade 6" value={count('completer')} meta="Not placed: elementary school done" accent={1} />
+            <StatTile label="Waiting on an outcome" value={waitingOn} meta="Remedial, or not approved yet" accent={2} />
+            <StatTile label="Already enrolled" value={count('already_enrolled')} meta={`in ${yearLabel(preview.target_year.start_year)}`} accent={3} />
+          </div>
+
+          {/* One card per grade next year, its boys and girls drawn as counts. Pressing one shows that grade alone. */}
+          {preview.grades.length ? (
+            <div className="grade-cards" role="group" aria-label="Grades next year">
+              {preview.grades.map(g => {
+                const total = g.carried.male + g.carried.female;
+                const pressed = focus === g.grade_level;
+                const boys = total ? (g.carried.male / total) * 100 : 0;
+                return (
+                  <button key={g.grade_level} type="button" className="grade-card" aria-pressed={pressed}
+                    onClick={() => setFocus(pressed ? null : g.grade_level)}>
+                    <span className="grade-card-name">{gradeName(g.grade_level)}</span>
+                    <b className="grade-card-total">{total}</b>
+                    <svg className="grade-card-bar" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true">
+                      <rect className="bar-male" x="0" y="0" height="6" width={boys} />
+                      <rect className="bar-female" x={boys} y="0" height="6" width={total ? 100 - boys : 0} />
+                    </svg>
+                    <span className="grade-card-meta"><span className="swatch-m" aria-hidden="true" />{g.carried.male} male <span className="swatch-f" aria-hidden="true" />{g.carried.female} female</span>
+                  </button>
+                );
+              })}
             </div>
-            {/* What each grade receives. Sections are not shown because none is
-                chosen here: a learner is taken into a class afterwards. */}
+          ) : (
+            <div className="card"><EmptyState title="Nobody to carry forward" body="No approved outcome in this school year leads into the next one yet. Outcomes are endorsed and approved on Promotion." /></div>
+          )}
+
+          {groups.length ? (
             <div className="card">
-            <div className="card-head"><h2>Grades next year</h2></div>
-            <Table
-              rows={preview.grades}
-              rowKey={g => String(g.grade_level)}
-              empty={<EmptyState title="Nobody to carry forward" body="No approved outcome in this school year leads into the next one yet." />}
-              columns={[
-                { header: 'Grade', cell: g => gradeName(g.grade_level) },
-                { header: 'Carried into it', cell: g => <span className="mono">{g.carried.male} M · {g.carried.female} F</span> },
-                { header: 'Total', cell: g => <b className="mono">{g.carried.male + g.carried.female}</b> },
-              ]}
-            />
-            </div>
-            {preview.placements.length ? (
-              <div className="card">
-                <div className="card-head">
-                  <h2>Learners carried forward</h2>
-                  <div className="card-head-actions field">
-                  </div>
+              <div className="card-head">
+                <div>
+                  <h2>Learners carried forward{focus === null ? '' : ` into ${gradeName(focus)}`}</h2>
+                  <p className="card-note">Grouped by the grade they move to. Each is enrolled with no section, and taken into a class afterwards.</p>
                 </div>
-                <Table
-                  rows={shown}
-                  rowKey={p => p.enrollment_id}
-                  columns={[
-                    { header: 'Learner', cell: p => <Cell title={learnerName(p)} meta={p.sex === 'male' ? 'Male' : 'Female'} /> },
-                    { header: 'This year', cell: p => fromClass(p) },
-                    { header: 'Outcome', cell: p => (p.action ? <Badge tone={p.action === 'retained' ? 'info' : 'good'}>{outcomeWord[p.action]}</Badge> : null) },
-                    { header: 'Next year', cell: p => gradeName(p.to_grade) },
-                    { header: 'Section', cell: () => <Badge tone="attention">Assigned later</Badge> },
-                  ]}
-                />
+                {focus === null ? null : <div className="card-head-actions"><button type="button" className="btn ghost" onClick={() => setFocus(null)}>Show every grade</button></div>}
               </div>
-            ) : null}
-            {preview.unplaced.length ? (
-              <div className="card">
-                <div className="card-head"><h2>Not placed</h2></div>
-                <Table
-                  rows={preview.unplaced}
-                  rowKey={u => u.enrollment_id}
-                  columns={[
-                    { header: 'Learner', cell: u => <Cell title={learnerName(u)} meta={u.sex === 'male' ? 'Male' : 'Female'} /> },
-                    { header: 'This year', cell: u => fromClass(u) },
-                    { header: 'Why', cell: u => <span className={u.reason === 'completer' || u.reason === 'already_enrolled' ? 'muted' : ''}>{why(u)}</span> },
-                  ]}
-                />
+              {groups.map(({ grade: g, list }) => (
+                <section key={g.grade_level} className="carry-group" aria-labelledby={`${id}-g${g.grade_level}`}>
+                  <h3 id={`${id}-g${g.grade_level}`}>{gradeName(g.grade_level)} <span className="muted">· {list.length} {list.length === 1 ? 'learner' : 'learners'}</span></h3>
+                  <Table
+                    stack
+                    rows={list}
+                    rowKey={p => p.enrollment_id}
+                    columns={[
+                      { header: 'Learner', cell: p => <Cell title={learnerName(p)} meta={p.sex === 'male' ? 'Male' : 'Female'} /> },
+                      { header: `In ${yearLabel(preview.source_year.start_year)}`, cell: p => fromClass(p) },
+                      { header: 'Outcome', cell: p => (p.action ? <Badge tone={p.action === 'retained' ? 'info' : 'good'}>{outcomeWord[p.action]}</Badge> : null) },
+                    ]}
+                  />
+                </section>
+              ))}
+            </div>
+          ) : null}
+
+          {reasonGroups.length ? (
+            <div className="card">
+              <div className="card-head"><div>
+                <h2>Not carried forward</h2>
+                <p className="card-note">Grouped by why. Those waiting on an outcome are carried forward once it is approved on Promotion.</p>
+              </div></div>
+              <div className="card-body">
+                {reasonGroups.map(({ reason, list }) => (
+                  <Task key={reason} title={`${reasonInfo[reason].title} · ${list.length}`} note={reasonInfo[reason].note}>
+                    {reasonInfo[reason].act ? <p className="muted"><a href="#/report-cards">Open Promotion</a> to decide these outcomes.</p> : null}
+                    <Table
+                      stack
+                      rows={list}
+                      rowKey={u => u.enrollment_id}
+                      columns={[
+                        { header: 'Learner', cell: u => <Cell title={learnerName(u)} meta={u.sex === 'male' ? 'Male' : 'Female'} /> },
+                        { header: `In ${yearLabel(preview.source_year.start_year)}`, cell: u => fromClass(u) },
+                      ]}
+                    />
+                  </Task>
+                ))}
               </div>
-            ) : null}
-            {preview.runs.length ? (
-              <div className="card">
-                <div className="card-head"><h2>Enrolled from this screen before</h2></div>
-                <Table
-                  rows={preview.runs}
-                  rowKey={r => r.id}
-                  columns={[
-                    { header: 'When', cell: r => <Cell title={new Date(r.recorded_at).toLocaleString()} meta={r.actor_name ?? undefined} /> },
-                    { header: 'Grade', cell: r => (r.grade_level === null ? 'Every grade' : gradeName(r.grade_level)) },
-                    { header: 'Enrolled', cell: r => r.placed },
-                    { header: 'Reason', cell: r => <span className="note-text">{r.reason}</span> },
-                  ]}
-                />
-              </div>
-            ) : null}
-          </>
+            </div>
+          ) : null}
+
+          {preview.runs.length ? (
+            <Task title="Enrolled from this screen before" note={`${preview.runs.length} ${preview.runs.length === 1 ? 'time' : 'times'}`}>
+              <Table
+                rows={preview.runs}
+                rowKey={r => r.id}
+                columns={[
+                  { header: 'When', cell: r => <Cell title={new Date(r.recorded_at).toLocaleString()} meta={r.actor_name ?? undefined} /> },
+                  { header: 'Grade', cell: r => (r.grade_level === null ? 'Every grade' : gradeName(r.grade_level)) },
+                  { header: 'Enrolled', cell: r => r.placed },
+                  { header: 'Reason', cell: r => <span className="note-text">{r.reason}</span> },
+                ]}
+              />
+            </Task>
+          ) : null}
+        </>
       ) : null}
       {enrolling && preview ? <EnrolSheet api={api} preview={preview} onClose={() => setEnrolling(false)}
         onChanged={() => { setPreview(null); setStale(true); setTick(t => t + 1); }}
@@ -268,7 +326,7 @@ function EnrolSheet({ api, preview, onClose, onChanged, onDone }: { api: Api; pr
           </div>
         </div>
         <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Enrolling…' : `Enrol ${preview.placements.length}`}</button>
+          <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? <><Spinner />Enrolling…</> : `Enrol ${preview.placements.length}`}</button>
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
         </div>
       </form>

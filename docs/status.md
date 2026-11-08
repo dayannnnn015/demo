@@ -39,8 +39,10 @@
 >
 > **0.106.0, U4: Staff portal and staff profiles.** Staff portal opens the workspace's sign-in in a same-origin frame
 > over the front page (U-D3 as amended, 9 November); a colleague's row opens on who they are. No migration of its own,
-> but it carries 0.105.0, so **it too waits on migration 0069** before it can be deployed. **Next: U5, Next year's
-> classes and the test pass.**
+> but it carries 0.105.0, so **it too waits on migration 0069** before it can be deployed.
+>
+> **0.107.0, U5: Next year's classes and the test pass. The UI notes plan is complete.** Also waits on 0069. **Next:
+> apply 0069 (`! npm run db:migrate`), then deploy 0.107.0 from a clean worktree and `npm run smoke`.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >

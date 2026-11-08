@@ -2784,3 +2784,39 @@ a.btn { text-decoration: none; }
 .staff-head-text { flex: 1; min-width: 200px; display: grid; gap: 2px; }
 .staff-head-text b { font-size: var(--t-16); font-weight: 650; color: var(--ink-900); }
 .staff-head-text > span { font-size: var(--t-13); color: var(--ink-600); }
+
+/* Next year's classes (the UI notes of 8 November, note 2): three steps, a card per grade, learners grouped by the
+   grade they move to. Counts are drawn, never turned into a rate. */
+.steps { list-style: none; margin: 0 0 var(--s4); padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s3); }
+.step { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); }
+.step-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--line-strong); font-size: var(--t-12); font-weight: 650; color: var(--ink-500); font-variant-numeric: tabular-nums; }
+.step-text { display: grid; gap: 2px; min-width: 0; }
+.step-text b { font-size: var(--t-13); color: var(--ink-900); }
+.step-text span { font-size: var(--t-12); color: var(--ink-500); }
+.step.done .step-mark { background: var(--accent-700); border-color: var(--accent-700); color: var(--white); }
+.step.now { border-color: var(--accent-300); box-shadow: inset 3px 0 0 var(--accent-700); }
+.step.now .step-mark { border-color: var(--accent-700); color: var(--accent-800); }
+.step.later { opacity: .75; }
+.grade-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s3); margin-bottom: var(--s4); }
+.grade-card { display: grid; gap: var(--s2); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white);
+  text-align: left; font: inherit; color: var(--ink-900); cursor: pointer; transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+.grade-card:hover { border-color: var(--line-strong); }
+.grade-card[aria-pressed='true'] { border-color: var(--accent-700); box-shadow: 0 0 0 1px var(--accent-700); }
+.grade-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.grade-card-name { font-size: var(--t-12); font-weight: 600; color: var(--ink-500); }
+.grade-card-total { font-size: var(--t-26); font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.grade-card-bar { width: 100%; height: 6px; display: block; background: var(--chart-grid); border-radius: var(--r-sm); overflow: hidden; }
+.bar-male { fill: var(--chart-2); }
+.bar-female { fill: var(--chart-4); }
+.grade-card-meta { display: flex; align-items: center; gap: var(--s1); flex-wrap: wrap; font-size: var(--t-12); color: var(--ink-600); }
+.swatch-m, .swatch-f { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-left: var(--s1); }
+.swatch-m { background: var(--chart-2); margin-left: 0; }
+.swatch-f { background: var(--chart-4); }
+.carry-group > h3 { margin: 0; padding: var(--s3) var(--s5); font-size: var(--t-14); background: var(--sunk); border-bottom: 1px solid var(--line); }
+.carry-group + .carry-group > h3 { border-top: 1px solid var(--line); }
+@media print { .steps, .grade-cards { display: none; } }
+.step.ready { border-color: var(--accent-200); }
+.step.ready .step-mark { border-color: var(--accent-700); color: var(--accent-800); }
+/* A note under a head's filters takes its own line rather than squeezing beside the last control. */
+.card-head:has(> .toolbar) > .card-note { flex-basis: 100%; margin-top: 0; }

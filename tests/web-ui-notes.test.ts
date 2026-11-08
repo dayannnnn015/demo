@@ -8,6 +8,7 @@ import { Subjects } from '../web/screens/Subjects';
 import { PriorRecords } from '../web/screens/PriorRecords';
 import { Learners } from '../web/screens/Learners';
 import { Staff } from '../web/screens/Staff';
+import { NextYear } from '../web/screens/NextYear';
 import { Table } from '../web/components/primitives';
 import { routes } from '../web/routes';
 
@@ -222,6 +223,37 @@ describe('a colleague on Staff access (U4: note 9)', () => {
     expect(head).toContain('Teacher');
     expect(head).toContain('Adviser of Grade 3 · A, Grade 4 · B');
     expect(head).toContain('Access active');
+    m.unmount();
+  });
+});
+
+describe('next year’s classes (U5: note 2)', () => {
+  const next = '00000000-0000-4000-9000-000000002027';
+  beforeAll(async () => {
+    await db.pg.query(`insert into edunexus.academic_years(id,start_year,starts_on,ends_on,status) values($1,2027,'2027-06-07','2028-03-31','draft')`, [next]);
+    // Ana's outcome is approved, so she moves up; Ben and Cora have none yet.
+    await db.pg.query(`insert into edunexus.promotion_decisions(enrollment_id,action,status,recommended_by,decided_by) values($1,'promoted','approved',$2,$3)`,
+      ['00000000-0000-4000-9002-000000000001', ids.teacher, ids.principal]);
+  });
+
+  it('shows the year as steps, a card per grade, learners grouped by their new grade, and the rest grouped by why', async () => {
+    server.signInAs('principal');
+    const m = await mountScreen(NextYear as never, server, principal, { route: routes.find(r => r.id === 'next-year')! });
+    await m.until(v => v.all('.grade-card').length > 0, 'the grades next year');
+    const steps = m.all('.step').map(x => (x.textContent ?? '').replace(/\s+/g, ' ').trim());
+    expect(steps[0]).toContain('2026–2027 into 2027–2028');
+    expect(steps[1]).toContain('2 still waiting on an outcome');
+    expect(steps[2]).toContain('1 ready to enrol');
+    // Enrolling the one decided is possible while two wait, so step 3 is ready rather than current.
+    expect(m.all('.step.ready')).toHaveLength(1);
+    const card = (m.all('.grade-card')[0]!.textContent ?? '').replace(/\s+/g, ' ');
+    expect(card).toContain('Grade 4');
+    expect(card).toContain('0 male');
+    expect(card).toContain('1 female');
+    expect(m.all('.carry-group h3').map(h => (h.textContent ?? '').replace(/\s+/g, ' ').trim())).toEqual(['Grade 4 · 1 learner']);
+    expect(m.all('details.task > summary').some(x => (x.textContent ?? '').includes('No outcome recorded · 2'))).toBe(true);
+    // Nothing on it is a rate: counts only.
+    expect(m.text()).not.toMatch(/%/);
     m.unmount();
   });
 });
