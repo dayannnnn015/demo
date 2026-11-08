@@ -1,7 +1,7 @@
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ApiError, type Api, type Row } from './api';
-import { AppShell } from './components/AppShell';
+import { AppShell, waitingByRoute } from './components/AppShell';
 import { BrandMark } from './components/brand';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
 import { available, routeFor, routes } from './routes';
@@ -74,6 +74,13 @@ function Demo() {
     void api<Row>('/school').then(setSchool).catch(() => setSchool(null));
   }, [api, me, tick]);
 
+  // The same counts the real shell asks for, so the demo's rail shows them.
+  const [waiting, setWaiting] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!me || me.role === 'teacher') { setWaiting({}); return; }
+    void api<{ class_lists: number; outcomes: number; name_requests: number }>('/waiting/count').then(w => setWaiting(waitingByRoute(w))).catch(() => setWaiting({}));
+  }, [api, me, tick]);
+
   if (!me) {
     return (
       <div className="auth">
@@ -106,6 +113,7 @@ function Demo() {
       current={route}
       context={year === undefined ? undefined : year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}
+      waiting={waiting}
       onNavigate={navigate}
       onSignOut={() => { setToken(''); location.hash = ''; }}
     >

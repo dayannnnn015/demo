@@ -28,7 +28,10 @@
 >
 > **0.104.0, U2: the learner registry.** A **Class** filter (and `section_id` on `GET /learners`), duplicate entries
 > called that, and the learner's profile opening on who they are. No migration. **Live** as `edunexus-k78v8uw2y` from a
-> clean worktree of `90dec93`; `npm run smoke` passes all 195 checks. **Next: U3, counts on the rail.**
+> clean worktree of `90dec93`; `npm run smoke` passes all 195 checks.
+>
+> **0.105.0, U3: counts on the rail (migration 0069).** A number beside Admissions, Promotion and Staff access for
+> what waits on a manager, from `GET /waiting/count`. **Next: U4, profiles and the Staff portal.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >

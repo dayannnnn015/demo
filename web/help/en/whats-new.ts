@@ -8,6 +8,13 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.105.0', date: '2026-11-08',
+    items: [
+      'Principals and administrative officers: a number beside **Admissions** in the sidebar says how many class lists from advisers are waiting for you, from any screen. **Promotion** shows the endorsed outcomes waiting for approval, and **Staff access** the name or position corrections you may decide.',
+      'The numbers go away as the work is done. They count only what waits on you, and nothing about attendance.',
+    ],
+  },
+  {
     version: '0.104.0', date: '2026-11-08',
     items: [
       'Advisers with more than one class: {learners} has a **Class** filter that shows one of your classes at a time. Principals and administrative officers can filter by any class too.',

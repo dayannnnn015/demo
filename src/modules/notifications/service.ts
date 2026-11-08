@@ -55,6 +55,11 @@ export async function executeNotification(id:NotificationOperationId,ctx:Context
       const [row]=await tx.query<{id:string}>('select id::text from edunexus.mark_notification_read($1)',[b.id]);
       return one(tx,row!.id);
     }
+    case 'waitingCount':{
+      const [row]=await tx.query<{w:{class_lists:number;outcomes:number;name_requests:number}}>('select edunexus.read_waiting_counts() w');
+      const w=row!.w;
+      return {class_lists:Number(w.class_lists),outcomes:Number(w.outcomes),name_requests:Number(w.name_requests)};
+    }
     case 'notificationReadAll':{
       const [row]=await tx.query<{marked:number}>('select edunexus.mark_all_notifications_read() marked');
       return {marked:Number(row?.marked??0)};

@@ -118,7 +118,14 @@ function ProfileMenu({ me, onSignOut, onChangePassword, onProfile, onSettings }:
   );
 }
 
-function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate }: {
+/** Which rail item each waiting count belongs to: the screen where that work is done. */
+export const waitingByRoute = (w: { class_lists: number; outcomes: number; name_requests: number }): Record<string, number> =>
+  ({ enrollment: Number(w.class_lists) || 0, 'report-cards': Number(w.outcomes) || 0, staff: Number(w.name_requests) || 0 });
+
+/** A count of work waiting, drawn as a number and read aloud as one: "Admissions, 3 waiting". */
+const shownCount = (n: number) => (n > 99 ? '99+' : String(n));
+
+function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate, waiting = {} }: {
   group: string;
   items: Route[];
   current: Route;
@@ -126,8 +133,12 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
   open: boolean;
   onToggle: () => void;
   onNavigate: (id: string) => void;
+  /** What waits on the viewer, by route id (the UI notes of 8 November, note 8). */
+  waiting?: Record<string, number> | undefined;
 }) {
   const holdsCurrent = items.some(route => route.id === current.id);
+  // A folded group still says that something inside it is waiting, so folding it never hides the work.
+  const folded = items.reduce((sum, route) => sum + (waiting[route.id] ?? 0), 0);
   return (
     <div className="nav" data-open={open}>
       {collapsed ? <hr className="nav-rule" /> : (
@@ -137,33 +148,39 @@ function NavGroup({ group, items, current, collapsed, open, onToggle, onNavigate
           {/* Collapsing the group that holds the current page is allowed; a dot
               says where you are, so the rail never loses your position. */}
           {!open && holdsCurrent ? <Icon name="dot" size={8} /> : null}
+          {!open && folded ? <span className="nav-count">{shownCount(folded)}<span className="sr-only"> waiting</span></span> : null}
         </button>
       )}
       {open || collapsed ? (
         <div className="nav-items">
-          {items.map(route => (
-            <button
-              key={route.id}
-              type="button"
-              className="nav-item"
-              aria-current={route.id === current.id ? 'page' : 'false'}
-              title={collapsed ? route.nav : undefined}
-              aria-label={collapsed ? route.nav : undefined}
-              onClick={() => onNavigate(route.id)}
-              data-tour={`nav-${route.id}`}
-            >
-              <Icon name={route.icon} size={17} />
-              <span className="nav-label">{route.nav}</span>
-              {route.built ? null : <span className="soon">Soon</span>}
-            </button>
-          ))}
+          {items.map(route => {
+            const count = waiting[route.id] ?? 0;
+            const named = count ? `${route.nav}, ${count} waiting` : route.nav;
+            return (
+              <button
+                key={route.id}
+                type="button"
+                className="nav-item"
+                aria-current={route.id === current.id ? 'page' : 'false'}
+                title={collapsed ? named : undefined}
+                aria-label={collapsed ? named : undefined}
+                onClick={() => onNavigate(route.id)}
+                data-tour={`nav-${route.id}`}
+              >
+                <Icon name={route.icon} size={17} />
+                <span className="nav-label">{route.nav}</span>
+                {count ? <span className="nav-count">{shownCount(count)}<span className="sr-only"> waiting</span></span> : null}
+                {route.built ? null : <span className="soon">Soon</span>}
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>
   );
 }
 
-export function AppShell({ me, school, current, context, contextTone, hidden = [], unread = 0, notificationPanel, onNavigate, onSignOut, onChangePassword, children }: {
+export function AppShell({ me, school, current, context, contextTone, hidden = [], unread = 0, waiting, notificationPanel, onNavigate, onSignOut, onChangePassword, children }: {
   me: Row;
   /** The school profile record. The rail states what it reads, never a literal:
    *  this is the same name printed on every official form, and it is editable. */
@@ -180,6 +197,9 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
    *  for the count, which names no record and writes no access row, so it may
    *  be asked for repeatedly. */
   unread?: number | undefined;
+  /** What waits on a manager, by route id, for the numbers beside those rail items. App.tsx asks
+   *  `/waiting/count`, which names no record and writes no access row. */
+  waiting?: Record<string, number> | undefined;
   notificationPanel?: ReactNode;
   onNavigate: (id: string) => void;
   onSignOut: () => void;
@@ -291,6 +311,7 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
                 open={!shut.includes(group)}
                 onToggle={() => toggleGroup(group)}
                 onNavigate={id => { onNavigate(id); setDrawer(false); }}
+                waiting={waiting}
               />
             );
           })}

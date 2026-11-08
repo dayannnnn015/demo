@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, createApi, message, rememberMe, sessionStore, type Page, type Row } from './api';
 import { Account, PasswordChange } from './Account';
-import { AppShell } from './components/AppShell';
+import { AppShell, waitingByRoute } from './components/AppShell';
 import { Notifications } from './screens/Notifications';
 import { BrandMark } from './components/brand';
 import { Sheet } from './components/overlay';
@@ -158,6 +158,23 @@ export function App() {
     return () => { live = false; clearInterval(timer); };
   }, [me, api, token]);
 
+  // What waits on a principal or administrative officer, for the numbers beside Admissions, Promotion and Staff
+  // access (the UI notes of 8 November, note 8). Asked exactly like the bell: numbers only, no access row, on every
+  // navigation and once a minute. A teacher decides none of these, so a teacher's rail never asks.
+  const [waiting, setWaiting] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!me || !api || me.role === 'teacher') { setWaiting({}); return; }
+    let live = true;
+    const ask = () => {
+      void api<{ class_lists: number; outcomes: number; name_requests: number }>('/waiting/count')
+        .then(w => { if (live) setWaiting(waitingByRoute(w)); })
+        .catch(() => { if (live) setWaiting({}); });
+    };
+    ask();
+    const timer = setInterval(ask, 60000);
+    return () => { live = false; clearInterval(timer); };
+  }, [me, api, token]);
+
   // Retrying the staff record after a passing failure shows why, rather than a sign-in form; once signed in,
   // the start screen stays up while the staff record is read, instead of the sign-in heading with no form under it.
   if (!client || !api || (signedIn && !me)) {
@@ -195,6 +212,7 @@ export function App() {
       school={school}
       hidden={hidden}
       unread={unread}
+      waiting={waiting}
       notificationPanel={
         <Notifications
           api={api}

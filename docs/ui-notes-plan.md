@@ -30,6 +30,6 @@ U-D1 to U-D5, recorded in [constraints](constraints.md) on 8 November.
 |---|---|---|---|
 | U1 | 0.103.0 | 11, 4, 6, 3 | **Shipped 8 November.** Consistent boxes, loading kept on screen, a still front page, no reason asked when adding a subject, an offering or a historical record. |
 | U2 | 0.104.0 | 10, 5, 9 (learners) | **Shipped 8 November.** **The learner registry.** Section filter; duplicates in plain words; the learner's profile reviewed. |
-| U3 | 0.105.0 | 8 | **Counts on the rail.** A number on Admissions and the other approval screens. |
+| U3 | 0.105.0 | 8 | **Shipped 8 November.** **Counts on the rail.** A number on Admissions and the other approval screens. |
 | U4 | 0.106.0 | 9 (users), 7 | **Profiles and the Staff portal.** |
 | U5 | 0.107.0 | 2, then all | **Next year's classes, and the test pass.** |

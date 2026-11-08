@@ -145,6 +145,7 @@ export const guides: Guide[] = [
     summary: 'Putting a learner in a section for a school year, and every movement after: transfer, withdrawal and re-entry.',
     steps: [
       'Class lists advisers have submitted wait in **Class lists from advisers**, at the top. **Review** one to read every row exactly as the adviser sent it, then **Approve and import** — that one action creates the learner records, enrols them into the adviser’s class, and tells the adviser their list went in.',
+      'The number beside Admissions in the sidebar is how many lists are waiting, so you can see one has arrived from any screen. Promotion and Staff access carry the same kind of number for endorsed outcomes and name corrections waiting on you.',
       'A list is a file until you approve it: nothing of it is on the registry, and nothing of it counts on any form, so a list left waiting is learners the school does not yet hold.',
       '**Decline** a list instead, with a reason the adviser reads, and they correct it and send it again.',
       'Open an enrolment to record a movement. Each movement is a dated event with its reason, and the SF2 and SF4 count from it.',

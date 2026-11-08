@@ -66,5 +66,6 @@
   "0065_same_day_timeline_state.sql": "0f09fa0ba56278463a1de039841a5c71c2a34192c2dc3b5e0333bece2a7b3cdd",
   "0066_notification_actor_name.sql": "ff88ac7f1fabb4a98469a2f6deceb0e7b6118442d2b08d2b62be1c89f1ec8902",
   "0067_same_day_timeline_everywhere.sql": "9d3c7e55da8c4e07225fe53277d67ee74635221e549ce5859021fea6c55202ce",
-  "0068_any_grade_may_be_submitted.sql": "736d0f8f55c9f2d62c95c52410904c4dc89386adcbc8871c8cccf6bb53db1edb"
+  "0068_any_grade_may_be_submitted.sql": "736d0f8f55c9f2d62c95c52410904c4dc89386adcbc8871c8cccf6bb53db1edb",
+  "0069_waiting_counts.sql": "72e0798cc4d7c710f4ac1bc008f4c63ac8bcec62381396a85022326b5c04cdc4"
 }

@@ -2754,3 +2754,15 @@ a.btn { text-decoration: none; }
 .fact-group .facts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s3); }
 .fact-group:first-child { grid-column: 1 / -1; }
 @media print { .learner-mark { display: none; } }
+
+/* Work waiting on the viewer, beside the rail item where it is done (the UI notes of 8 November, note 8). Drawn like
+   the bell's count, never red and never pulsing: it is work to do, not an alarm, and nothing about attendance is counted. */
+.nav-count {
+  flex: none; min-width: 20px; height: 18px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--accent-200); border-radius: 999px; background: var(--accent-100); color: var(--accent-800); font-size: var(--t-11); font-weight: 650;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.nav-group .nav-count { margin-left: auto; }
+.app[data-rail='collapsed'] .nav-item { position: relative; }
+.app[data-rail='collapsed'] .nav-item .nav-count { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 15px; padding: 0 4px; font-size: var(--t-10); }
+@media print { .nav-count { display: none; } }

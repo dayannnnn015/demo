@@ -18,6 +18,9 @@ export const notificationOperations=([
   {id:'notificationList',method:'get',path:'/api/v1/notifications',summary:'Your own notifications, newest first; no learner is named in one',query:notificationSchemas.list},
   {id:'notificationRead',method:'post',path:'/api/v1/notifications/read',summary:'Mark one of your notifications as read',body:notificationSchemas.read},
   {id:'notificationReadAll',method:'post',path:'/api/v1/notifications/read-all',summary:'Mark every unread notification of yours as read; nothing unread is a zero, not a refusal',body:notificationSchemas.readAll},
+  // Not an inbox: the work waiting on a manager, counted for the rail (the UI notes of 8 November, note 8). Numbers
+  // only, so it names nobody and writes no access row; a teacher is answered zeros. Nothing about attendance.
+  {id:'waitingCount',method:'get',path:'/api/v1/waiting/count',summary:'How many class lists, endorsed outcomes and staff name corrections wait on you; zeros for a teacher. Names no record and writes no access row'},
 ] as const).map(op=>({...op,module:'notifications' as const}));
 export type NotificationOperationId=typeof notificationOperations[number]['id'];
 // Every key the payload check constraint in 0057 admits, all optional. A
@@ -33,4 +36,5 @@ export const notificationResponses:Record<string,z.ZodType>={
   notificationList:z.object({items:z.array(notificationRecord),pagination:z.object({limit:z.number().int(),next_before_id:z.string().nullable()})}),
   notificationRead:notificationRecord,
   notificationReadAll:z.object({marked:z.number().int()}),
+  waitingCount:z.object({class_lists:z.number().int(),outcomes:z.number().int(),name_requests:z.number().int()}),
 };
