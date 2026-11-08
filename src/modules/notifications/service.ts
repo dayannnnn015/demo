@@ -19,15 +19,21 @@ import {notificationSchemas as s,type NotificationOperationId} from './contracts
  * in 0057 answers only rows addressed to the caller, so a principal asking for
  * the list gets their own inbox, not the school's.
  *
- * `actor_name` comes from a left join on `edunexus.staff`, whose `staff_read`
- * policy is own-row-or-manager. So a teacher sees `actor_user_id` but a null
- * `actor_name`: they are not told which manager imported or declined their
- * class list. That is the existing boundary answering, not a gap to patch --
- * naming the manager would mean widening a teacher's read of staff so a
- * notification reads better, and the API is the authority over the UI.
+ * `actor_name` came from a left join on `edunexus.staff`, whose `staff_read`
+ * policy is own-row-or-manager, so an adviser read a null and was not told
+ * which manager imported or declined their class list. The school asked to
+ * see it (2026-11-07), and `0066` gives it the narrow way.
+ *
+ * **`staff_read` is untouched**, which was the thing worth protecting: a
+ * teacher still cannot list staff, search them, or read any row but their
+ * own. `notification_actor_name` is a security-definer function taking a
+ * notification id and nothing else, and it answers only when that
+ * notification is addressed to the caller -- so the one name it can disclose
+ * is the one person who acted on your own inbox row, and the disclosure
+ * cannot be aimed at anybody else.
  */
-const columns=`n.id::text,n.kind,n.subject_table,n.subject_id,n.academic_year_id,n.section_id,n.learner_id,n.payload,n.actor_user_id,st.display_name actor_name,n.created_at,n.read_at`;
-const from=`from edunexus.notifications n left join edunexus.staff st on st.user_id=n.actor_user_id`;
+const columns=`n.id::text,n.kind,n.subject_table,n.subject_id,n.academic_year_id,n.section_id,n.learner_id,n.payload,n.actor_user_id,edunexus.notification_actor_name(n.id) actor_name,n.created_at,n.read_at`;
+const from=`from edunexus.notifications n`;
 export async function executeNotification(id:NotificationOperationId,ctx:Context,input:{body:unknown;query:unknown}){
   const {tx}=ctx;
   switch(id){

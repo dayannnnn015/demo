@@ -16,12 +16,14 @@ import { lrnDigits } from '../record-fields';
  * cannot create learner records, so for them the same form adds one row to the
  * class list they submit, which the office imports as usual.
  */
-export type Profile = { lrn: string | null; first_name: string; middle_name: string | null; last_name: string; name_extension: string | null; birth_date: string; sex: 'male' | 'female' };
+export type Profile = { lrn: string | null; first_name: string; middle_name: string | null; last_name: string; name_extension: string | null; birth_date: string; sex: 'male' | 'female';
+  /** Address and grade are columns of the class list, not fields of a learner record. Both may be left unset. */
+  address?: string | null; grade_level?: number | null };
 
 // Shared with MyClass.tsx, where an adviser registers a learner into their own
 // class: the same fields, the same checks and the same shape of profile, so the
 // two forms cannot drift into asking for different things about one child.
-export const blankLearner = { lrn: '', first_name: '', middle_name: '', last_name: '', name_extension: '', birth_date: '', sex: '' };
+export const blankLearner = { lrn: '', first_name: '', middle_name: '', last_name: '', name_extension: '', birth_date: '', sex: '', address: '', grade_level: '' };
 export type LearnerDraft = typeof blankLearner;
 type Draft = LearnerDraft;
 
@@ -38,11 +40,17 @@ export function learnerProblems(d: Draft) {
 export const toLearnerProfile = (d: Draft): Profile => ({
   lrn: lrnDigits(d.lrn) || null, first_name: d.first_name.trim(), middle_name: d.middle_name.trim() || null, last_name: d.last_name.trim(),
   name_extension: d.name_extension.trim() || null, birth_date: d.birth_date, sex: d.sex as Profile['sex'],
+  address: d.address.trim() || null, grade_level: d.grade_level === '' ? null : Number(d.grade_level),
 });
 
 /** A CSV cell the import reads back as the same text. */
 const cell = (v: string | null) => (v === null ? '' : /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-export const csvRow = (p: Profile) => [p.lrn, p.first_name, p.middle_name, p.last_name, p.name_extension, p.birth_date, p.sex].map(cell).join(',');
+// Every column of `ROSTER_HEADER`, in its order. It wrote seven of them until
+// 2026-11-07, so a learner added this way silently lost their address; the
+// importer padded the short row rather than refusing it, which is why nobody
+// saw it. `tests/web-roster-template.test.ts` now holds the two in step.
+export const csvRow = (p: Profile) => [p.lrn, p.first_name, p.middle_name, p.last_name, p.name_extension, p.birth_date, p.sex,
+  p.address ?? null, p.grade_level === null || p.grade_level === undefined ? null : String(p.grade_level)].map(cell).join(',');
 
 export function LearnerFields({ draft, set, bad }: { draft: Draft; set: (d: Draft) => void; bad: [keyof Draft, string][] }) {
   const id = useId();
@@ -70,6 +78,21 @@ export function LearnerFields({ draft, set, bad }: { draft: Draft; set: (d: Draf
         {error('sex') ? <span className="field-error">{error('sex')}</span> : null}
       </div>
       {text('lrn', 'LRN', false, { inputMode: 'numeric', maxLength: 20, className: 'mono', placeholder: 'All 12 digits' })}
+      {text('address', 'Address', true, { maxLength: 300, autoComplete: 'off' })}
+      {/*
+        The grade this learner is enrolling at, asked for on 2026-11-07. It is
+        a column of the list rather than a field of the learner record — a
+        learner has no grade, an enrolment does — so it sits here with the
+        address rather than among the name fields.
+      */}
+      <div className="field">
+        <label className="label" htmlFor={`${id}-grade_level`}>Grade level<span className="optional">Optional</span></label>
+        <Select id={`${id}-grade_level`} value={draft.grade_level} onChange={e => set({ ...draft, grade_level: e.target.value })}>
+          <option value="">Use the grade chosen for the list</option>
+          {[0, 1, 2, 3, 4, 5, 6].map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
+        </Select>
+        <span className="hint">Which grade this learner is enrolling at. Leave it as it is for the grade the rest of the list uses.</span>
+      </div>
     </div>
   );
 }
@@ -85,7 +108,7 @@ export function LateRowSheet({ onAdd, onClose }: { onAdd: (row: Profile) => void
     if (!found.length) onAdd(toLearnerProfile(draft));
   };
   return (
-    <Sheet title="Add one late learner" note="The learner is added as one row of your class list. Check and submit the list as usual; the office enrols them." onClose={onClose}>
+    <Sheet title="Add learner" note="The learner is added as one row of your class list. Check and submit the list as usual; the office enrols them." onClose={onClose}>
       <form noValidate onSubmit={add}>
         <LearnerFields draft={draft} set={setDraft} bad={bad} />
         <div className="form-actions">

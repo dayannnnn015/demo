@@ -15,11 +15,35 @@ import { candidateSchema, reviewSchemas, type ImportInput, type ReviewOperationI
  * Nothing else about a child or their family is here, because which further
  * fields the school may keep is behind the learner-fields gate.
  */
-const columns = ['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address'];
+// The template's columns. `grade_level` was added last, on 2026-11-07, so one
+// file can carry learners of several grades — which is what the office
+// actually has when it registers the school. The two older shapes are still
+// read: a file saved from either of them simply carries no grade, and the
+// grade given on the screen stands for every row.
+const columns = ['lrn', 'first_name', 'middle_name', 'last_name', 'name_extension', 'birth_date', 'sex', 'address', 'grade_level'];
+const columnsV2 = columns.slice(0, 8);
 /** The columns before 0053, still accepted so a file already filled in is not refused. */
 const columnsV1 = columns.slice(0, 7);
 const header = columns.join(',') + '\r\n';
 type Profile = z.infer<typeof registrySchemas.learnerCreate>;
+
+/**
+ * A grade as a school writes one in a spreadsheet column: a bare number, or
+ * the words around it. Kindergarten is 0, as it is everywhere else here.
+ *
+ * It reads what can be read without guessing and returns null for the rest —
+ * "Grade 3-A" is a section and a grade run together, and which part is the
+ * grade is not ours to decide.
+ */
+/** A grade in the words a refusal should use. Kindergarten is never "Grade 0". */
+const gradeWord = (grade: number) => (grade === 0 ? 'Kindergarten' : `Grade ${grade}`);
+
+export function readGrade(typed: string): number | null {
+  const text = typed.trim().toLowerCase();
+  if (/^(k|kinder|kindergarten|grade\s*k|gr\.?\s*k)$/.test(text)) return 0;
+  const digits = /^(?:grade\s*|gr\.?\s*|g\s*)?([0-6])$/.exec(text);
+  return digits ? Number(digits[1]) : null;
+}
 type Candidate = z.infer<typeof candidateSchema>;
 type Issue = z.infer<typeof issueSchema>;
 type PreviewRow = z.infer<typeof previewRowSchema>;
@@ -49,7 +73,7 @@ const sexes: Record<string, 'male' | 'female'> = { m: 'male', male: 'male', f: '
  * Excel's number format. What can be read without guessing is read; what cannot is said in words a registrar
  * can act on, for that row. A date is never reordered: 03/04/2017 could be either month.
  */
-export function readCsv(csv: string): { profiles: (Profile | null)[]; issues: Issue[] } {
+export function readCsv(csv: string): { profiles: (Profile | null)[]; grades: (number | null)[]; issues: Issue[] } {
   if (Buffer.byteLength(csv, 'utf8') > 24000) throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'CSV content must be at most 24,000 UTF-8 bytes.');
   const firstLine = csv.replace(/^\ufeff/, '').split(/\r?\n/, 1)[0] ?? '';
   if (!firstLine.includes(',') && firstLine.split(';').length >= columns.length) {
@@ -60,25 +84,56 @@ export function readCsv(csv: string): { profiles: (Profile | null)[]; issues: Is
   catch { throw new AppError(422, 'INVALID_CSV', 'Use a comma-separated UTF-8 file with the template header and correctly quoted fields.'); }
   // Empty cells past the template's last column are a spreadsheet's trailing commas, not data.
   records = records.map(r => { let n = r.length; while (n > columns.length && !(r[n - 1] ?? '').trim()) n--; return r.slice(0, n); });
+  // A row that stops short is a trailing cell left empty, which many editors
+  // and Excel itself write as nothing at all rather than as a final comma. The
+  // school's own file was refused for it with "this row has 7 columns; the
+  // template has 8", which reads as a broken file and is not one. Short rows
+  // are padded, and whether what is missing actually mattered is then decided
+  // by the field rules below, which name the field instead of the row.
   const head = (records.shift() ?? []).map(c => c.trim().toLowerCase());
-  // Either template: the current one, or the one before `address` was added.
+  // Any of the three templates: the current one, the one before
+  // `grade_level` was added, and the one before `address` was.
   const shape = JSON.stringify(head) === JSON.stringify(columns) ? columns
-    : JSON.stringify(head) === JSON.stringify(columnsV1) ? columnsV1 : null;
-  if (!shape) throw new AppError(422, 'INVALID_CSV_HEADER', `The first row must be the template's header, ${columns.join(',')}, in that order. A file from the earlier template, without the address column, is read too.`);
+    : JSON.stringify(head) === JSON.stringify(columnsV2) ? columnsV2
+      : JSON.stringify(head) === JSON.stringify(columnsV1) ? columnsV1 : null;
+  if (!shape) throw new AppError(422, 'INVALID_CSV_HEADER', `The first row must be the template's header, ${columns.join(',')}, in that order. A file from an earlier template, without the grade level or without the address, is read too.`);
   if (records.length < 1 || records.length > 50) throw new AppError(422, 'INVALID_ROW_COUNT', 'Each import must contain 1 to 50 learner rows.');
   const issues: Issue[] = [];
-  const profiles = records.map((values, index) => {
+  // Kept beside the profiles rather than inside them: a learner record has no
+  // grade, an enrolment does, and putting one on the profile sent it into
+  // `register_learner`, which refuses a key it does not know.
+  const grades: (number | null)[] = records.map(() => null);
+  const profiles = records.map((short, index) => {
     const row = index + 1;
+    // Padded, never truncated: too many cells still means a comma inside an
+    // unquoted field, which would silently put a name in the wrong column.
+    const values = short.length < shape.length ? [...short, ...Array(shape.length - short.length).fill('')] : short;
     if (values.length !== shape.length) {
       issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: `This row has ${values.length} columns; the template has ${shape.length}. A name holding a comma needs quotes around it.` }); return null;
     }
     if (values.some(value => /[\u0000-\u001f\u007f\ufffd]/u.test(value))) {
       issues.push({ row, field: 'csv', code: 'INVALID_TEXT', message: 'Fields must contain valid single-line text.' }); return null;
     }
-    const fields: Record<string, string | null> = Object.fromEntries(shape.map((key, i) => [key, values[i]!.trim() || (['lrn', 'middle_name', 'name_extension', 'address'].includes(key) ? null : '')]));
-    // A file from the earlier template carries no address column at all, which
+    const fields: Record<string, string | null> = Object.fromEntries(shape.map((key, i) => [key, values[i]!.trim() || (['lrn', 'middle_name', 'name_extension', 'address', 'grade_level'].includes(key) ? null : '')]));
+    // A file from an earlier template carries no address column at all, which
     // is unrecorded rather than empty.
     if (!('address' in fields)) fields.address = null;
+    // The grade is read out of the row before the profile is parsed, because
+    // it is not a field of the learner record: a learner has no grade, an
+    // enrolment does. An unreadable one is said on its own row rather than
+    // refusing the file, and a row that leaves it empty takes the grade the
+    // screen gives.
+    const typed = (fields.grade_level ?? '').trim();
+    delete fields.grade_level;
+    if (typed !== '') {
+      const read = readGrade(typed);
+      if (read === null) {
+        issues.push({ row, field: 'grade_level', code: 'INVALID_FIELD',
+          message: 'Write the grade as a number from 0 to 6, or as Kinder, Kindergarten or Grade 3.' });
+        grades[index] = null; return null;
+      }
+      grades[index] = read;
+    }
     fields.sex = sexes[(fields.sex ?? '').toLowerCase()] ?? fields.sex ?? '';
     const result = registrySchemas.learnerCreate.safeParse(fields);
     if (!result.success) {
@@ -99,11 +154,11 @@ export function readCsv(csv: string): { profiles: (Profile | null)[]; issues: Is
     }
     return result.data;
   });
-  return { profiles, issues };
+  return { profiles, grades, issues };
 }
 
 async function planImport(tx: Query, b: ImportInput) {
-  const { profiles, issues } = readCsv(b.csv);
+  const { profiles, grades, issues } = readCsv(b.csv);
   const issue = (row: number, field: string, code: string, message: string) => issues.push({ row, field, code, message });
   // The same lock is taken by all learner writes, enrollment commands, and
   // section/adviser changes. The year row lock additionally blocks year closure.
@@ -121,7 +176,11 @@ async function planImport(tx: Query, b: ImportInput) {
   if (section && b.grade_level !== undefined && b.grade_level !== section.grade_level) {
     throw new AppError(422, 'SECTION_MISMATCH', 'This section does not teach the grade given. Send the section alone, or the year and grade without it.');
   }
-  const grade = section ? section.grade_level : b.grade_level!;
+  // The grade the whole file lands at, when one was given. Since the template
+  // carries a grade per row, a registry import may give none at all and let
+  // every row say its own; a row that says nothing then has nowhere to go and
+  // is refused on its own line rather than the file being refused.
+  const fileGrade: number | null = section ? section.grade_level : (b.grade_level ?? null);
   const [year] = await tx.query<{ id: string; version: number; status: string; starts_on: string; ends_on: string }>('select id,version,status,starts_on,ends_on from edunexus.academic_years where id=$1 for update', [section ? section.academic_year_id : b.academic_year_id]);
   if (!year) throw missing();
   const where = section ? 'section_id' : 'academic_year_id';
@@ -154,8 +213,18 @@ async function planImport(tx: Query, b: ImportInput) {
   const seenLrn = new Set<string>(), seenName = new Set<string>(), seenId = new Set<string>();
   const rows: PreviewRow[] = profiles.map((profile, index) => {
     const row = index + 1, choices = candidates.get(row) ?? [], resolution = resolutions.get(row);
-    const result: PreviewRow = { row, profile, action: profile ? 'create' : null, learner_id: null, candidates: choices, candidates_truncated: choices.length === 6 };
+    const result: PreviewRow = { row, profile, action: profile ? 'create' : null, learner_id: null, grade_level: null, candidates: choices, candidates_truncated: choices.length === 6 };
     if (!profile) return result;
+    // The grade this learner is enrolled at: their own row's, or the one the
+    // screen gave for the whole file.
+    result.grade_level = grades[index] ?? fileGrade;
+    if (result.grade_level === null) {
+      issue(row, 'grade_level', 'GRADE_REQUIRED', 'This row has no grade level, and none was given for the file. Fill the grade level column, or choose a grade for the whole import.');
+    } else if (section && result.grade_level !== section.grade_level) {
+      // A class teaches one grade. A row naming another is a mistake worth
+      // refusing rather than silently resolving either way.
+      issue(row, 'grade_level', 'GRADE_NOT_THIS_CLASS', `This class teaches ${gradeWord(section.grade_level)}, and this row says ${gradeWord(result.grade_level)}.`);
+    }
     if (profile.birth_date >= b.enrolled_on) issue(row, 'birth_date', 'INVALID_BIRTH_DATE', 'Birth date must precede enrollment.');
     const nameKey = JSON.stringify([profile.first_name.toLowerCase(), profile.last_name.toLowerCase(), profile.birth_date]);
     if ((profile.lrn && seenLrn.has(profile.lrn)) || seenName.has(nameKey)) issue(row, 'csv', 'DUPLICATE_INPUT', 'This batch repeats an LRN or the same first name, last name, and birth date. Review and split distinct namesakes into separate imports.');
@@ -167,7 +236,9 @@ async function planImport(tx: Query, b: ImportInput) {
       else {
         // A learner on file from before the LRN was required may have none; an import never assigns one, so it is recorded on the registry first.
         if (existing.lrn === null) issue(row, 'lrn', 'LRN_MISSING_ON_FILE', 'The learner on file has no LRN yet. Record it on the Learner registry first, then preview again.');
-        else if (columns.some(key => profile[key as keyof Profile] !== existing[key as keyof Candidate])) issue(row, 'csv', 'PROFILE_MISMATCH', 'CSV fields must match the selected learner. Imports cannot overwrite existing profiles or assign LRNs.');
+        // `columnsV2`, not `columns`: the grade is the enrolment's, not the
+        // learner's, and a learner on file has no grade to compare against.
+        else if (columnsV2.some(key => profile[key as keyof Profile] !== existing[key as keyof Candidate])) issue(row, 'csv', 'PROFILE_MISMATCH', 'CSV fields must match the selected learner. Imports cannot overwrite existing profiles or assign LRNs.');
         if (enrolled.has(existing.id)) issue(row, 'resolutions', 'ALREADY_ENROLLED', 'The learner already has enrollment history in this year. Use the existing enrollment workflow.');
         if (seenId.has(existing.id)) issue(row, 'resolutions', 'DUPLICATE_INPUT', 'The same learner cannot appear twice in a batch.');
         seenId.add(existing.id);
@@ -182,7 +253,12 @@ async function planImport(tx: Query, b: ImportInput) {
   // The plan hash binds the grade as well as the section, so a preview reviewed
   // for one grade cannot be committed against another. `section` is undefined
   // for an import with no class yet, and that is part of what is hashed.
-  return { section: section ?? null, year, grade, rows, issues, candidateIds, hash: digest({ format: 'edunexus-roster-v2', section: section ?? null, year, grade, rows }) };
+  // `grade` is the file's own, which is null for a mixed registry import; the
+  // grade each learner is actually enrolled at is on their row. The digest
+  // names v3 because the rows now carry a grade, so a preview reviewed under
+  // the old shape cannot be committed under the new one.
+  return { section: section ?? null, year, grade: fileGrade, rows, issues, candidateIds,
+    hash: digest({ format: 'edunexus-roster-v3', section: section ?? null, year, grade: fileGrade, rows }) };
 }
 
 export async function executeReview(id: ReviewOperationId, ctx: Context, input: { body: unknown; query: unknown; id?: string }) {
@@ -222,12 +298,17 @@ export async function executeReview(id: ReviewOperationId, ctx: Context, input: 
         // One writer for both, as `enrollmentCreate` does it for one learner:
         // the section is the optional argument, and null is a learner enrolled
         // at a grade with no class yet.
+        // Each learner at the grade their own row names, which is how one
+        // file carries a whole school rather than one class.
         const [enrollment] = await tx.query('select id from edunexus.place_enrollment($1,$2,$3::smallint,$4,$5,$6)',
-          [learnerId, plan.year.id, plan.grade, b.section_id, b.enrolled_on, b.entry_kind]);
+          [learnerId, plan.year.id, row.grade_level, b.section_id, b.enrolled_on, b.entry_kind]);
         if (!enrollment || !learnerId || !row.action) throw new Error('Incomplete import plan');
         const resolution = b.resolutions.find(r => r.row === row.row);
         items.push({ row: row.row, learner_id: learnerId, enrollment_id: String(enrollment.id), action: row.action, resolution_reason: resolution?.action === 'create_distinct' ? resolution.reason : null });
       }
+      // The receipt's grade is the file's: null when its rows carry their own.
+      // `decide_roster_submission` matches a submission against it, so what it
+      // says has to be what was asked for, not a grade picked from the rows.
       const receipt: Receipt = { preview_id: input.id!, section_id: b.section_id, academic_year_id: plan.year.id, grade_level: plan.grade, items };
       await tx.query('select edunexus.finish_import($1,$2,$3::jsonb)', [input.id, plan.hash, JSON.stringify(receipt)]);
       await record(tx, id, [...plan.candidateIds, ...items.map(i => i.learner_id)]);

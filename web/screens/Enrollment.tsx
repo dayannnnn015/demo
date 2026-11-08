@@ -6,10 +6,11 @@ import { Icon } from '../components/icons';
 import { Sheet } from '../components/overlay';
 import { PlacementSheet, RecordHistory, RecordSheet, ReviewActions, TimelineHistory, TimelineSheet } from './Reviews';
 import {
-  Badge, Callout, Cell, Editor, EmptyState, Finder, PageHeader, PrintButton, Select, StatusLine, Table,
+  Badge, Callout, Cell, Editor, EmptyState, PageHeader, PrintButton, Select, StatusLine, Table,
   TableSkeleton, Task, Unrecorded, gradeName, idle, learnerName, sentence, value, yearName, type Status,
 } from '../components/primitives';
 import { Affects } from '../components/affects';
+import { WaitingLists } from './ListApproval';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -122,82 +123,6 @@ function History({ api, enrollment }: { api: Api; enrollment: Row }) {
   );
 }
 
-/**
- * Finding a learner and enrolling them is two steps, so it gets a panel of its
- * own rather than a permanent second form under the class list. The registry
- * search happens here, deliberately, and writes its own access-log row: this
- * is the one place in the workspace where naming learners is the task.
- */
-function EnrolSheet({ api, sectionId, sectionLabel, reload, onClose, onDone }: {
-  api: Api;
-  sectionId: string;
-  sectionLabel: string;
-  reload: () => void;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [status, setStatus] = useState<Status>(idle);
-  const [found, setFound] = useState<Row[] | null>(null);
-  const [chosen, setChosen] = useState<Row | null>(null);
-
-  return (
-    <Sheet title="Enrol a learner" note={`Into ${sectionLabel}. Search the registry, then set the first day in this section.`} wide onClose={onClose}>
-      <StatusLine status={status} />
-
-      {chosen ? (
-        <>
-          <dl className="facts">
-            <div><dt>Learner</dt><dd>{learnerName(chosen)}</dd></div>
-            <div><dt>Reference number</dt><dd>{lrnOf(chosen)}</dd></div>
-          </dl>
-          <hr className="rule" />
-          <Editor
-            submitLabel="Enrol this learner"
-            setStatus={setStatus}
-            onSaved={() => { onDone(); reload(); }}
-            fields={[
-              { key: 'enrolled_on', label: 'First day in this section', type: 'date', hint: 'Must fall inside the school year and after the learner’s birth date.' },
-              { key: 'entry_kind', label: 'Joining as', options: [['regular', 'Regular enrollment'], ['transfer_in', 'Transferred in from another school']] },
-            ]}
-            onSubmit={data => api('/enrollments', 'POST', { ...data, learner_id: chosen.id, section_id: sectionId })}
-            note={<button type="button" className="btn ghost small" onClick={() => setChosen(null)}>Choose someone else</button>}
-          />
-        </>
-      ) : (
-        <>
-          <Finder
-            initial={{ search: '', lrn: '' }}
-            onApply={async values => {
-              setFound(null);
-              try {
-                const result = await api<Page>(`/learners${query({ ...values, limit: 25 })}`);
-                setFound(result.items);
-              } catch (error) { setStatus({ text: message(error), kind: 'error' }); setFound([]); }
-            }}
-            onClear={() => setFound(null)}
-            fields={[
-              { key: 'search', label: 'Name or LRN', optional: true, minLength: 2, maxLength: 100, hint: 'At least two characters.' },
-              { key: 'lrn', label: 'Exact LRN', optional: true, pattern: '[0-9 -]{12,20}', maxLength: 20 },
-            ]}
-          />
-          <hr className="rule" />
-          {found === null
-            ? <p className="muted">Search the registry to find the learner. Nothing is read until you do.</p>
-            : <Table
-                rows={found}
-                rowKey={r => String(r.id)}
-                empty={<EmptyState title="No learner found" body="Check the spelling, or register the learner first on the Learner registry screen." />}
-                columns={[
-                  { header: 'Learner', cell: r => <Cell title={learnerName(r)} meta={lrnOf(r)} /> },
-                  { header: 'Birth date', cell: r => <span className="mono">{value(r, 'birth_date')}</span> },
-                  { header: '', cell: r => <button type="button" className="btn secondary small" onClick={() => setChosen(r)}>Choose</button> },
-                ]}
-              />}
-        </>
-      )}
-    </Sheet>
-  );
-}
 
 type Review = 'timeline' | 'placement' | 'void' | 'restore';
 
@@ -253,7 +178,6 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
   const [sectionId, setSectionId] = useState('');
   const [rows, setRows] = useState<Page | null>(null);
   const [learners, setLearners] = useState<Record<string, Row>>({});
-  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     void api<Page>('/academic-years').then(r => {
@@ -312,11 +236,12 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
         route={route}
         actions={<>
           {listed ? <PrintButton label="Print class list" /> : null}
-          {manager && !closed && section
-            ? <button type="button" className="btn" onClick={() => setEnrolling(true)}><Icon name="plus" size={15} />Enrol a learner</button>
-            : null}
         </>}
       />
+
+      {/* Above the class list, because a list waiting to be approved is work
+          outstanding and the class below it is work already done. */}
+      <WaitingLists api={api} manager={manager} token={token} setStatus={setStatus} reload={reload} />
 
       <div className="card">
         <div className="card-head">
@@ -374,16 +299,6 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
         and then enrolled on <a href="#/next-year">Next year’s classes</a>.
       </Callout>
 
-      {enrolling && section ? (
-        <EnrolSheet
-          api={api}
-          sectionId={sectionId}
-          sectionLabel={label}
-          reload={reload}
-          onClose={() => setEnrolling(false)}
-          onDone={() => { setEnrolling(false); setStatus({ text: 'Learner enrolled.', kind: 'done' }); }}
-        />
-      ) : null}
     </>
   );
 }

@@ -1,8 +1,22 @@
 import { z } from 'zod';
-import { plainName, plainNameMessage, singleSpaced } from '../../core/text.js';
+import { firstCapital, plainName, plainNameMessage, singleSpaced } from '../../core/text.js';
 
 export const uuid = z.uuid();
-const name = (max: number) => z.string().trim().overwrite(singleSpaced).min(1).max(max).regex(plainName, plainNameMessage);
+
+/**
+ * A grade level: 0 for Kindergarten, then 1 to 6.
+ *
+ * `z.coerce.number()` is how these arrive from a query string, and it reads
+ * **null as 0** — so a caller sending `grade_level: null` to mean "none" was
+ * silently asking for Kindergarten. An adviser's class list did exactly that
+ * and was refused for a grade they do not advise, with a message about
+ * advising that made no sense to them.
+ *
+ * Null is now refused rather than read as a grade. Omit the field to mean
+ * none; a grade has to be said.
+ */
+export const gradeLevel = z.preprocess(v => (v === null ? Number.NaN : v), z.coerce.number().int().min(0).max(6));
+const name = (max: number) => z.string().trim().overwrite(singleSpaced).overwrite(firstCapital).min(1).max(max).regex(plainName, plainNameMessage);
 const date = z.iso.date();
 const version = z.number().int().positive().max(2147483646);
 export const staffRole = z.enum(['principal', 'administrative_officer', 'teacher']);

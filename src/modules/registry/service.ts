@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { Row } from '../../core/db.js';
 import type { Context } from '../foundation/service.js';
 import { AppError } from '../../core/errors.js';
-import { registrySchemas as s, type RegistryOperationId } from './contracts.js';
+import { learnerRegister, registrySchemas as s, type RegistryOperationId } from './contracts.js';
 
 function found(rows: Row[], update = false) {
   if (!rows[0]) throw new AppError(update ? 409 : 404, update ? 'VERSION_CONFLICT' : 'NOT_FOUND', update ? 'The record changed or is unavailable. Refresh before saving.' : 'The record was not found.');
@@ -25,8 +25,12 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
   }
   switch (id) {
     case 'learnerCreate': {
-      const b = input.body as z.infer<typeof s.learnerCreate>;
-      return found(await tx.query('insert into edunexus.learners(lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address,guardian_name,guardian_contact) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *', [b.lrn, b.first_name, b.middle_name, b.last_name, b.name_extension, b.birth_date, b.sex, b.address, b.guardian_name, b.guardian_contact]));
+      const { distinct_reason: distinct, ...profile } = input.body as z.infer<typeof learnerRegister>;
+      // Through `register_learner` since 0062, for the duplicate guard an
+      // adviser has had since 0054. A direct insert left the unique LRN as the
+      // only check, so a second record for one child with a different LRN went
+      // in — and the workspace's warning was a warning, not a control.
+      return found(await tx.query('select * from edunexus.register_learner($1::jsonb,$2)', [JSON.stringify(profile), distinct]));
     }
     case 'learnerUpdate': {
       const b = input.body as z.infer<typeof s.learnerUpdate>;
@@ -92,6 +96,20 @@ export async function executeRegistry(id: RegistryOperationId, ctx: Context, inp
         ? await tx.query('select * from edunexus.enroll_learner($1,$2,$3,$4)', [b.learner_id, b.section_id, b.enrolled_on, b.entry_kind])
         : await tx.query('select * from edunexus.place_enrollment($1,$2,$3::smallint,null,$4,$5)', [b.learner_id, b.academic_year_id, b.grade_level, b.enrolled_on, b.entry_kind]));
       return enrollmentRow(row.id);
+    }
+    case 'enrollmentRelease': {
+      const b = input.body as z.infer<typeof s.release>;
+      // Answered from the writer's own row, never re-read. Releasing is the one
+      // write that ends the caller's right to read what they just wrote: an
+      // adviser sees the enrolments in the classes they advise, and this one no
+      // longer has a class, so a follow-up select returns nothing and would
+      // turn a success into a 404 that rolls the whole thing back.
+      //
+      // No access row either: `record_access_events.resource` admits only the
+      // five read operations, and a write is accounted for by its journal
+      // entry — the same reason `enrollmentMove` writes none.
+      return found(await tx.query(`select r.*,r.learner_id as recorded_learner_id,edunexus.visible_learner_identity(r.learner_id) as learner_id
+        from edunexus.release_learner_from_section($1,$2,$3,$4) r`, [input.id, b.version, b.effective_on, b.reason]));
     }
     case 'enrollmentMove': {
       const b = input.body as z.infer<typeof s.movement>;

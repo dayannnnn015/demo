@@ -224,21 +224,42 @@ function AddReportCardAreas({ api, catalog, onClose }: { api: Api; catalog: Subj
   );
 }
 
-function OfferReportCard({ api, section, catalog: opened, onClose }: { api: Api; section: Row; catalog: Subject[]; onClose: (written: number) => void }) {
-  const grade = Number(section.grade_level);
+/**
+ * The report-card set offered to **every class of one grade** at once.
+ *
+ * A row here is one learning area for the whole grade, and sending it offers
+ * that area to each class that does not already have it. A class that already
+ * does is skipped rather than refused, so a grade part-way done can be
+ * finished without undoing what is there — and if one class refuses, the row
+ * says so and the other areas still go in, which is what `BatchSheet` is for.
+ */
+function OfferReportCard({ api, sections, grade, catalog: opened, onClose }: { api: Api; sections: Row[]; grade: number; catalog: Subject[]; onClose: (written: number) => void }) {
+  const section = sections[0]!;
   const [catalog, setCatalog] = useState(opened);
   const [existing, setExisting] = useState<Offering[] | null>(null);
   const [failed, setFailed] = useState(false);
   // Retired offerings included: they are unique per section too, so offering one again is a refusal, not a second row.
+  // Every class of the grade, so a subject counts as offered only when all of
+  // them have it — a grade half done shows the remaining areas as still to go.
+  const ids = sections.map(x => String(x.id)).join(',');
   useEffect(() => {
-    void collect<Offering>(api, `/sections/${String(section.id)}/subjects`, { active: 'all' }).then(r => setExisting(r.items)).catch(() => setFailed(true));
-  }, [api, section.id]);
-  const candidates = useMemo(() => (existing ? offeringCandidates(grade, catalog, existing) : null), [existing, grade, catalog]);
+    void Promise.all(sections.map(async target => {
+      const page = await collect<Offering>(api, `/sections/${String(target.id)}/subjects`, { active: 'all' });
+      return page.items.map(o => ({ ...o, section_id: String(target.id) }));
+    })).then(all => setExisting(all.flat())).catch(() => setFailed(true));
+  }, [api, ids]);
+  // Offered everywhere, or not yet offered everywhere: the candidate list is
+  // what the grade still needs.
+  const everywhere = useMemo(() => (existing ?? []).filter(o =>
+    sections.every(target => (existing ?? []).some(x => x.subject_id === o.subject_id && String(x.section_id) === String(target.id)))), [existing, sections]);
+  const candidates = useMemo(() => (existing ? offeringCandidates(grade, catalog, everywhere) : null), [existing, everywhere, grade, catalog]);
   const disputed = cardFor(grade).some(area => disputedFor(area, grade));
   return (
     <BatchSheet
-      title={`Offer the ${gradeName(grade)} card to ${sectionName(section)}`}
-      note="Each offering is its own record. A refused row does not stop the others."
+      title={`Offer the ${gradeName(grade)} card`}
+      note={sections.length === 1
+        ? `To ${sectionName(section)}, the one class at this grade. Each offering is its own record; a refused row does not stop the others.`
+        : `To all ${sections.length} classes at this grade. Each offering is its own record; a refused row does not stop the others.`}
       intro={grade === 0 ? null : (
         <Callout tone="info" title={`The learning areas the ${gradeName(grade)} card prints`}>
           In the order the card prints them, which becomes their order in the section. Only subjects already in the catalog can be offered; add the others from the catalog first.
@@ -251,16 +272,26 @@ function OfferReportCard({ api, section, catalog: opened, onClose }: { api: Api;
       empty={<EmptyState title={`No ${gradeName(grade)} card has been supplied`} body="There is no set to offer from. Offer this section’s subjects one at a time." />}
       verb={n => (n === 1 ? 'Offer 1 subject' : `Offer ${n} subjects`)}
       past="Offered"
-      send={(code, reason) => {
+      send={async (code, reason) => {
         const area = reportCardAreas.find(a => a.code === code)!;
         const subject = catalog.find(s => s.code === code)!;
-        return api(`/sections/${String(section.id)}/subjects`, 'POST', { subject_id: subject.id, subject_version: subject.version, display_order: lineOf(area, grade), reason });
+        // One request per class, in order, so a refusal names the class it
+        // happened in rather than disappearing into a bulk write. A class that
+        // already has this area is left alone.
+        for (const target of sections) {
+          const held = (existing ?? []).some(o => o.subject_id === subject.id && String(o.section_id) === String(target.id));
+          if (held) continue;
+          await api(`/sections/${String(target.id)}/subjects`, 'POST', { subject_id: subject.id, subject_version: subject.version, display_order: lineOf(area, grade), reason });
+        }
       }}
       // Both halves go stale: a catalog revision refuses the pinned version, and another manager may have offered a subject meanwhile.
       reread={async () => {
-        const [subjects, offerings] = await Promise.all([collect<Subject>(api, '/subjects', { active: 'all' }), collect<Offering>(api, `/sections/${String(section.id)}/subjects`, { active: 'all' })]);
+        const [subjects, ...pages] = await Promise.all([
+          collect<Subject>(api, '/subjects', { active: 'all' }),
+          ...sections.map(target => collect<Offering>(api, `/sections/${String(target.id)}/subjects`, { active: 'all' })),
+        ]);
         setCatalog(subjects.items);
-        setExisting(offerings.items);
+        setExisting(pages.flatMap((page, n) => page.items.map(o => ({ ...o, section_id: String(sections[n]!.id) }))));
       }}
       onClose={onClose}
     />
@@ -493,7 +524,26 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
   // Every offering is read, retired ones included, and the filter only hides
   // them. Reading active ones alone let a hidden retired subject be offered
   // again, which the database refuses as a duplicate.
-  const { sectionId } = scope;
+  /*
+   * **Offerings are chosen per grade, not per section** (asked for
+   * 2026-11-07). Every section of a grade prints the same report card, so
+   * offering them one class at a time was asking the same question four times
+   * and letting the four answers drift apart.
+   *
+   * The records underneath are unchanged — `section_subjects` is still one row
+   * per section, which is what the register, the SF9 and the score sheets
+   * read. What changed is that the screen works a grade at a time and writes
+   * to every section of it, and says plainly when the sections of a grade do
+   * not agree, which is the state this replaces and which older years may
+   * still be in.
+   */
+  const gradesHere = [...new Set((scope.sections ?? []).map(x => Number(x.grade_level)))].sort((a, b) => a - b);
+  const [chosenGrade, setChosenGrade] = useState<number | null>(null);
+  const gradeHere = chosenGrade !== null && gradesHere.includes(chosenGrade) ? chosenGrade : (gradesHere[0] ?? null);
+  const gradeSections = (scope.sections ?? []).filter(x => Number(x.grade_level) === gradeHere);
+  // Read from the first section of the chosen grade: every section of a grade
+  // takes the same card, so this is the grade's own list.
+  const sectionId = gradeSections[0] ? String(gradeSections[0].id) : '';
   useEffect(() => {
     if (!sectionId) { setOfferings(null); setContext(null); return; }
     setOfferings(null);
@@ -505,7 +555,7 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
 
   const section = scope.section;
   const yearStatus = (context?.school_year.status ?? scope.year?.status ?? 'draft') as 'draft' | 'active' | 'closed';
-  const grade = Number(section?.grade_level);
+  const grade = gradeHere ?? Number(section?.grade_level);
   const shown = offerings && (showRetired ? offerings : offerings.filter(o => o.active));
   const offered = new Set((offerings ?? []).map(o => o.subject_id));
   // Retired offerings stay unique per section, so they are excluded too, even
@@ -531,8 +581,8 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
       <div className="card">
         <div className="card-head">
           <div>
-            <h2>Section offerings</h2>
-            <p className="card-note">What one section takes, each pinned to the catalog revision it was chosen from.</p>
+            <h2>Grade offerings</h2>
+            <p className="card-note">What every class of one grade takes, each pinned to the catalog revision it was chosen from.</p>
           </div>
         </div>
         {scope.years?.length === 0 ? (
@@ -549,7 +599,18 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
           <>
             <div className="card-head">
               <div className="toolbar">
-                <ScopePickers scope={scope} />
+                <ScopePickers scope={scope} yearOnly />
+                <div className="field inline">
+                  <label className="label" htmlFor="offerings-grade">Grade level</label>
+                  <Select id="offerings-grade" value={String(gradeHere ?? '')} onChange={event => setChosenGrade(Number(event.target.value))}>
+                    {gradesHere.map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
+                  </Select>
+                  <span className="hint">
+                    {gradeSections.length === 1
+                      ? 'One class at this grade.'
+                      : `${gradeSections.length} classes at this grade, and they take the same card.`}
+                  </span>
+                </div>
                 <label className="check-line">
                   <input type="checkbox" checked={showRetired} onChange={event => setShowRetired(event.target.checked)} />
                   <span>Include retired</span>
@@ -558,7 +619,7 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
               <div className="card-head-actions">
                 {context ? <Badge tone={yearStatus === 'closed' ? 'neutral' : yearStatus === 'active' ? 'good' : 'info'}>{yearStatus === 'closed' ? 'Closed year — read only' : yearStatus === 'draft' ? 'Draft year' : 'Active year'}</Badge> : null}
                 {manager ? (
-                  <button type="button" className="btn secondary" disabled={!section || !context || yearStatus === 'closed' || catalog === null} onClick={() => setOfferingCard(true)}>
+                  <button type="button" className="btn secondary" disabled={!gradeSections.length || !context || yearStatus === 'closed' || catalog === null} onClick={() => setOfferingCard(true)}>
                     <Icon name="plus" size={15} />Offer the report-card set
                   </button>
                 ) : null}
@@ -570,7 +631,7 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
               rows={shown ?? []}
               rowKey={row => row.id}
               empty={<EmptyState
-                title={`No subjects offered to ${sectionName(section)}`}
+                title={`No subjects offered at ${gradeHere === null ? 'this grade' : gradeName(gradeHere)}`}
                 body={manager ? 'Offer a subject from the catalog. Only available subjects that apply to this grade can be chosen.' : 'No subject has been offered to this section yet.'}
               />}
               columns={[
@@ -627,18 +688,19 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
         />
       ) : null}
 
-      {offeringCard && section && catalog ? (
+      {offeringCard && gradeSections.length && catalog ? (
         <OfferReportCard
-          // A new section is a new sheet: ticks seeded for one card must never carry over to another.
-          key={String(section.id)}
+          // A new grade is a new sheet: ticks seeded for one card must never carry over to another.
+          key={String(gradeHere)}
           api={api}
-          section={section}
+          sections={gradeSections}
+          grade={grade}
           catalog={catalog}
           onClose={written => {
             setOfferingCard(false);
             if (!written) return;
             reload();
-            setStatus({ text: written === 1 ? '1 subject offered to the section.' : `${written} subjects offered to the section.`, kind: 'done' });
+            setStatus({ text: `${written === 1 ? '1 subject' : `${written} subjects`} offered to ${gradeSections.length === 1 ? 'the class' : `all ${gradeSections.length} classes`} at ${gradeName(grade)}.`, kind: 'done' });
           }}
         />
       ) : null}

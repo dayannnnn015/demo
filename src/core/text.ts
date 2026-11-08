@@ -28,3 +28,27 @@ export const singleSpaced = (value: string) => value.replace(/ {2,}/g, ' ');
  * result is the same LRN or it is refused.
  */
 export const lrnDigits = (value: string) => value.replace(/[\s-]/g, '');
+
+/**
+ * Raises the first letter of a value a person typed, and changes nothing else.
+ *
+ * The school asked for it (2026-11-07) after transcribing documents into the
+ * registry and the academic history: a name typed "isabella", a source typed
+ * "from spreadsheet". These are printed onto official forms, so the casing is
+ * the school's own record and not a preference.
+ *
+ * **It raises, and never lowers.** "LRN", "DepEd", "ECCD" and a surname like
+ * "de la Cruz" are all left exactly as typed past the first character, because
+ * a rule that normalised the rest would corrupt more than it tidied. A value
+ * starting with a digit or a bracket — "2015-2016", "(074) 422-1234" — has no
+ * first letter to raise and is returned untouched.
+ */
+export const firstCapital = (value: string) => {
+  const at = value.search(/\p{L}/u);
+  if (at === -1) return value;
+  const letter = value[at]!;
+  const raised = letter.toLocaleUpperCase();
+  // A script with no case, and a letter already capital, both come back as
+  // they were rather than through a needless rebuild of the string.
+  return raised === letter ? value : value.slice(0, at) + raised + value.slice(at + 1);
+};

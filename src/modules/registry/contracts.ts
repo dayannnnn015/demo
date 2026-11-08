@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { lrnDigits, plainName, plainNameMessage, singleSpaced } from '../../core/text.js';
-import { uuid } from '../foundation/contracts.js';
-const text = (max: number) => z.string().trim().overwrite(singleSpaced).min(1).max(max).regex(plainName, plainNameMessage);
+import { firstCapital, lrnDigits, plainName, plainNameMessage, singleSpaced } from '../../core/text.js';
+import {uuid,gradeLevel} from '../foundation/contracts.js';
+const text = (max: number) => z.string().trim().overwrite(singleSpaced).overwrite(firstCapital).min(1).max(max).regex(plainName, plainNameMessage);
 const version = z.number().int().min(1).max(2147483646);
 const date = z.iso.date();
 const lrn = z.string().overwrite(lrnDigits).regex(/^[0-9]{12}$/, 'LRN must contain exactly 12 digits.');
@@ -37,26 +37,45 @@ export const registrySchemas = {
   // It is a property of an enrolment, not of a learner, so it is matched with a
   // subquery rather than a column; row security on enrollments still applies,
   // which is what keeps a teacher filtering by grade to their own learners.
-  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), grade_level: z.coerce.number().int().min(0).max(6).optional(), include_linked: z.enum(['true','false']).default('false') }),
+  learnerQuery: z.strictObject({ ...page, search: text(100).min(2).optional(), birth_date: date.optional(), lrn: lrn.optional(), sex: z.enum(['male', 'female']).optional(), grade_level: gradeLevel.optional(), include_linked: z.enum(['true','false']).default('false') }),
   // A section, or a year and a grade. Giving a section is the older, shorter
   // way of saying all three, since a section has only one year and one grade;
   // giving the year and grade without one enrols a learner who has no class
   // yet. Assigning that class later is a movement, not another enrolment.
   enrollmentCreate: z.strictObject({
     learner_id: uuid, section_id: uuid.nullable().default(null),
-    academic_year_id: uuid.optional(), grade_level: z.coerce.number().int().min(0).max(6).optional(),
+    academic_year_id: uuid.optional(), grade_level: gradeLevel.optional(),
     enrolled_on: date, entry_kind: z.enum(['regular', 'transfer_in']).default('regular'),
   }).refine(v => v.section_id !== null || (v.academic_year_id !== undefined && v.grade_level !== undefined),
     'Give a section_id, or an academic_year_id and grade_level to enrol without one.'),
   enrollmentQuery: z.strictObject({ ...page, academic_year_id: uuid.optional(), section_id: uuid.optional(), learner_id: uuid.optional(), status: z.enum(['enrolled', 'withdrawn']).optional(), record_state: z.enum(['valid', 'voided', 'all']).default('valid') }),
   movement: z.strictObject({ version, action: z.enum(['reassigned', 'withdrawn', 'reentered']), effective_on: date, section_id: uuid.nullable().default(null), exit_reason: z.enum(['transfer_out', 'withdrawal', 'dropout', 'death']).nullable().default(null) }).refine(v => v.action === 'withdrawn' ? v.section_id === null && v.exit_reason !== null : v.section_id !== null && v.exit_reason === null, 'Withdrawals require exit_reason and no section; reassignment/reentry require section_id and no exit_reason.'),
+  // Releasing a learner back to having no class: the mirror of an adviser's
+  // pull, and only that. There is no section to give, because the enrolment
+  // returns to having none.
+  release: z.strictObject({ version, effective_on: date, reason: text(500).min(10) }),
   historyQuery: z.strictObject(page),
   countQuery: z.strictObject({ academic_year_id: uuid }),
   accessQuery: z.strictObject({ limit: page.limit, before_id: z.string().regex(/^[1-9][0-9]{0,17}$/).optional(), actor_user_id: uuid.optional(), record_id: uuid.optional() }),
 };
+/**
+ * What `POST /learners` takes: `learnerCreate` plus the one field a duplicate
+ * needs. It is a separate schema rather than another key on `learnerCreate`
+ * because the adviser's own registration spreads that shape into its own body
+ * (`teacher-roster`), and a field meant for the office must never arrive
+ * inside an adviser's profile — `register_learner_into_section` checks its
+ * keys against a closed list and refuses the whole call for an unknown one.
+ *
+ * `distinct_reason` is only read when a learner of the same first name, last
+ * name and birth date is already on the registry. Then it is required, so a
+ * genuinely different child with the same name is registered by saying why in
+ * writing rather than by clicking past a warning.
+ */
+export const learnerRegister = registrySchemas.learnerCreate.extend({ distinct_reason: text(500).min(10).nullable().default(null) });
+
 export const registryOperations = ([
   { id: 'learnerList', method: 'get', path: '/api/v1/learners', summary: 'Search learners visible to the current staff member', query: registrySchemas.learnerQuery },
-  { id: 'learnerCreate', method: 'post', path: '/api/v1/learners', summary: 'Create a learner with their twelve-digit LRN, which every new learner must carry', body: registrySchemas.learnerCreate, manager: true },
+  { id: 'learnerCreate', method: 'post', path: '/api/v1/learners', summary: 'Create a learner with their twelve-digit LRN; refused when one of the same name and birth date is already on the registry unless distinct_reason says why this is a different child', body: learnerRegister, manager: true },
   { id: 'learnerGet', method: 'get', path: '/api/v1/learners/:id', summary: 'Read a visible learner profile' },
   { id: 'learnerUpdate', method: 'patch', path: '/api/v1/learners/:id', summary: 'Correct learner profile fields without changing an assigned LRN', body: registrySchemas.learnerUpdate, manager: true },
   { id: 'learnerLrn', method: 'patch', path: '/api/v1/learners/:id/lrn', summary: 'Assign the official LRN to a learner whose LRN is pending', body: registrySchemas.learnerLrn, manager: true },
@@ -64,6 +83,7 @@ export const registryOperations = ([
   { id: 'enrollmentCreate', method: 'post', path: '/api/v1/enrollments', summary: 'Enroll a learner once in a school year and assign a section', body: registrySchemas.enrollmentCreate, manager: true },
   { id: 'enrollmentGet', method: 'get', path: '/api/v1/enrollments/:id', summary: 'Read a visible annual enrollment' },
   { id: 'enrollmentMove', method: 'post', path: '/api/v1/enrollments/:id/movements', summary: 'Append a dated section change, withdrawal, or reentry; supply the current enrollment version', body: registrySchemas.movement, manager: true },
+  { id: 'enrollmentRelease', method: 'post', path: '/api/v1/enrollments/:id/release', summary: 'Take a learner back out of a class you advise, returning the enrollment to having no class; never moves them to another class or withdraws them', body: registrySchemas.release },
   { id: 'enrollmentHistory', method: 'get', path: '/api/v1/enrollments/:id/history', summary: 'Read original movement records, which may be superseded by corrections; use /timeline for effective history', query: registrySchemas.historyQuery, manager: true },
   { id: 'enrollmentCounts', method: 'get', path: '/api/v1/enrollment-counts', summary: 'Count valid annual enrollments by grade and status within what the caller may read; names no learner or enrollment and writes no access record', query: registrySchemas.countQuery },
   { id: 'recordAccessList', method: 'get', path: '/api/v1/record-access-events', summary: 'Review access to learner and enrollment records without raw search terms or profile values, optionally narrowed to one staff member or one record ID', query: registrySchemas.accessQuery, manager: true },
@@ -101,7 +121,7 @@ const placement = z.object({
 }).nullable().describe('The learner’s valid enrolment in the active school year, or null when they hold none the caller may read');
 export const registryResponses: Record<string, z.ZodType> = {
   learnerList: paginated(learner.extend({ placement })), learnerGet: learner, learnerCreate: learner, learnerUpdate: learner, learnerLrn: learner,
-  enrollmentList: paginated(enrollment.extend({ learner: z.object({ id: uuid, last_name: z.string(), first_name: z.string(), middle_name: z.string().nullable(), name_extension: z.string().nullable(), lrn: z.string().nullable() }).nullable().describe('The learner this enrollment belongs to, or null when the caller may not read them') })), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment,
+  enrollmentList: paginated(enrollment.extend({ learner: z.object({ id: uuid, last_name: z.string(), first_name: z.string(), middle_name: z.string().nullable(), name_extension: z.string().nullable(), lrn: z.string().nullable() }).nullable().describe('The learner this enrollment belongs to, or null when the caller may not read them') })), enrollmentGet: enrollment, enrollmentCreate: enrollment, enrollmentMove: enrollment, enrollmentRelease: enrollment,
   enrollmentHistory: paginated(event).extend({ interpretation: z.literal('original_movements'), timeline_version: z.number().int(), has_corrections: z.boolean(), record_state: z.enum(['valid', 'voided']), usable_for_reporting: z.boolean(), current_grade_level: z.number().int(), academic_year_id: uuid }),
   enrollmentCounts: z.object({ academic_year_id: uuid, scope: z.enum(['school', 'current_access']), record_state: z.literal('valid'), enrolled: z.number().int(), withdrawn: z.number().int(),
     grades: z.array(z.object({ grade_level: z.number().int(), enrolled: z.number().int(), withdrawn: z.number().int() })) }),

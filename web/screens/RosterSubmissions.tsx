@@ -5,7 +5,7 @@ import type { Route } from '../routes';
 import { clamp } from '../dates';
 import { Icon } from '../components/icons';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
-import { csvProblem, csvStats, rosterFileText, rosterTemplateWorkbook } from '../csv';
+import { ROSTER_HEADER, csvProblem, csvStats, rosterFileText, rosterTemplateWorkbook } from '../csv';
 import { downloadXlsx } from '../xlsx';
 import { LateRowSheet, csvRow } from './LateLearner';
 import {
@@ -17,13 +17,16 @@ type Profile = { lrn: string | null; first_name: string; middle_name: string | n
 type Issue = { row: number; field: string; code: string; message: string };
 type Checked = { row_count: number; rows: (Profile | null)[]; issues: Issue[] };
 export type Submission = {
-  id: string; section_id: string; academic_year_id: string; enrolled_on: string; entry_kind: 'regular' | 'transfer_in'; row_count: number;
-  status: 'submitted' | 'withdrawn' | 'accepted' | 'declined'; version: number; created_at: string; grade_level: number; section_name: string;
-  submitted_by_name: string | null; csv?: string;
+  id: string; section_id: string | null; academic_year_id: string; enrolled_on: string; entry_kind: 'regular' | 'transfer_in'; row_count: number;
+  status: 'submitted' | 'withdrawn' | 'accepted' | 'declined'; version: number; created_at: string; grade_level: number;
+  submitted_by_name: string | null; section_name: string | null; csv?: string;
 };
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
-export const TEMPLATE_HEADER = 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex';
+/** Where a half-typed class list waits out a page refresh. */
+const DRAFT = 'edunexus-ui-roster-draft';
+const clearDraft = () => { try { sessionStorage.removeItem(DRAFT); } catch { /* nothing to clean up */ } };
+
 const reasonField = { key: 'reason', label: 'Reason', type: 'textarea', minLength: 10, maxLength: 500, wide: true, hint: '10–500 characters on one line, kept with the list for good.' };
 
 const statusBadge: Record<Submission['status'], [string, 'info' | 'neutral' | 'good' | 'stopped']> = {
@@ -44,22 +47,52 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
   const scope = useScope(api, token);
   const [enrolledOn, setEnrolledOn] = useState('');
   const [kind, setKind] = useState<'regular' | 'transfer_in'>('regular');
-  const [csv, setCsv] = useState('');
+  // The list being built, kept across a refresh. The school lost a morning's
+  // typing to one: learners added through **Add learner** live only in this
+  // state until the list is submitted, and a reload emptied it.
+  //
+  // `sessionStorage`, not `localStorage`, and that is the whole of the
+  // decision. A draft list holds learner names, birth dates and LRNs, so it
+  // follows the rule sessions follow here: it dies with the tab, and a
+  // staffroom machine does not keep one adviser's list for the next person.
+  // It is cleared the moment the list is submitted, and a private window
+  // throwing on access costs the feature and nothing else.
+  const [csv, setCsv] = useState(() => {
+    try { return sessionStorage.getItem(DRAFT) ?? ''; } catch { return ''; }
+  });
   const [checked, setChecked] = useState<Checked | null>(null);
   const [status, setLocal] = useState<Status>(idle);
   const [busy, setBusy] = useState(false);
   const [mine, setMine] = useState<Submission[] | null>(null);
   const [tick, setTick] = useState(0);
   const [late, setLate] = useState(false);
-  const { year, section } = scope;
+  const { year } = scope;
 
   useEffect(() => { if (year) setEnrolledOn(clamp(localToday(), String(year.starts_on), String(year.ends_on))); }, [year?.id]);
   useEffect(() => { setChecked(null); }, [csv, scope.sectionId, enrolledOn, kind]);
   useEffect(() => {
+    try { if (csv.trim()) sessionStorage.setItem(DRAFT, csv); else sessionStorage.removeItem(DRAFT); } catch { /* a private window refuses, which costs only the draft */ }
+  }, [csv]);
+  useEffect(() => {
     void api<Page<Submission>>(`/roster-submissions${query({ status: 'all', limit: 50 })}`).then(r => setMine(r.items)).catch(() => setMine([]));
   }, [api, token, tick]);
 
-  const body = () => ({ section_id: scope.sectionId, enrolled_on: enrolledOn, entry_kind: kind, csv });
+  /*
+   * Every list lands on the registry with no class, at the grades its rows
+   * say. **Any grade may be submitted** (decided 2026-11-07, the school's
+   * second asking): a submission creates nothing, and the office reads every
+   * row before it becomes a record, so which classes this adviser happens to
+   * advise does not decide what they may put on a list.
+   *
+   * The grade chosen here stands only for the rows that leave theirs empty.
+   * It defaults to a grade this adviser advises, because that is almost
+   * always the answer — but it is a default, not a limit.
+   */
+  // No `grade_level` at all: each row carries its own, and a row that carries
+  // none is refused on its own line rather than quietly taking a grade chosen
+  // for the whole file. It is never sent as null either — the API reads a null
+  // as 0, which is Kindergarten, and would invent a grade nobody named.
+  const body = () => ({ section_id: null, academic_year_id: scope.yearId, enrolled_on: enrolledOn, entry_kind: kind, csv });
   const runCheck = async () => {
     setBusy(true);
     setLocal({ text: 'Checking the list…', kind: 'busy' });
@@ -72,42 +105,61 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
   };
 
   if (scope.years === null) return <><PageHeader route={route} /><div className="card"><TableSkeleton columns={4} /></div></>;
-  if (!scope.years.length || scope.sections?.length === 0) {
+  // Only a missing school year stops this screen. Advising no class used to
+  // stop it too, back when a list had to be for a grade you advised; it no
+  // longer does, so an adviser waiting on their class assignment can still
+  // prepare and send a list.
+  if (!scope.years.length) {
     return (
       <>
         <PageHeader route={route} />
-        <div className="card"><EmptyState title="No section assigned to you" body="You can submit a class list for a section you currently advise. A principal or administrative officer assigns advisers." /></div>
+        <div className="card"><EmptyState
+          title="No school year yet"
+          body="A list belongs to a school year. A principal or administrative officer creates one on School years & sections."
+        /></div>
       </>
     );
   }
 
   const problem = csvProblem(csv);
   const stats = csvStats(csv);
-  const waiting = (mine ?? []).some(s => s.section_id === scope.sectionId && s.status === 'submitted');
+  // How many of this adviser's lists are waiting. It is shown, never enforced:
+  // `0064` dropped the one-list-per-grade index, and this screen went on
+  // refusing a second list for a release afterwards — the database allowed it
+  // and the button did not, which is the worst of the two.
+  const waitingCount = (mine ?? []).filter(s => s.status === 'submitted').length;
   const issuesFor = (row: number) => (checked?.issues ?? []).filter(i => i.row === row);
 
   return (
     <>
       <PageHeader route={route} actions={<button type="button" className="btn secondary" data-tour="roster-template" onClick={() => { void downloadXlsx('edunexus-class-list-template.xlsx', rosterTemplateWorkbook()).catch(error => setStatus({ text: message(error), kind: 'error' })); }}><Icon name="imports" size={15} />Download the template</button>} />
       <Callout tone="info" title="You submit; the office imports">
-        Check your class list here and submit it. The principal or administrative officer reviews it against the registry, resolves any learner already on file, and imports it. You will see its state below.
+        Check your list here and submit it. The principal or administrative officer approves it on <b>Enrollment</b>, which is what turns it into learner records — until then none of these learners is on the registry. You will see its state below.
       </Callout>
 
       {late ? (
         <LateRowSheet onClose={() => setLate(false)} onAdd={row => {
           // A late learner is one more row of the list: the header starts it if the list is empty.
-          setCsv(current => `${current.trim() ? current.replace(/\s*$/, '') : TEMPLATE_HEADER}\r\n${csvRow(row)}\r\n`);
+          setCsv(current => `${current.trim() ? current.replace(/\s*$/, '') : ROSTER_HEADER}\r\n${csvRow(row)}\r\n`);
           setLate(false);
           setLocal({ text: `${row.last_name}, ${row.first_name} is on your list. Check the list, then submit it.`, kind: 'done' });
         }} />
       ) : null}
       <div className="card">
-        <div className="card-head" data-tour="roster-form"><div><h2>Your class list</h2><p className="card-note">One file, up to 50 learners, all joining one section on one date.</p></div></div>
+        <div className="card-head" data-tour="roster-form"><div><h2>Your class list</h2><p className="card-note">One file, up to 50 learners, joining on one date. Each carries their own grade level, and they are registered at it with no class; the advisers of each grade then take in their own.</p></div></div>
         <div className="card-head">
           <div className="toolbar">
-            <ScopePickers scope={scope} />
+            <ScopePickers scope={scope} yearOnly />
+            {/*
+              No grade picker here. Every learner carries their own grade —
+              typed on **Add learner**, or in the template's `grade_level`
+              column — so a grade for the whole list was a second place to say
+              the same thing, and the school asked for it to go (2026-11-07).
+              A row that names no grade is said on its own line when the list
+              is checked, which is where the other row problems are said too.
+            */}
             <div className="field inline">
-              <label className="label" htmlFor={`${id}-on`}>First day in the section</label>
+              <label className="label" htmlFor={`${id}-on`}>First day at school</label>
               <input id={`${id}-on`} type="date" className="date-input" value={enrolledOn} min={String(year?.starts_on ?? '')} max={String(year?.ends_on ?? '')} onChange={event => setEnrolledOn(event.target.value)} />
             </div>
             <div className="field inline">
@@ -128,7 +180,7 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
                 if (!file) return;
                 try { setCsv(await rosterFileText(file)); } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
               }} />
-              <span className="hint">The Excel template, or a CSV file. The header must be exactly <span className="mono">{TEMPLATE_HEADER}</span>. every LRN with all twelve digits, since each learner needs one; dates as YYYY-MM-DD; sex as male or female.</span>
+              <span className="hint">The Excel template, or a CSV file. The header must be exactly <span className="mono">{ROSTER_HEADER}</span>. every LRN with all twelve digits, since each learner needs one; dates as YYYY-MM-DD; sex as male or female.</span>
             </div>
           </div>
           <Task title="Paste the CSV text instead" note="For a list copied from a text editor">
@@ -137,11 +189,12 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
               <textarea id={`${id}-text`} className="mono" rows={8} value={csv} onChange={event => setCsv(event.target.value)} />
             </div>
           </Task>
-          {csv ? <p className="card-note">{stats.rows} {stats.rows === 1 ? 'row' : 'rows'}, {stats.bytes.toLocaleString()} bytes{problem ? ` — ${problem}` : ''}</p> : null}
+          {csv ? <p className="card-note">{stats.rows} {stats.rows === 1 ? 'row' : 'rows'}, {stats.bytes.toLocaleString()} bytes{problem ? ` — ${problem}` : ''} · Kept while this tab is open, so a refresh does not lose it.</p> : null}
           <StatusLine status={status} />
           <div className="form-actions">
-            <button type="button" className="btn" disabled={busy || !csv || !!problem || !scope.sectionId} aria-busy={busy} onClick={() => void runCheck()} data-tour="roster-check">{busy ? 'Checking…' : 'Check the list'}</button>
-            <button type="button" className="btn secondary" onClick={() => setLate(true)} data-tour="roster-late">Add one late learner</button>
+            <button type="button" className="btn" disabled={busy || !csv || !!problem} aria-busy={busy} onClick={() => void runCheck()} data-tour="roster-check">{busy ? 'Checking…' : 'Check the list'}</button>
+            <button type="button" className="btn secondary" onClick={() => setLate(true)} data-tour="roster-late">Add learner</button>
+            {csv ? <button type="button" className="btn ghost" disabled={busy} onClick={() => { clearDraft(); setCsv(''); setChecked(null); }}>Start the list again</button> : null}
           </div>
         </div>
         {checked ? (
@@ -160,13 +213,20 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
         ) : null}
         {checked && !checked.issues.length ? (
           <div className="card-body">
-            {waiting ? <Callout tone="attention" title="A list for this section is already waiting">Withdraw it below before submitting another, or wait for the office to decide it.</Callout> : (
+            {waitingCount ? (
+              <Callout tone="info" title={waitingCount === 1 ? 'You have one list waiting' : `You have ${waitingCount} lists waiting`}>
+                You can send this one as well — the office decides them separately, and nothing has to be withdrawn first. Each is listed below with its state.
+              </Callout>
+            ) : null}
+            {(
               <Editor
                 fields={[reasonField]}
                 submitLabel={`Submit ${checked.row_count} ${checked.row_count === 1 ? 'learner' : 'learners'} for review`}
                 setStatus={setLocal}
                 onSubmit={data => api('/roster-submissions', 'POST', { ...body(), reason: data.reason })}
-                onSaved={() => { setCsv(''); setChecked(null); setTick(t => t + 1); setStatus({ text: `Class list for ${sectionName(section)} submitted for review.`, kind: 'done' }); }}
+                onSaved={() => { clearDraft(); setCsv(''); setChecked(null); setTick(t => t + 1); setStatus({
+                  text: `List of ${checked.row_count} ${checked.row_count === 1 ? 'learner' : 'learners'} submitted for review. Once the office approves it, they are on the registry with no class, and each grade's advisers take in the ones who are theirs.`,
+                  kind: 'done' }); }}
               />
             )}
           </div>
@@ -181,13 +241,17 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
           rowKey={s => s.id}
           empty={<EmptyState title="None yet" body="A class list you submit appears here with its state." />}
           columns={[
-            { header: 'Section', cell: s => `${gradeName(s.grade_level)} · ${s.section_name}` },
+            { header: 'For', cell: s => (s.section_name
+              ? `${gradeName(s.grade_level)} · ${s.section_name}`
+              : `${gradeName(s.grade_level)} — no class yet`) },
             { header: 'Learners', cell: s => s.row_count, numeric: true },
             { header: 'Submitted', cell: s => <span className="mono">{when(s.created_at)}</span> },
             { header: 'State', cell: s => <StatusBadge status={s.status} /> },
           ]}
           detailLabel="Open"
-          detail={s => (s.status !== 'submitted' ? <p className="muted">{s.status === 'accepted' ? 'Imported: the learners are on your register.' : s.status === 'declined' ? 'Declined. Ask the office why, then submit a corrected list.' : 'Withdrawn by you.'}</p> : (
+          detail={s => (s.status !== 'submitted' ? <p className="muted">{s.status === 'accepted'
+            ? (s.section_name ? 'Imported: the learners are on your register.' : 'Imported: the learners are on the registry at this grade, in no class. Take in the ones who are yours from Learner registry.')
+            : s.status === 'declined' ? 'Declined. Ask the office why, then submit a corrected list.' : 'Withdrawn by you.'}</p> : (
             <Task title="Withdraw this list" note="Kept as a record" tone="warn">
               <Editor fields={[reasonField]} submitLabel="Withdraw" setStatus={setLocal}
                 onSubmit={data => api(`/roster-submissions/${s.id}/withdrawal`, 'POST', { version: s.version, reason: data.reason })}

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { uuid } from '../foundation/contracts.js';
+import {uuid,gradeLevel} from '../foundation/contracts.js';
 import { registrySchemas, registryResponses } from '../registry/contracts.js';
 
 const reason = z.string().trim().min(10).max(500).regex(/^[^\u0000-\u001f\u007f]*$/, 'Use a single line of text.');
@@ -23,11 +23,15 @@ const resolution = z.discriminatedUnion('action', [
 const target = {
   section_id: uuid.nullable().default(null),
   academic_year_id: uuid.optional(),
-  grade_level: z.coerce.number().int().min(0).max(6).optional(),
+  grade_level: gradeLevel.optional(),
 };
-const placed = (v: { section_id: string | null; academic_year_id?: string | undefined; grade_level?: number | undefined }) =>
-  v.section_id !== null || (v.academic_year_id !== undefined && v.grade_level !== undefined);
-const placedMessage = 'Give a section_id, or an academic_year_id and grade_level to import without one.';
+// A section says all three. Without one, the school year is still required —
+// but the grade is not, since 2026-11-07: the template carries a grade per
+// row, so a file may name its own grades and a row that names none is refused
+// on its own line.
+const placed = (v: { section_id: string | null; academic_year_id?: string | undefined }) =>
+  v.section_id !== null || v.academic_year_id !== undefined;
+const placedMessage = 'Give a section_id, or an academic_year_id; a grade_level for the whole file is optional when the rows carry their own.';
 const importBody = {
   ...target, enrolled_on: z.iso.date(), entry_kind: z.enum(['regular', 'transfer_in']).default('regular'),
   csv: z.string().min(1).max(24000), resolutions: z.array(resolution).max(50).default([]),
@@ -50,9 +54,11 @@ export type ReviewOperationId = typeof reviewOperations[number]['id'];
 
 const profile = z.object({ lrn: z.string().nullable(), first_name: z.string(), middle_name: z.string().nullable(), last_name: z.string(), name_extension: z.string().nullable(), birth_date: z.iso.date(), sex: z.enum(['male', 'female']) });
 export const candidateSchema = profile.extend({ id: uuid, version: z.number().int() });
-export const previewRowSchema = z.object({ row, profile: profile.nullable(), action: z.enum(['create', 'use_existing']).nullable(), learner_id: uuid.nullable(), candidates: z.array(candidateSchema), candidates_truncated: z.boolean() });
+export const previewRowSchema = z.object({ row, profile: profile.nullable(), action: z.enum(['create', 'use_existing']).nullable(), learner_id: uuid.nullable(),
+  grade_level: z.number().int().nullable().describe('The grade this learner is enrolled at: their own row’s grade level column, or the grade given for the whole file'),
+  candidates: z.array(candidateSchema), candidates_truncated: z.boolean() });
 export const issueSchema = z.object({ row: z.number().int().min(0), field: z.string(), code: z.string(), message: z.string() });
-export const receiptSchema = z.object({ preview_id: uuid, section_id: uuid.nullable().describe('Null when the learners were enrolled with no class yet; assigning one afterwards is a movement on the enrolment'), academic_year_id: uuid, grade_level: z.number().int(), items: z.array(z.object({ row, learner_id: uuid, enrollment_id: uuid, action: z.enum(['create', 'use_existing']), resolution_reason: z.string().nullable() })) });
+export const receiptSchema = z.object({ preview_id: uuid, section_id: uuid.nullable().describe('Null when the learners were enrolled with no class yet; assigning one afterwards is a movement on the enrolment'), academic_year_id: uuid, grade_level: z.number().int().nullable().describe('The grade asked for the whole file, or null when its rows carried their own'), items: z.array(z.object({ row, learner_id: uuid, enrollment_id: uuid, action: z.enum(['create', 'use_existing']), resolution_reason: z.string().nullable() })) });
 export const reviewResponses: Record<string, z.ZodType> = {
   importTemplate: z.object({ format: z.literal('edunexus-roster-v2'), csv: z.string(), max_rows: z.literal(50), max_csv_bytes: z.literal(24000), max_request_bytes: z.literal(32768), preview_minutes: z.literal(30), instructions: z.array(z.string()) }),
   importPreview: z.object({ can_commit: z.boolean(), preview_id: uuid.nullable(), expires_at: z.iso.datetime().nullable(),

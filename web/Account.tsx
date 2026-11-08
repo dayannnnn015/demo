@@ -253,7 +253,7 @@ export function Account({ client, onReady }: { client: SupabaseClient; onReady: 
 }
 
 /** The three Supabase calls a password change needs, so a test can stand in for the service. */
-export type PasswordAuth = Pick<SupabaseClient['auth'], 'getUser' | 'signInWithPassword' | 'updateUser'>;
+export type PasswordAuth = Pick<SupabaseClient['auth'], 'getUser' | 'signInWithPassword' | 'updateUser' | 'mfa'>;
 
 /** What the sign-in service's refusal means, in the words of this form. */
 export function passwordProblem(error: { code?: string | undefined; message?: string | undefined } | null | undefined) {
@@ -261,6 +261,8 @@ export function passwordProblem(error: { code?: string | undefined; message?: st
   if (error.code === 'same_password') return 'The new password must be different from the one you use now.';
   if (error.code === 'weak_password') return 'The sign-in service found that password too easy to guess. Choose a longer one, or one that is not a common word or phrase.';
   if (error.code === 'over_request_rate_limit' || error.code === 'over_email_send_rate_limit') return 'Too many attempts in a short time. Wait a minute and try again.';
+  if (error.code === 'insufficient_aal' || /aal2/i.test(error.message ?? '')) return 'Your authenticator code is needed before the password can be changed. Enter the six digits from your authenticator app.';
+  if (error.code === 'invalid_totp' || /invalid.*(totp|code)/i.test(error.message ?? '')) return 'That code was not accepted. Codes change every 30 seconds — wait for the next one and try again.';
   return error.message || 'The sign-in service did not accept the change.';
 }
 
@@ -273,11 +275,23 @@ export function passwordProblem(error: { code?: string | undefined; message?: st
  * signs in again with the current password before it changes anything. That
  * is a check in the browser, not a control: the operator should also switch on
  * secure password change, which is recorded in the status.
+ *
+ * **That re-sign-in is also what broke the form for everyone with MFA on.**
+ * `signInWithPassword` returns a session at AAL1, because the authenticator
+ * step has not been done in it; Supabase then refuses `updateUser` with "AAL2
+ * session is required to update email or password when MFA is enabled", which
+ * is the message the school saw and which says nothing about what to do. So
+ * when a verified factor exists the form asks for the six digits and lifts the
+ * session back to AAL2 before changing anything. Nobody is asked for a code
+ * who has not enrolled one.
  */
 export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (text: string) => void }) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [code, setCode] = useState('');
+  /** Whether this account has an authenticator to answer for. Unknown until asked. */
+  const [needsCode, setNeedsCode] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(idle);
 
@@ -295,11 +309,27 @@ export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (
       const check = await auth.signInWithPassword({ email, password: current });
       setCurrent('');
       if (check.error) { setStatus({ kind: 'error', text: check.error.code === 'invalid_credentials' ? 'That is not your current password.' : passwordProblem(check.error) }); return; }
+
+      // The sign-in above lands at AAL1. If a verified authenticator exists,
+      // Supabase will refuse the change until this session answers it.
+      const factors = await auth.mfa.listFactors();
+      const totp = factors.data?.totp?.find(f => f.status === 'verified');
+      if (totp) {
+        if (!/^[0-9]{6}$/.test(code.trim())) {
+          setNeedsCode(true);
+          setStatus({ kind: 'error', text: 'Enter the six digits from your authenticator app, then change the password.' });
+          return;
+        }
+        const lifted = await auth.mfa.challengeAndVerify({ factorId: totp.id, code: code.trim() });
+        setCode('');
+        if (lifted.error) { setStatus({ kind: 'error', text: passwordProblem(lifted.error) }); return; }
+      }
+
       const changed = await auth.updateUser({ password: next });
       if (changed.error) { setStatus({ kind: 'error', text: passwordProblem(changed.error) }); return; }
       // So the browser's saved password follows the change, rather than filling the old one next time.
       offerToSave(email, next);
-      setNext(''); setConfirmation('');
+      setNext(''); setConfirmation(''); setNeedsCode(false);
       onDone('Password changed. Use the new one the next time you sign in.');
     } catch (error) {
       setStatus({ kind: 'error', text: message(error) });
@@ -314,6 +344,14 @@ export function PasswordChange({ auth, onDone }: { auth: PasswordAuth; onDone: (
       <Password id="current-password" label="Current password" autoComplete="current-password" value={current} onChange={setCurrent} />
       <Password id="changed-password" label="New password" hint="At least 12 characters." autoComplete="new-password" value={next} onChange={setNext} />
       <Password id="changed-confirmation" label="Confirm new password" autoComplete="new-password" value={confirmation} onChange={setConfirmation} />
+      {needsCode ? (
+        <div className="field">
+          <label className="label" htmlFor="changed-totp">Authenticator code</label>
+          <input id="changed-totp" className="mono" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+            value={code} onChange={event => setCode(event.target.value.replace(/[^0-9]/g, ''))} />
+          <span className="hint">The six digits shown in your authenticator app right now. The sign-in service asks for them before a password changes.</span>
+        </div>
+      ) : null}
       <div className="form-actions">
         <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : 'Change password'}</button>
       </div>

@@ -47,7 +47,10 @@ export async function executeRoster(id:RosterOperationId,ctx:Context,input:{body
     }
     case 'learnerRegister':{
       const {enrolled_on,entry_kind,...profile}=input.body as z.infer<typeof s.register>;
-      const made=await call<{learner:{id:string}}>(tx,'edunexus.register_learner_into_section($1,$2,$3,$4)',[input.id!,profile,enrolled_on,entry_kind]);
+      // Stringified and cast, like every other jsonb argument here. It was a
+      // bare object, which the driver happens to JSON-encode — the same
+      // fragility that broke the academic history when the value was an array.
+      const made=await call<{learner:{id:string}}>(tx,'edunexus.register_learner_into_section($1,$2::jsonb,$3,$4)',[input.id!,JSON.stringify(profile),enrolled_on,entry_kind]);
       await logged(tx,'learnerRegister',[made.learner.id]);
       return made;
     }

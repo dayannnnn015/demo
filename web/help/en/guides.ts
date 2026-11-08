@@ -126,7 +126,7 @@ export const guides: Guide[] = [
       'An empty list in a year that has just started usually means nobody has been registered into it yet, not that your class is full: the office carries last year’s learners over on **Next year’s classes** first.',
       'Taking a learner in never makes a second record for them — it is the record the office already holds, given your class. A learner already in somebody else’s class is not offered: a principal or administrative officer moves a learner between classes.',
       'The search there also finds a learner with no enrolment this school year, such as one returning to the school, so they need not be keyed in again.',
-      '**Register a new learner into my class** is for a child the school has never held a record for at all. The registry is checked first, so if a learner with the same name and birth date is already on it you take that learner in instead.',
+      'A child the school has never held a record for goes on a list for the office to approve, like any other: use **Add learner** on {imports}, which puts them on a list of one. An adviser no longer adds a learner straight to the registry — creating a learner record is the office’s.',
       'On a learner’s row, **SF9** opens this year’s report card and **SF10** their record across the years.',
       'Opening a learner gives three parts: **Learner profile**, who they are; **Academic history**, where the school years from before EDUNEXUS are kept; and **Enrollment**, where they are this year and every year they have been enrolled.',
       'Open a learner, then **Enrollment** and **School years**, and **View the year** for their attendance month by month. **Print this year** prints it for a parent conference.',
@@ -143,13 +143,17 @@ export const guides: Guide[] = [
     route: 'enrollment',
     summary: 'Putting a learner in a section for a school year, and every movement after: transfer, withdrawal and re-entry.',
     steps: [
-      '**Enrol a learner**: find them by name or exact LRN, choose the section and the first day in it, and say how they join.',
+      'Class lists advisers have submitted wait in **Class lists from advisers**, at the top. **Review** one to read every row exactly as the adviser sent it, then **Approve and import** — that one action creates the learner records, enrols them into the adviser’s class, and tells the adviser their list went in.',
+      'A list is a file until you approve it: nothing of it is on the registry, and nothing of it counts on any form, so a list left waiting is learners the school does not yet hold.',
+      '**Decline** a list instead, with a reason the adviser reads, and they correct it and send it again.',
       'Open an enrolment to record a movement. Each movement is a dated event with its reason, and the SF2 and SF4 count from it.',
       'A wrong date or section is fixed with **Correct the timeline**, and a wrong grade with **Correct the grade**. Both show the record before and after and keep what was first recorded.',
     ],
     refuses: [
       'A movement cannot be dated in the future or outside the school year.',
       'A voided enrolment is read only until it is restored.',
+      'Approving writes the whole list or none of it, so a class never goes in half done.',
+      'A row that may be a learner already on file stops the approval and writes nothing. EDUNEXUS never guesses which learner a row means: the row is pointed at the right record on **Roster import**, or the list is declined and sent again.',
     ],
   },
   {
@@ -159,7 +163,7 @@ export const guides: Guide[] = [
     steps: [
       'Lists advisers have submitted wait at the top. Open one, preview and confirm the import, and the adviser’s list is marked imported.',
       'To import a list yourself, **Download the template (Excel)**, fill it in, and upload it. The file names every column, says which are required and shows a worked row on its second sheet. **Template as CSV** is the same columns for anyone who prefers one.',
-      'Choose under *Where this file lands* whether the file goes **Into a section** — one class list for one class — or **Onto the registry at a grade, with no class yet**, which is how the school registers every learner before the classes are settled.',
+      'Fill the **grade_level** column and one file can register several year groups at once — 0 for Kindergarten, then 1 to 6. A row that leaves it empty uses the **Enrol at grade** chosen here, and a row with neither is refused on its own line. Every import registers its learners with *no class yet*; each adviser then takes in the ones who are theirs.',
       'With no class yet, the learners are enrolled for the year and count on the totals but belong to no section. Give them a class afterwards on {enrollment}, which changes the enrolment they already have rather than adding another. Import the registry list *or* the class lists, not both.',
       'One file holds up to 50 learners, so a class list is one file and a whole grade is several. Each row is checked and shown before anything is written.',
       'Fill the **address** column where the school has one recorded; leave it empty where it has none, and the learner is registered without one. A class list saved from the earlier template, which had no address column, still imports.',
@@ -176,12 +180,15 @@ export const guides: Guide[] = [
   {
     route: 'imports',
     for: 'teacher',
-    summary: 'Submitting your class list for the office to import. You prepare it; the principal or administrative officer imports it.',
+    summary: 'Submitting your class list for the office to approve. You prepare it; the principal or administrative officer approves it on Enrollment, and only then are the learners on the registry.',
     steps: [
       'Choose your section, the first day in it and how the learners join. **Download the template**, fill it in, and upload or paste it. The Excel file names every column on its second sheet and shows a worked row.',
+      'Every learner carries their own grade level — chosen on **Add learner**, or filled into the grade_level column of the template — so one list can hold several grades and there is nothing to choose for the list as a whole. A row with no grade is named on its own line when you check the list. Its learners are registered at their grade with *no class yet*, and the advisers of that grade — you included — then take in the ones who are theirs from **Add learner** on {learners}.',
+      'Until the office approves it, none of these learners is on the registry and none counts on any form. A list left waiting is learners the school does not yet hold.',
       '**Check the list** shows any problem beside its row. Fix them and check again, then give a reason and submit.',
-      'Until it is imported, the list shows as *Waiting for review*, and you may **Withdraw** it.',
-      'A learner who arrives later needs no file: **Add one late learner** puts them on your list as one more row.',
+      'Until it is imported, the list shows as *Waiting for review*, and you may **Withdraw** it. You can send another list without withdrawing this one — several may wait at once.',
+      'A learner who arrives later needs no file: **Add learner** puts them on your list as one more row, with their own grade level if it differs from the rest.',
+      'Took in the wrong learner? Open them on {learners}, go to **Enrollment**, and **Take out of this class**. They stay on the registry and stay enrolled at their grade — only the class is given back, so any adviser of that grade can take them in. Their marks and history are untouched.',
     ],
   },
   {

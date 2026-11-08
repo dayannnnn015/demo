@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {firstCapital} from '../../core/text.js';
 import {uuid} from '../foundation/contracts.js';
 import {subjectReason} from '../subjects/contracts.js';
 const version=z.number().int().min(0).max(2147483646),date=z.iso.date();
@@ -7,11 +8,11 @@ const version=z.number().int().min(0).max(2147483646),date=z.iso.date();
 // decimal place. Nothing here computes one.
 const grade=z.number().min(0).max(100).refine(v=>Math.abs(v*100-Math.round(v*100))<1e-6,'At most two decimal places, as the document shows it.').nullable();
 const remark=z.enum(['passed','failed']).nullable();
-const line=(max:number)=>z.string().trim().min(1).max(max).regex(/^[^\u0000-\u001f\u007f]*$/,'Use one plain line of text.');
+const line=(max:number)=>z.string().trim().overwrite(firstCapital).min(1).max(max).regex(/^[^\u0000-\u001f\u007f]*$/,'Use one plain line of text.');
 const code=z.string().trim().regex(/^[A-Z][A-Z0-9_-]{0,23}$/,'A code is capitals, digits, dash or underscore, starting with a letter.');
 // Which document this was transcribed from. A permanent record copied out of a
 // spreadsheet is only as good as the note saying which spreadsheet.
-const source=z.string().trim().min(10,'Name the document this was copied from, in at least ten characters.').max(500)
+const source=z.string().trim().overwrite(firstCapital).min(10,'Name the document this was copied from, in at least ten characters.').max(500)
   .regex(/^[^\u0000-\u001f\u007f]*$/,'Use one plain line of text.');
 const priorSubject=z.strictObject({subject_id:uuid.nullable().default(null),code:code.nullable().default(null),name:line(120),
   q1:grade.default(null),q2:grade.default(null),q3:grade.default(null),q4:grade.default(null),final:grade.default(null),remark:remark.default(null)});

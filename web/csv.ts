@@ -179,7 +179,7 @@ export function csvProblem(text: string): string | null {
  * further field about a child or their family waits on the school's reviewed
  * field list. A file saved from the earlier seven-column template still imports.
  */
-export const ROSTER_HEADER = 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address';
+export const ROSTER_HEADER = 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex,address,grade_level';
 
 /** What each column holds, said in the template itself rather than only on the screen that downloads it. */
 const rosterColumnNotes: Record<string, { required: boolean; note: string }> = {
@@ -191,6 +191,7 @@ const rosterColumnNotes: Record<string, { required: boolean; note: string }> = {
   birth_date: { required: true, note: 'YYYY-MM-DD, for example 2017-03-14. A past date. This column is formatted as text so the day and month cannot be swapped by a regional setting.' },
   sex: { required: true, note: 'male or female, as recorded on school forms. M and F are read too.' },
   address: { required: false, note: 'One line, as the school’s own learner information writes it. Optional: an address nobody has recorded is left empty rather than guessed at, and the learner is recorded without one.' },
+  grade_level: { required: false, note: 'The grade this learner is enrolling at: 0 for Kindergarten, then 1 to 6. “Kinder” and “Grade 3” are read too. One file may hold several grades, which is how a whole year group is registered at once. Leave it empty to use the grade chosen on the screen for every row — a row that is empty with no grade chosen is refused on its own line.' },
 };
 
 /**
@@ -212,7 +213,7 @@ export function rosterTemplateWorkbook() {
   sheet.setup = { landscape: true, paper: 'a4', fitWidth: false, freeze: { rows: 3, cols: 1 } };
   sheet.merge(1, 1, 1, header.length, 'EDUNEXUS class list', { bold: true, size: 13 });
   sheet.merge(2, 1, 2, header.length,
-    'One learner a row under the header, which stays exactly as it is — the columns are read by position. Read “What each column holds” before filling this in. Shaded headings are required. One file is one class list, up to 50 learners.',
+    'One learner a row under the header, which stays exactly as it is — the columns are read by position. Read “What each column holds” before filling this in. Shaded headings are required. Up to 50 learners a file, and they need not all be at the same grade: fill in grade_level and one file can register several year groups.',
     { italic: true, size: 9, wrap: true });
   header.forEach((name, i) => sheet.set(3, i + 1, name, {
     bold: true, border: true, size: 9, wrap: true, valign: 'bottom',
@@ -225,9 +226,17 @@ export function rosterTemplateWorkbook() {
   for (let r = 0; r < rows; r++) header.forEach((name, c) => sheet.set(4 + r, c + 1, null, { border: true, size: 9, ...(text.has(name) ? { format: '@' as const } : {}) }));
   const sex = header.indexOf('sex') + 1;
   sheet.allow(4, sex, 3 + rows, sex, { kind: 'list', values: ['male', 'female'] }, 'male or female', 'Type male or female, as recorded on school forms.');
+  // Kindergarten is 0 here, as it is everywhere else in EDUNEXUS. The list is
+  // what Excel offers; the importer also reads "Kinder" and "Grade 3", so a
+  // file typed by hand outside this template is still read.
+  const grade = header.indexOf('grade_level') + 1;
+  sheet.allow(4, grade, 3 + rows, grade, { kind: 'list', values: ['0', '1', '2', '3', '4', '5', '6'] },
+    '0 for Kindergarten, then 1 to 6', 'Type 0 for Kindergarten, or 1 to 6. Leave it empty to use the grade chosen on the screen.');
   header.forEach((name, c) => {
     const widest = Math.max(...name.split('_').map(word => textPx(word, 9, true)),
-      textPx(name === 'address' ? 'Purok 4, Balili, La Trinidad, Benguet' : name === 'birth_date' ? '0000-00-00' : '000000000000', 9));
+      // The grade's own values are one character, so the heading is what has
+      // to fit: measured whole rather than by its widest word.
+      textPx(name === 'address' ? 'Purok 4, Balili, La Trinidad, Benguet' : name === 'birth_date' ? '0000-00-00' : name === 'grade_level' ? 'grade_level' : '000000000000', 9));
     sheet.width(c + 1, Math.min(44, Math.max(8, Math.ceil((widest + 6) / 7) + 1)));
   });
 
@@ -247,7 +256,7 @@ export function rosterTemplateWorkbook() {
   });
   const example: Record<string, string> = {
     lrn: '136170000001', first_name: 'Ana', middle_name: 'Bautista', last_name: 'Reyes', name_extension: '',
-    birth_date: '2017-05-02', sex: 'female', address: 'Purok 4, Balili, La Trinidad, Benguet',
+    birth_date: '2017-05-02', sex: 'female', address: 'Purok 4, Balili, La Trinidad, Benguet', grade_level: '3',
   };
   const at = 5 + header.length + 1;
   notes.merge(at, 1, at, 3, 'One row, as it would be typed:', { bold: true, size: 10 });

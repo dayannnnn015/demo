@@ -439,6 +439,29 @@ const gradeField = { type: 'number', min: 0, max: 100, step: '0.01' };
  * beside the control it belongs to, including a message about one row of the
  * grid.
  */
+/**
+ * The year a school year began, from either way a person writes one.
+ *
+ * "2015" is the value the record keeps. "2015-2016" is how every document the
+ * school is copying from prints it, and typing that was the first thing they
+ * did — into a number field, which showed the text and reported nothing, so
+ * the form sent an empty year and the refusal named a rule the field appeared
+ * to satisfy. Both are read here, along with the en and em dashes a word
+ * processor substitutes for the hyphen.
+ *
+ * A range whose second year is not the first plus one is refused rather than
+ * guessed at: "2015-2017" is a mistake, not a school year.
+ */
+export function startYear(typed: string): number | null {
+  const text = typed.trim().replace(/[‐-―]/g, '-');
+  const one = /^(\d{4})$/.exec(text);
+  if (one) return Number(one[1]);
+  const range = /^(\d{4})\s*-\s*(\d{4})$/.exec(text);
+  if (!range) return null;
+  const from = Number(range[1]), to = Number(range[2]);
+  return to === from + 1 ? from : null;
+}
+
 function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded, onClose, onSaved }: {
   api: Api; learner: string; learnerLabel: string; block: EncodedYear | null; school: SchoolHeading;
   taken: number[]; recorded: number[]; onClose: () => void; onSaved: () => void;
@@ -449,6 +472,7 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
   const [bad, setBad] = useState<Record<string, string>>({});
   const [head, setHead] = useState<Record<string, string>>(() => ({
     start_year: block ? String(block.start_year) : '',
+    end_year: block ? String(block.start_year + 1) : '',
     grade_level: block ? String(block.grade_level) : '',
     school_name: block ? block.school_name : school.name,
     school_code: block ? block.school_code ?? '' : school.school_code ?? '',
@@ -472,7 +496,21 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
   const id = (key: string) => `${scope}-${key}`;
   /** The draft is a plain record, so every read of it is a string; a field never typed into is empty, not missing. */
   const h = (key: string) => head[key] ?? '';
-  const setField = (key: string, value: string) => { setHead(prev => ({ ...prev, [key]: value })); setBad(b => { const { [key]: _gone, ...rest } = b; return rest; }); };
+  const setField = (key: string, value: string) => {
+    setHead(prev => {
+      const next = { ...prev, [key]: value };
+      // Typing the start fills the end, because a school year ends the year
+      // after it begins and nobody should have to type both. It is still a
+      // field rather than a label: a document that disagrees can be followed,
+      // and the pair is checked before anything is sent.
+      if (key === 'start_year') {
+        const from = startYear(value);
+        next.end_year = from === null ? '' : String(from + 1);
+      }
+      return next;
+    });
+    setBad(b => { const { [key]: _gone, ...rest } = b; return rest; });
+  };
   const setSubject = (index: number, key: keyof SubjectDraft, value: string) => {
     setSubjects(list => list.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
     setBad(b => { const path = `subjects.${index}.${key}`; const { [path]: _gone, ...rest } = b; return rest; });
@@ -491,8 +529,21 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
   const addable = proposal.filter(a => !listed.has(a.name.toLowerCase()));
 
   const headFields: Field[] = [
-    { key: 'start_year', label: 'School year began', type: 'number', min: 1990, max: 2100,
-      hint: 'The year the school year began, not the year it ended — a 2015 – 2016 school year is 2015. Any year from 1990 to this one.' },
+    // Text, not a number input, and that is the fix rather than a preference.
+    // The school typed the school year the way their documents print it —
+    // "2020-2021" — into a number field. A number input accepts the hyphen as
+    // it types, shows what was typed, and then reports an **empty** value, so
+    // the form sent nothing and the refusal read "a school year from 1990 up to
+    // this one" against a field that plainly held one. Both forms are now read.
+    // Two fields, asked for on 2026-11-07. One box for a school year made
+    // people type it the way their documents print it, "2021-2022", and the
+    // record keeps only the year it began — so the box had to accept a range
+    // and quietly discard half of it. Asking for both says plainly what is
+    // kept and what is only being checked.
+    { key: 'start_year', label: 'School year began', maxLength: 4, pattern: '[0-9]{4}',
+      hint: 'The year it began: a 2015 – 2016 school year is 2015. Any year from 1990 to this one.' },
+    { key: 'end_year', label: 'School year ended', maxLength: 4, pattern: '[0-9]{4}',
+      hint: 'The year after it, filled in for you. It is checked against the start, and only the start is kept.' },
     { key: 'grade_level', label: 'Grade level', options: [['', 'Choose…'], ...[1, 2, 3, 4, 5, 6].map(g => [String(g), gradeName(g)] as [string, string])], choose: true,
       hint: 'Grade 1 to Grade 6. A Kindergarten year is not one of these: it is the credential under Eligibility for Grade 1. Never enter a Kindergarten year’s marks as Grade 1 grades — they are not the same record.' },
     { key: 'school_name', label: 'School that taught the year', maxLength: 150, hint: 'This school, or the previous school for a transferee.' },
@@ -507,10 +558,17 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
     { key: 'reason', label: block ? 'Reason for this correction' : 'Reason for this entry', wide: true, type: 'textarea', minLength: 10, maxLength: 500 },
   ];
 
-  const clash = Number.isInteger(Number(h('start_year'))) && h('start_year') !== ''
-    ? recorded.includes(Number(h('start_year')))
+  const began = startYear(h('start_year'));
+  const ended = h('end_year').trim();
+  // The end year is a check on the start, never a second value: the record
+  // keeps one year, as an SF10 block does.
+  const yearPair = began === null ? null
+    : ended === '' ? `Fill the year this school year ended — ${began + 1}.`
+      : Number(ended) === began + 1 ? '' : `A school year ends the year after it begins, so ${began} runs to ${began + 1}.`;
+  const clash = began !== null
+    ? recorded.includes(began)
       ? 'EDUNEXUS already holds this school year for this learner. Its grades are entered on Promotion → Report card, and reach the SF10 from there.'
-      : taken.includes(Number(h('start_year')))
+      : taken.includes(began)
         ? 'This school year is already encoded for this learner. Open that year and correct it instead of adding it again.'
         : ''
     : '';
@@ -519,11 +577,19 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
     event.preventDefault();
     setBusy(true);
     setBad({});
+    if (began === null || yearPair) {
+      setBad(began === null
+        ? { start_year: 'The year this school year began, as four digits: 2015.' }
+        : { end_year: yearPair ?? '' });
+      setStatus({ text: 'Check the fields marked below.', kind: 'error' });
+      setBusy(false);
+      return;
+    }
     setStatus({ text: 'Saving…', kind: 'busy' });
     const rows = subjects.filter(s => s.name.trim() !== '' || s.q1 || s.q2 || s.q3 || s.q4 || s.final || s.remark);
     const payload = {
       year: {
-        start_year: Number(h('start_year')), grade_level: Number(h('grade_level')),
+        start_year: began, grade_level: Number(h('grade_level')),
         school_name: h('school_name').trim(), school_code: text(h('school_code')), school_address: text(h('school_address')),
         section_name: text(h('section_name')), adviser_name: text(h('adviser_name')),
         general_average: num(h('general_average')), remark: text(h('remark')),

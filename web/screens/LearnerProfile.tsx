@@ -7,7 +7,7 @@ import { profileFields } from '../record-fields';
 import { IdentityHistory, LrnCorrection, LrnHistory, ReviewActions } from './Reviews';
 import {
   Badge, Callout, Editor, FormSheet, StatusLine, Table, Task, Unrecorded,
-  gradeName, idle, sentence, shown, value, type Status,
+  gradeName, idle, localToday, sentence, shown, value, type Status,
 } from '../components/primitives';
 
 /**
@@ -184,6 +184,25 @@ export function LearnerDetail({ api, learner, manager, setStatus, reload, yearLa
           ) : (
             <p><Unrecorded label="Not enrolled in the active school year" /></p>
           )}
+          {/*
+            Taking a learner back out of the class, for an adviser who took in
+            the wrong one. The school asked for it on 2026-11-07: the pull was
+            built and its undo was not, so the only remedy was to ask the
+            office. It returns the enrolment to having **no class** — the state
+            it was pulled from — and never moves the learner to another class,
+            never withdraws them and never touches their record, all of which
+            remain a manager's. A manager has it too, as the quickest way to
+            undo a placement.
+          */}
+          {placement && placement.section_id && placement.status === 'enrolled' ? (
+            <ReleaseFromClass
+              api={api}
+              placement={placement}
+              sectionLabel={sectionLabel}
+              setStatus={setStatus}
+              reload={reload}
+            />
+          ) : null}
           <EnrollmentHistory api={api} learnerId={id} manager={manager} yearLabel={yearLabel} sectionLabel={sectionLabel} onView={onView} onSf9={onSf9} />
         </>
       ) : null}
@@ -269,6 +288,66 @@ export function EnrollmentHistory({ api, learnerId, manager, yearLabel, sectionL
           },
         ]}
       />
+    </>
+  );
+}
+
+/**
+ * Taking a learner back out of a class.
+ *
+ * The mirror of an adviser's pull, and deliberately only that: the enrolment
+ * returns to having no class, which is the state it was pulled from. It never
+ * moves the learner into another class, never withdraws them from school and
+ * never touches their record — all three stay a manager's, and
+ * `release_learner_from_section` (0062) refuses them whoever asks.
+ *
+ * It costs something, so it goes through `Confirm` and takes a reason that is
+ * kept with the enrolment for good.
+ */
+function ReleaseFromClass({ api, placement, sectionLabel, setStatus, reload }: {
+  api: Api; placement: Placement; sectionLabel: (id: unknown) => string;
+  setStatus: (s: Status) => void; reload: () => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const where = placement.section_name ?? sectionLabel(placement.section_id);
+
+  return (
+    <>
+      <Task title="Take out of this class" note="Returns the learner to having no class" tone="warn">
+        <p className="muted">
+          For a learner taken in by mistake. They stay on the registry and stay enrolled for the year at {gradeName(placement.grade_level)} — only the class is
+          given back, and any adviser of that grade can take them in afterwards. Their marks, grades and history are untouched.
+        </p>
+        <p className="card-note">
+          <button type="button" className="btn secondary" onClick={() => setAsking(true)}>
+            <Icon name="back" size={15} />Take out of {where}
+          </button>
+        </p>
+      </Task>
+
+      {asking ? (
+        <FormSheet
+          title={`Take this learner out of ${where}?`}
+          note="They keep their place on the registry and their enrolment for this school year. Only the class is given back, and the office is told so it can be settled."
+          submitLabel="Take out of the class"
+          fields={[{
+            key: 'reason', label: 'Reason', type: 'textarea', wide: true, minLength: 10, maxLength: 500,
+            hint: '10–500 characters on one line, kept with the enrolment for good.',
+          }]}
+          onSubmit={async data => {
+            // The placement beside a registry row carries no version, so the
+            // enrolment is read for its own: a release is a mutation like any
+            // other and takes the version the caller last read, or the API
+            // answers P0003 rather than overwriting a competing change.
+            const held = await api<Row>(`/enrollments/${placement.enrollment_id}`);
+            return api(`/enrollments/${placement.enrollment_id}/release`, 'POST', {
+              version: Number(held.version), effective_on: localToday(), reason: data.reason,
+            });
+          }}
+          onSaved={() => { setAsking(false); setStatus({ kind: 'done', text: `Taken out of ${where}. They are on the registry with no class.` }); reload(); }}
+          onClose={() => setAsking(false)}
+        />
+      ) : null}
     </>
   );
 }

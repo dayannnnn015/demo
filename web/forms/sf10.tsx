@@ -76,6 +76,30 @@ function Certification({ form }: { form: Sf10Form }) {
   );
 }
 
+/**
+ * The scholastic blocks laid into the panels their grades belong to: Grade 1
+ * in the first, Grade 6 in the sixth, and an empty panel wherever a year has
+ * not been recorded or transcribed yet.
+ *
+ * **Nothing is ever dropped.** A repeated grade gives two blocks the same
+ * panel; the earlier school year keeps it and the later one is placed after
+ * the six, in its own order. The same is true of anything outside Grade 1 to
+ * Grade 6, which the writers refuse but the form must not lose if it ever
+ * arrives. A permanent academic record silently losing a year is the one
+ * failure this layout exists to prevent.
+ */
+export function placeByGrade(source: Block[]): (Block | null)[] {
+  const panels: (Block | null)[] = [null, null, null, null, null, null];
+  const overflow: Block[] = [];
+  // Oldest first, so a repeated grade leaves the earlier year in the panel.
+  for (const block of [...source].sort((a, b) => a.school_year.start_year - b.school_year.start_year)) {
+    const slot = block.grade_level - 1;
+    if (slot >= 0 && slot < panels.length && panels[slot] === null) panels[slot] = block;
+    else overflow.push(block);
+  }
+  return [...panels, ...overflow];
+}
+
 /** Four scholastic blocks to a sheet, as the workbook rules them. */
 const PER_SHEET = 4;
 /** Front and back: the workbook's own eight, and the unit a duplex sheet pairs in. */
@@ -97,9 +121,17 @@ export function Sf10Sheet({ form, footer }: { form: Sf10Form; footer?: ReactNode
    *
    * Blocks are rounded up to a whole leaf, never a half one, so the page count
    * stays even and every sheet printed two-sided has a front and a back.
+   *
+   * **A block sits in the panel for its grade, not the next free one** (asked
+   * for 2026-11-07). A learner in Grade 3 whose earlier years have not been
+   * transcribed yet has their Grade 3 year in the *third* panel and the first
+   * two left empty, so the form shows at a glance which years are still
+   * missing from a permanent record. Filling from the top instead made a
+   * one-year record look like a complete one that began at Grade 1.
    */
-  const total = Math.max(PER_LEAF, Math.ceil(form.blocks.length / PER_LEAF) * PER_LEAF);
-  const blocks: (Block | null)[] = [...form.blocks, ...Array.from({ length: total - form.blocks.length }, () => null)];
+  const blocks: (Block | null)[] = placeByGrade(form.blocks);
+  const total = Math.max(PER_LEAF, Math.ceil(blocks.length / PER_LEAF) * PER_LEAF);
+  while (blocks.length < total) blocks.push(null);
   const sheets = Array.from({ length: total / PER_SHEET }, (_, i) => blocks.slice(i * PER_SHEET, (i + 1) * PER_SHEET));
   const last = sheets.length - 1;
   return (

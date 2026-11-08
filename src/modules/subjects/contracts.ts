@@ -1,7 +1,10 @@
 import {z} from 'zod';
-import {plainName,plainNameMessage,shortCode,shortCodeMessage} from '../../core/text.js';
+import {firstCapital,plainName,plainNameMessage,shortCode,shortCodeMessage} from '../../core/text.js';
 import {uuid} from '../foundation/contracts.js';
-export const subjectReason=z.string().trim().min(10).max(500).regex(/^[^\u0000-\u001f\u007f]*$/);
+// Capitalised on save since 2026-11-07, at the school's request. A reason is
+// read back in journals and in the message an adviser is sent, so it is
+// writing rather than a field value.
+export const subjectReason=z.string().trim().overwrite(firstCapital).min(10).max(500).regex(/^[^\u0000-\u001f\u007f]*$/);
 const metadata={name:z.string().trim().min(1).max(120).regex(plainName,plainNameMessage),kind:z.enum(['learning_area','developmental_domain']),grade_levels:z.array(z.number().int().min(0).max(6)).min(1).max(7).refine(v=>new Set(v).size===v.length,'Choose each grade level once'),active:z.boolean()};
 export const subjectSchemas={
   create:z.strictObject({code:z.string().trim().regex(shortCode,shortCodeMessage),...metadata,reason:subjectReason}),

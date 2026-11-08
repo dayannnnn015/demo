@@ -1,9 +1,9 @@
 import {z} from 'zod';
 import {staffRole,uuid} from '../foundation/contracts.js';
 import {subjectReason} from '../subjects/contracts.js';
-import {plainName,plainNameMessage,singleSpaced} from '../../core/text.js';
+import {firstCapital,plainName,plainNameMessage,singleSpaced} from '../../core/text.js';
 
-const staffName=(max:number)=>z.string().trim().overwrite(singleSpaced).min(1).max(max).regex(plainName,plainNameMessage);
+const staffName=(max:number)=>z.string().trim().overwrite(singleSpaced).overwrite(firstCapital).min(1).max(max).regex(plainName,plainNameMessage);
 
 const version=z.number().int().min(0).max(2147483646);
 export const avatarIcons=['book','pencil','globe','leaf','sun','star','music','flask','ball','heart','compass','palette'] as const;

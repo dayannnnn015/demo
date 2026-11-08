@@ -25,7 +25,7 @@ export type Resolution = { row: number; action: 'use_existing'; learner_id: stri
 
 export { MAX_BYTES, MAX_ROWS, csvProblem, csvStats } from '../csv';
 import { EnlistSheet } from './LateLearner';
-import { csvProblem, csvStats, MAX_BYTES, MAX_ROWS, rosterFileText, rosterTemplateWorkbook } from '../csv';
+import { ROSTER_HEADER, csvProblem, csvStats, MAX_BYTES, MAX_ROWS, rosterFileText, rosterTemplateWorkbook } from '../csv';
 import { downloadXlsx } from '../xlsx';
 
 /** The resolutions a preview is sent with, one per row, in row order. */
@@ -86,8 +86,17 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   const [template, setTemplate] = useState<Template | null>(null);
   const [enrolledOn, setEnrolledOn] = useState('');
   const [kind, setKind] = useState<'regular' | 'transfer_in'>('regular');
-  /** Where the list lands: into one section, or onto the registry at a grade with no class yet. */
-  const [into, setInto] = useState<'section' | 'registry'>('section');
+  /**
+   * Every bulk import lands learners **on the registry at a grade, with no
+   * class** (decided 2026-11-07). The school chose the one workflow: the
+   * office registers by grade, the advisers take in their own from Learner
+   * registry. So there is no longer anything to choose here, and the control
+   * that asked has gone — a question with one answer is furniture.
+   *
+   * The value is kept because an adviser's submitted class list, from before
+   * the change, is still imported into its own section; `openList` sets it.
+   */
+  const [into, setInto] = useState<'section' | 'registry'>('registry');
   const [grade, setGrade] = useState('');
   const [csv, setCsv] = useState('');
   const [fileName, setFileName] = useState('');
@@ -136,15 +145,27 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
     setFromList(list);
     setPendingFill(list);
     scope.setYearId(list.academic_year_id);
-    scope.setSectionId(list.section_id);
-    setLocal({ text: `Opened the class list for ${gradeName(list.grade_level)} · ${list.section_name}. Preview it below.`, kind: 'done' });
+    // A list submitted at a grade has no section to open into, and since 0061
+    // the two shapes are imported differently: that one lands on the registry
+    // at its grade, which is what `into` selects below.
+    if (list.section_id) { setInto('section'); scope.setSectionId(list.section_id); }
+    else { setInto('registry'); setGrade(String(list.grade_level)); }
+    setLocal({ text: list.section_name
+      ? `Opened the class list for ${gradeName(list.grade_level)} · ${list.section_name}. Preview it below.`
+      : `Opened the list for ${gradeName(list.grade_level)}, which lands on the registry with no class. Preview it below.`, kind: 'done' });
   };
 
   const problem = csvProblem(csv);
   const stats = csvStats(csv);
   const closed = year?.status === 'closed';
-  /** Whether a destination has been chosen: a section, or a year and a grade. */
-  const target = into === 'section' ? !!scope.sectionId : !!scope.yearId && grade !== '';
+  /**
+   * Whether a destination has been chosen. A section says all three. Without
+   * one the school year is enough: since the template carries a grade per row
+   * the file may name its own, so **the grade here is optional** and stands
+   * only for the rows that leave theirs empty. Requiring it was what stopped
+   * a mixed-grade file being imported at all.
+   */
+  const target = into === 'section' ? !!scope.sectionId : !!scope.yearId;
 
   // Into a section, or onto the registry at a grade with no class yet. The
   // second is how a school puts every learner on the registry before classes
@@ -153,7 +174,9 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
   const body = () => ({
     ...(into === 'section'
       ? { section_id: scope.sectionId }
-      : { section_id: null, academic_year_id: scope.yearId, grade_level: Number(grade) }),
+      // Omitted entirely when nothing is chosen, rather than sent as a null
+      // or a NaN: the API reads its absence as "every row says its own".
+      : { section_id: null, academic_year_id: scope.yearId, ...(grade === '' ? {} : { grade_level: Number(grade) }) }),
     enrolled_on: enrolledOn, entry_kind: kind, csv,
     resolutions: resolutionList(chosen).map(r => (r.action === 'create_distinct' ? { ...r, reason: tidy(r.reason) } : r)),
   });
@@ -254,33 +277,22 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
         ) : null}
         <div className="card-head">
           <div>
-            <h2>1. Where the learners go</h2>
+            <h2>1. Which grade, and from when</h2>
             <p className="card-note">
               {into === 'section'
-                ? 'Every learner in one file is enrolled into one section, on one date.'
-                : 'Every learner in one file is registered and enrolled at one grade, with no class yet. Assigning a class later is a change to that enrolment, not a second one.'}
+                ? 'An adviser’s own class list, imported into their class.'
+                : 'Every learner in one file is registered and enrolled at one grade, with no class yet. Their advisers take in the ones who are theirs afterwards.'}
             </p>
           </div>
         </div>
         <div className="card-body">
-          <fieldset className="choose">
-            <legend className="label">Where this file lands</legend>
-            <label className="check-line">
-              <input type="radio" name={`${id}-into`} checked={into === 'section'} onChange={() => setInto('section')} />
-              <span>Into a section — the class list for one class</span>
-            </label>
-            <label className="check-line">
-              <input type="radio" name={`${id}-into`} checked={into === 'registry'} disabled={!!fromList} onChange={() => setInto('registry')} />
-              <span>Onto the registry at a grade, with no class yet — for registering the school’s learners before classes are settled</span>
-            </label>
-            {fromList ? <p className="muted">An adviser’s submitted list is a class list, so it is imported into their section.</p> : null}
-          </fieldset>
+          {fromList ? <p className="muted">An adviser’s submitted class list is imported into their section.</p> : null}
           {into === 'registry' ? (
-            <Callout tone="info" title="These learners will have no class until one is assigned">
+            <Callout tone="info" title="These learners will have no class until an adviser takes them in">
               They are on the registry and enrolled for the year, so they count on the enrolment totals. They appear as <b>not in a class</b> on the SF4, which is
-              refused until every registered learner is in one, and they are on no section’s register. Assign their classes afterwards on <b>Enrollment</b>, or by
-              importing a class list into each section — a learner already enrolled this year is then refused, so import the registry list <i>or</i> the class lists,
-              not both.
+              refused until every registered learner is in one, and they are on no section’s register. Each adviser then takes in the learners at their class’s
+              grade, from <b>Add learner</b> on <b>Learner registry</b>; a manager can place one on <b>Enrollment</b>. A learner already enrolled this year is
+              refused a second time, so import each learner once.
             </Callout>
           ) : null}
         </div>
@@ -289,11 +301,15 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
             <ScopePickers scope={scope} yearOnly={into === 'registry'} />
             {into === 'registry' ? (
               <div className="field inline">
-                <label className="label" htmlFor={`${id}-grade`}>Enrol at grade</label>
+                <label className="label" htmlFor={`${id}-grade`}>Enrol at grade<span className="optional">Optional</span></label>
                 <Select id={`${id}-grade`} value={grade} onChange={event => setGrade(event.target.value)}>
-                  <option value="">Choose a grade…</option>
+                  <option value="">Each row says its own</option>
                   {[0, 1, 2, 3, 4, 5, 6].map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
                 </Select>
+                <span className="hint">
+                  The template has a <span className="mono">grade_level</span> column, so one file can hold several grades. Choose a grade here only to stand
+                  for the rows that leave theirs empty; a row with neither is named on its own line below.
+                </span>
               </div>
             ) : null}
             <div className="field inline">
@@ -330,7 +346,7 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
                 try { setCsv(await rosterFileText(file)); } catch (error) { setFileName(''); setStatus({ text: message(error), kind: 'error' }); }
               }} />
               <span className="hint">
-                The header must be exactly <span className="mono">{template?.csv.trim() ?? 'lrn,first_name,middle_name,last_name,name_extension,birth_date,sex'}</span>.
+                The header must be exactly <span className="mono">{template?.csv.trim() ?? ROSTER_HEADER}</span>.
                 Keep every LRN as text with all twelve digits, dates as YYYY-MM-DD, and sex as male or female.
               </span>
             </div>

@@ -10,6 +10,18 @@ import {priorSchemas as s,type PriorOperationId} from './contracts.js';
 /** Encoded history names a learner, so every read and write of it is logged like the register's. */
 async function logged(tx:Query,resource:string,ids:string[]){if(ids.length)await tx.query('select edunexus.record_access($1,$2::uuid[])',[resource,ids]);}
 const call=async<T>(tx:Query,sql:string,params:unknown[])=>(await tx.query<{r:T}>(`select ${sql} r`,params))[0]!.r;
+/**
+ * A jsonb argument, serialised here rather than left to the driver.
+ *
+ * node-postgres sends a JS **array** as a PostgreSQL array literal, not as
+ * JSON, so binding one straight to a `jsonb` parameter fails the cast with
+ * `22P02`. A plain object happens to be JSON-encoded, which is why only the
+ * learning areas broke — and why the tests did not catch it: PGlite encodes
+ * both the same way, so this is one of the few faults that can only be seen
+ * against a real server. The school hit it on every attempt to add a school
+ * year for three sessions.
+ */
+const json=(value:unknown)=>JSON.stringify(value);
 /** The retained profile behind an id, as every learner read resolves it. Null when the caller may not read it at all. */
 async function retained(tx:Query,learner:string){
   const id=await call<string|null>(tx,'edunexus.visible_learner_identity($1)',[learner]);
@@ -33,13 +45,13 @@ export async function executePrior(id:PriorOperationId,ctx:Context,input:{body:u
     }
     case 'priorYearRecord':{
       const b=input.body as z.infer<typeof s.create>;
-      const block=await call<Block>(tx,'edunexus.write_learner_prior_year(null,0,$1,$2,$3,$4)',[input.id!,b.year,b.subjects,b.reason]);
+      const block=await call<Block>(tx,'edunexus.write_learner_prior_year(null,0,$1,$2::jsonb,$3::jsonb,$4)',[input.id!,json(b.year),json(b.subjects),b.reason]);
       await logged(tx,'priorRecordsWrite',[block.learner_id]);
       return block;
     }
     case 'priorYearUpdate':{
       const b=input.body as z.infer<typeof s.update>;
-      const block=await call<Block>(tx,'edunexus.write_learner_prior_year($1,$2,null,$3,$4,$5)',[input.id!,b.version,b.year,b.subjects,b.reason]);
+      const block=await call<Block>(tx,'edunexus.write_learner_prior_year($1,$2,null,$3::jsonb,$4::jsonb,$5)',[input.id!,b.version,json(b.year),json(b.subjects),b.reason]);
       await logged(tx,'priorRecordsWrite',[block.learner_id]);
       return block;
     }
@@ -52,7 +64,7 @@ export async function executePrior(id:PriorOperationId,ctx:Context,input:{body:u
     }
     case 'eligibilityRecord':{
       const {reason,version,...payload}=input.body as z.infer<typeof s.eligibility>;
-      const record=await call<Block>(tx,'edunexus.write_learner_eligibility($1,$2,$3,$4)',[input.id!,version,payload,reason]);
+      const record=await call<Block>(tx,'edunexus.write_learner_eligibility($1,$2,$3::jsonb,$4)',[input.id!,version,json(payload),reason]);
       await logged(tx,'priorRecordsWrite',[record.learner_id]);
       return record;
     }

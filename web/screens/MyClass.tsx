@@ -6,7 +6,6 @@ import { Sheet } from '../components/overlay';
 import { BatchSheet, type Candidate } from '../components/batch';
 import { clamp } from '../dates';
 import { sectionName } from '../components/scope';
-import { LearnerFields, blankLearner, learnerProblems, toLearnerProfile, type LearnerDraft } from './LateLearner';
 import {
   Badge, Callout, Cell, Select, StatusLine, Task, Unrecorded, gradeName, idle, localToday, yearName, type Status,
 } from '../components/primitives';
@@ -97,7 +96,6 @@ export function MyClassSheet({ api, onClose, onDone }: {
   const [answer, setAnswer] = useState<{ section: Section; items: Pullable[] } | null>(null);
   const [status, setStatus] = useState<Status>(idle);
   const [on, setOn] = useState('');
-  const [registering, setRegistering] = useState(false);
   const [beat, setBeat] = useState(0);
   const again = useCallback(() => setBeat(n => n + 1), []);
 
@@ -262,75 +260,30 @@ export function MyClassSheet({ api, onClose, onDone }: {
             }}
           />
 
-          <Task title="3. A learner the school has never held" note="Only when they are on no list at all">
+          {/*
+            Registering a child the school has never held used to happen right
+            here, in one step. It no longer does: the school ruled on
+            2026-11-07 that **every** learner an adviser brings in is approved
+            by the office first, individually as well as in a class list. One
+            learner is a one-row list, which is exactly what Roster import's
+            **Add learner** already makes, so there is one workflow
+            rather than a reviewed one and an unreviewed one beside it.
+          */}
+          <Task title="3. A learner the school has never held" note="Sent to the office for approval, like any list">
             <p className="muted">
-              Register a child who is not on the school’s registry yet. The registry is checked first: if a learner with the same name and birth date is already on
-              it, this is refused and you take <i>that</i> learner into your class instead — one child has one record, for their whole time at the school.
+              A child who is not on the school’s registry yet is put on a list and approved by the principal or administrative officer, exactly as a whole class
+              list is — there is no longer a way to add one straight to the registry, because a learner record is theirs to create. Use <b>Add one late
+              learner</b> on <a href="#/imports">Roster import</a>: it puts the child on a list of one, which you then submit.
             </p>
-            <p className="card-note">
-              <button type="button" className="btn secondary" onClick={() => setRegistering(true)}>
-                <Icon name="plus" size={15} />Register a new learner into my class
-              </button>
+            <p className="muted">
+              The registry is still checked when the office approves it: if a learner with the same name and birth date is already on file, the import says so
+              and that learner is taken in instead — one child has one record, for their whole time at the school.
             </p>
           </Task>
         </>
       ) : null}
 
-      {registering && chosen && !shut ? (
-        <RegisterIntoClass
-          api={api}
-          section={chosen}
-          on={on}
-          onClose={() => setRegistering(false)}
-          onDone={text => { setRegistering(false); again(); onDone(text); }}
-        />
-      ) : null}
     </Sheet>
   );
 }
 
-/** One new learner, straight into the adviser's own class. */
-function RegisterIntoClass({ api, section, on, onClose, onDone }: {
-  api: Api; section: Section; on: string; onClose: () => void; onDone: (text: string) => void;
-}) {
-  const [draft, setDraft] = useState<LearnerDraft>(blankLearner);
-  const [bad, setBad] = useState<[keyof LearnerDraft, string][]>([]);
-  const [status, setStatus] = useState<Status>(idle);
-  const [busy, setBusy] = useState(false);
-
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const problems = learnerProblems(draft);
-    setBad(problems);
-    if (problems.length) { setStatus({ kind: 'error', text: 'Check the fields marked below.' }); return; }
-    setBusy(true);
-    setStatus({ kind: 'busy', text: 'Registering…' });
-    try {
-      await api(`/sections/${section.id}/learners`, 'POST', { ...toLearnerProfile(draft), enrolled_on: on, entry_kind: 'regular' });
-      onDone(`${draft.first_name.trim()} ${draft.last_name.trim()} registered into ${gradeName(section.grade_level)} · ${section.name}.`);
-    } catch (error) { setStatus({ kind: 'error', text: message(error) }); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <Sheet
-      title={`Register a learner into ${gradeName(section.grade_level)} · ${section.name}`}
-      note="A child the school has never held a record for. One record per child, for their whole time at the school."
-      onClose={onClose}
-    >
-      <StatusLine status={status} />
-      <Callout tone="attention" title="Check they are not already on the registry">
-        If a learner with the same name and birth date is already on the school’s registry, this is refused — take that learner into your class instead. Ask the
-        office if it is a different child with the same name.
-      </Callout>
-      <form noValidate onSubmit={save}>
-        <LearnerFields draft={draft} set={setDraft} bad={bad} />
-        <p className="card-note">They are enrolled into this class from <span className="mono">{on}</span>.</p>
-        <div className="form-actions">
-          <button type="submit" className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Registering…' : 'Register into my class'}</button>
-          <button type="button" className="btn secondary" disabled={busy} onClick={onClose}>Cancel</button>
-        </div>
-      </form>
-    </Sheet>
-  );
-}

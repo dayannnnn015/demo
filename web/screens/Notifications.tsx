@@ -20,10 +20,19 @@ type Props = { api: Api; me: Row; token: number; setStatus: (s: Status) => void;
  * to which class; the screen it points at is the one that logs the disclosure.
  */
 
-/** What each kind says, in the words of the work rather than the column's. */
-const says: Record<string, { text: string; goes?: string }> = {
-  roster_submitted: { text: 'A class list is waiting to be imported', goes: 'imports' },
-  roster_withdrawn: { text: 'A class list was withdrawn before it was decided', goes: 'imports' },
+/**
+ * What each kind says, in the words of the work rather than the column's.
+ *
+ * `closed` is what the row says to a reader the screen is shut to. Without it
+ * the row named a screen and stopped, which is how a principal came to be told
+ * a class list was waiting and shown the name of the one place they could not
+ * open — a dead end reported by the school. Naming who does the work is the
+ * fix; widening the screen is not, because the division of work is the
+ * school's to set and they have set it.
+ */
+const says: Record<string, { text: string; goes?: string; closed?: string }> = {
+  roster_submitted: { text: 'A class list is waiting to be imported', goes: 'imports', closed: 'The administrative officer imports it' },
+  roster_withdrawn: { text: 'A class list was withdrawn before it was decided', goes: 'imports', closed: 'Nothing is waiting for you' },
   roster_imported: { text: 'Your class list was imported', goes: 'imports' },
   roster_declined: { text: 'Your class list was declined — it needs correcting', goes: 'imports' },
   learner_placed: { text: 'A learner was placed in a class', goes: 'enrollment' },
@@ -58,12 +67,17 @@ export function describeSubject(payload: Row) {
  *
  * `hiddenFor` hides a screen from a role's navigation without changing what the
  * API allows, and `routeFor` answers Overview for a screen a role may not open
- * — so an unconditional link would land a principal on the Overview with no
- * explanation. Roster import is exactly that case: it is `hiddenFor:
- * ['principal']`, because on this school's division of work the administrative
- * officer imports, and the principal is still told a list is waiting. So the
- * link is offered when the screen is theirs to open, and the screen is named in
- * words when it is not.
+ * — so an unconditional link would land that reader on the Overview with no
+ * explanation. The link is offered when the screen is theirs to open, and what
+ * happens instead is named in words when it is not.
+ *
+ * Roster import is the case that matters: it is `hiddenFor: ['principal']`,
+ * because on this school's division of work the administrative officer
+ * imports, and the principal is still told a list is waiting. 0.95.4 opened
+ * the screen to them and 0.95.5 closed it again at the school's word, so the
+ * remaining fault was the wording — a row that named a screen and stopped. It
+ * now names who does the work (`closed` above). Nothing here is a permission:
+ * `decide_roster_submission` checks `is_manager()` and would accept either.
  */
 function pointsAt(kind: string, role: unknown) {
   const goes = says[kind]?.goes;
@@ -151,16 +165,19 @@ export function Notifications({ api, me, token, setStatus, popover = false, onUn
                     {about ? <span>{about}</span> : null}
                     {to?.open
                       ? <a href={`#/${to.route.id}`}>{to.route.nav}</a>
-                      : to ? <span className="muted">On {to.route.nav}</span> : null}
+                      : to ? <span className="muted">{says[String(r.kind)]?.closed ?? `On ${to.route.nav}`}</span> : null}
                   </>}
                 />
               );
             } },
             { header: 'Who', cell: r => (r.actor_name
               ? <b>{String(r.actor_name)}</b>
-              // Not an em dash and not a blank: a teacher cannot read a
-              // manager's staff row, so the name is genuinely not theirs to see.
-              : <Unrecorded label="Not shown to you" />) },
+              // Since 0066 the actor of your own notification is named,
+              // whoever you are, so this is now the rare case rather than
+              // every adviser's: a staff record that can no longer be read.
+              // Still drawn rather than blanked — absence is stated here as
+              // everywhere else.
+              : <Unrecorded label="Not recorded" />) },
             { header: 'Read', cell: r => (r.read_at
               ? <span className="muted">Read</span>
               : <button type="button" className="btn ghost small" onClick={() => void readOne(String(r.id))}>Mark as read</button>) },

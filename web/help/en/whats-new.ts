@@ -114,7 +114,7 @@ export const whatsNew: Release[] = [
       'Advisers can now build their own class. On {learners}, **Add learner** lists the learners the office has registered for your grade who are in no class yet, and takes as many as you tick into your class.',
       'It never makes a second record for a child: it is the record the office already holds, given your class. A learner already in somebody’s class is not offered — a principal or administrative officer moves a learner between classes.',
       'A search there also finds a learner with no enrolment this school year, such as one returning to the school, so they can be taken in without being keyed again.',
-      '**Register a new learner into my class** is for a child the school has never held a record for. The registry is checked first: a learner with the same name and birth date already on it is refused, and you take that learner in instead.',
+      'Registering a child the school has never held a record for was, at the time, done straight from your class. Since 0.99.0 it goes on a list for the office to approve, like any other list.',
       'You can still only see the learners in the classes you advise, and correcting a learner’s details is still the office’s.',
       'Principals and administrative officers get **Across the school** at the top of {prior-records}: for every class, how many of its learners have a previous school year or the Grade 1 credential typed in, how many have neither, and who the adviser is — so the classes with work left are visible without opening anybody’s record.',
       'That view counts only. It names no learner and records no access to anyone’s records, so it can be checked as often as it is useful.',
@@ -123,7 +123,7 @@ export const whatsNew: Release[] = [
   {
     version: '0.89.0', date: '2026-11-05',
     items: [
-      'A class list can now be imported **Onto the registry at a grade, with no class yet** — choose that under *Where this file lands* on {imports}. It is how the school puts every learner on the registry first and settles the classes afterwards.',
+      'A class list can now be imported onto the registry at a grade, with no class yet, on {imports}. It is how the school puts every learner on the registry first and settles the classes afterwards.',
       'Those learners are enrolled for the year and count on the totals, but belong to no section. Give them a class later on {enrollment}: that is a change to the enrolment they already have, not a second one.',
       'They are listed as *not in a class* on the SF4, and the SF4 cannot be issued until every registered learner is in one — so nobody is quietly left off the figure the division reads.',
       'Importing a class list into a section still works exactly as before, and is what an adviser’s submitted list is imported as. Import the registry list *or* the class lists, not both: a learner already enrolled this year is refused the second time.',

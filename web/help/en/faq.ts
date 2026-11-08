@@ -344,7 +344,7 @@ export const faq: Faq[] = [
     id: 'late-learner', group: 'learners',
     question: 'A learner arrived after the class list went in.',
     answer: [
-      'An adviser adds them with **Add one late learner** on {imports}, as one more row on their list.',
+      'An adviser adds them with **Add learner** on {imports}, as one more row on their list.',
       'The administrative officer uses **Enlist one late learner** on the same screen, which finds a record already on file or creates one, and enrols them in one step.',
     ],
     routes: ['imports'],

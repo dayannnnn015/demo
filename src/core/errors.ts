@@ -79,9 +79,9 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P1403') return new AppError(409, 'OFFERING_BOUND', 'Release the assessment-policy binding before retiring this offering.');
   if (code === 'P1500') return new AppError(409, 'INVITATION_STATE', 'This invitation was already completed or cancelled. Request a new one.');
   if (code === 'P1700') return new AppError(409, 'SUBMISSION_CLOSED', 'This class list is no longer waiting.');
-  if (code === 'P1701') return new AppError(403, 'NOT_SECTION_ADVISER', 'Submit a class list only for a section you currently advise.');
+  if (code === 'P1701') return new AppError(403, 'NOT_SECTION_ADVISER', 'Submit a list only for a section you currently advise, or for a grade you currently advise a class at.');
   if (code === 'P1702') return new AppError(409, 'SUBMISSION_YEAR', 'The school year is closed, or the enrollment date falls outside it.');
-  if (code === 'P1703') return new AppError(409, 'SUBMISSION_WAITING', 'A class list for this section is already waiting. Withdraw it first, or ask a manager to decide it.');
+  if (code === 'P1703') return new AppError(409, 'SUBMISSION_WAITING', 'A list for this section or grade is already waiting. Withdraw it first, or ask a manager to decide it.');
   if (code === 'P2000') return new AppError(409, 'PROMOTION_APPROVED', 'This outcome is approved. The principal or administrative officer returns it before it can change.');
   if (code === 'P2200') return new AppError(409, 'ANNOUNCEMENT_ARCHIVED', 'An archived announcement is kept as it was. Write a new one instead.');
   if (code === 'P2201') return new AppError(409, 'ANNOUNCEMENT_STATE', 'The announcement is not in a state that allows this. Read it again.');
@@ -109,6 +109,8 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P2602') return new AppError(409, 'LEARNER_IN_CLASS', 'This learner is already in a class this school year. A principal or administrative officer moves a learner between classes.');
   if (code === 'P2603') return new AppError(409, 'LEARNER_OTHER_GRADE', 'This learner is registered at another grade this school year. A principal or administrative officer corrects a grade placement.');
   if (code === 'P2604') return new AppError(409, 'VERSION_CONFLICT', 'This learner was taken in or changed while the list was open. Read the list again and take them in from it.');
+  if (code === 'P2605') return new AppError(409, 'LEARNER_ALREADY_ON_REGISTRY', 'A learner with this name and birth date is already on the registry. Open that record instead, or say in writing why this is a different child.', [{ path: 'distinct_reason', message: 'Say why this is a different child, in 10 to 500 characters.' }]);
+  if (code === 'P2606') return new AppError(409, 'LEARNER_NOT_IN_CLASS', 'This learner is already in no class.');
   if (code === 'P2600') return new AppError(403, 'NOT_YOUR_CLASS', 'Take learners only into a class you advise. A principal or administrative officer can place a learner in any class.');
   if (code === 'P2601') return new AppError(409, 'LEARNER_ALREADY_ON_REGISTRY', 'A learner with this name and birth date is already on the school registry. Take that learner into your class instead of making a second record for the same child; the office can help if it is a different child with the same name.');
   if (code === 'P2508') return new AppError(422, 'PRIOR_CREDENTIAL_FIELDS', 'Name the credential presented for Grade 1, and only the fields that credential has: a rating belongs to a PEPT, and words in the box belong to an "other" credential.');
@@ -182,5 +184,24 @@ export function normalizeError(error: unknown): AppError {
   if (code === '57014' || code?.startsWith('08') || code === 'CONNECTION_CLOSED' || code === 'CONNECT_TIMEOUT' || dropped) {
     return new AppError(503, 'SERVICE_UNAVAILABLE', 'The service is temporarily unavailable.');
   }
-  return new AppError(500, 'INTERNAL_ERROR', 'The request could not be completed.');
+  // The database is older than the code running against it: a function, column
+  // or table this release added has not been migrated onto it yet. It used to
+  // answer the bare "The request could not be completed.", which sent the
+  // school hunting through the file they were importing — the one place the
+  // fault was not. It names itself now, because the fix is one command and
+  // nobody can guess it from a blank 500.
+  if (code === '42883' || code === '42703' || code === '42P01') {
+    return new AppError(503, 'SCHEMA_BEHIND',
+      'This database is missing a change this version of EDUNEXUS needs. Apply the pending migrations (npm run db:migrate), then try again. Nothing was written.');
+  }
+  // An unmapped database error used to answer "The request could not be
+  // completed." and nothing else, which is unactionable for the school and
+  // undiagnosable for whoever they report it to: the academic history refused
+  // this way for three sessions running and the cause could not be read off
+  // it. The SQLSTATE is appended when it is one — five plain alphanumerics,
+  // never anything the database put a value into — so the next report carries
+  // the one fact that identifies the fault.
+  const sqlstate = typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? code : null;
+  return new AppError(500, 'INTERNAL_ERROR',
+    sqlstate ? `The request could not be completed. Quote this code if you report it: ${sqlstate}.` : 'The request could not be completed.');
 }

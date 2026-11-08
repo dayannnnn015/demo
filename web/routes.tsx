@@ -172,9 +172,13 @@ export const routes: Route[] = [
     render: p => <Learners {...p} />,
   },
   {
-    id: 'enrollment', nav: 'Enrollment', icon: 'enrollment', group: 'Learners', manager: true, built: true, ownHeader: true,
-    title: 'Enrollment and movements',
-    lede: 'Enrol, move, withdraw and re-enter a learner.',
+    // Renamed from "Enrollment" on 2026-11-07: the screen's first job is now
+    // approving the class lists advisers send, and the old name described only
+    // what came after. The route id is unchanged, so every link, guide and
+    // test that names it still finds it.
+    id: 'enrollment', nav: 'Admissions', icon: 'enrollment', group: 'Learners', manager: true, built: true, ownHeader: true,
+    title: 'Admissions and movements',
+    lede: 'Approve the class lists advisers send, then move, withdraw and re-enter a learner.',
     record: 'enrollments', feeds: 'SF2, SF4',
     render: p => <Enrollment {...p} />,
   },
@@ -183,7 +187,11 @@ export const routes: Route[] = [
     title: 'Roster import',
     lede: 'Bring in a class list from a reviewed CSV, or submit yours for review.',
     record: 'import_previews, roster_submissions',
-    // An adviser submits their section's list; only a manager imports it, and on the school's division of work that is the administrative officer.
+    // An adviser submits their section's list; only a manager imports it, and on
+    // the school's division of work that is the administrative officer. Opened to
+    // the principal in 0.95.4 and closed again in 0.95.5 at the school's word:
+    // the API has always allowed either manager (`decide_roster_submission`
+    // checks `is_manager()` only), so this stays a menu, not a permission.
     hiddenFor: ['principal'],
     render: p => (p.manager ? <Imports {...p} /> : <RosterSubmit {...p} />),
   },

@@ -136,7 +136,7 @@ export const tours: Tour[] = [
       {
         target: 'roster-late',
         title: 'A learner who arrives later',
-        body: '**Add one late learner** puts one more row on your list, with no file needed.',
+        body: '**Add learner** puts one more row on your list, with no file needed.',
         absent: 'This appears once you have a section to submit for.',
       },
       {

@@ -58,5 +58,13 @@
   "0057_notifications.sql": "4b3abe24b1c9d76f3e604ba105c19b5dcea5f26a807147fa43fb99eb95fd4fe5",
   "0058_enrollment_notifications.sql": "9c45432e1a81f1a94d44b6663dad42505a874b0de4e80355dad957dd74fe2518",
   "0059_workflow_notifications.sql": "5d60635349b54b54144cafdeffdfd4a24accdb89e8a83a24c0217131c20f9907",
-  "0060_conditional_promotion_restored.sql": "b0943aa1dbc8bad7c6703ae11e3299b41061fe3d68c54e13ba845737af1dc5ce"
+  "0060_conditional_promotion_restored.sql": "b0943aa1dbc8bad7c6703ae11e3299b41061fe3d68c54e13ba845737af1dc5ce",
+  "0061_grade_roster_submissions.sql": "a853b0702041410a5c10ac2d24ccb37dff3fd63f874e53e878fcf527f6e86066",
+  "0062_pull_release_and_duplicates.sql": "b2023ca2c3b8c9a6bab44d447f9016a6df9887f4526a94f93d754486ed15ae98",
+  "0063_registration_is_reviewed.sql": "7773a61769ff07449fa8c657fdacd03f8a9407dc60b151552086ea9f59f8e9a0",
+  "0064_lists_may_wait_and_mix.sql": "a4bde6220b3a479a2bc646b92a9f2914174c7a16ff040ea90500535a0f1ea820",
+  "0065_same_day_timeline_state.sql": "0f09fa0ba56278463a1de039841a5c71c2a34192c2dc3b5e0333bece2a7b3cdd",
+  "0066_notification_actor_name.sql": "ff88ac7f1fabb4a98469a2f6deceb0e7b6118442d2b08d2b62be1c89f1ec8902",
+  "0067_same_day_timeline_everywhere.sql": "9d3c7e55da8c4e07225fe53277d67ee74635221e549ce5859021fea6c55202ce",
+  "0068_any_grade_may_be_submitted.sql": "736d0f8f55c9f2d62c95c52410904c4dc89386adcbc8871c8cccf6bb53db1edb"
 }
