@@ -31,7 +31,11 @@
 > clean worktree of `90dec93`; `npm run smoke` passes all 195 checks.
 >
 > **0.105.0, U3: counts on the rail (migration 0069).** A number beside Admissions, Promotion and Staff access for
-> what waits on a manager, from `GET /waiting/count`. **Next: U4, profiles and the Staff portal.**
+> what waits on a manager, from `GET /waiting/count`. **Committed and pushed, not deployed: migration 0069 is not yet
+> applied to the hosted database** (Claude Code's permission check refuses `npm run db:migrate`). Live stays 0.104.0,
+> which needs nothing from 0069. To release: `! npm run db:migrate`, then build in a clean worktree, `npx vercel --prod
+> --scope joshs-projects-47d7b071`, `npm run smoke`. **Do not deploy 0.105.0 before 0069 is applied**: its readiness check
+> requires `read_waiting_counts()`. **Next: U4, profiles and the Staff portal.**
 
 > ## The hosted database is a demonstration registry, and live is at migration 0060 — read this first
 >
