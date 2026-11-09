@@ -34,6 +34,7 @@
     "tests/web-help.test.ts",
     "tests/web-card-boxes.test.ts",
     "tests/web-sf2-codes.test.ts",
-    "tests/web-site-page-head.test.ts"
+    "tests/web-site-page-head.test.ts",
+    "tests/web-sign-in-messages.test.ts"
   ]
 }

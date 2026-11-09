@@ -44,7 +44,12 @@ function Password({ id, name = id, label, hint, autoComplete, value, onChange }:
           type="button"
           className="password-peek"
           aria-pressed={shown}
-          aria-label={shown ? 'Hide password' : 'Show password'}
+          // One name, not two. A toggle button keeps its label and lets
+          // `aria-pressed` carry the state; swapping the words as well said the
+          // same thing twice, and a screen reader read it twice over — "Hide
+          // password, pressed". Asked for 2026-11-09.
+          aria-label="Show password"
+          title="Show password"
           onClick={() => setShown(v => !v)}
         >
           <Icon name={shown ? 'eye-off' : 'eye'} size={16} />
@@ -162,7 +167,7 @@ export function Account({ client, onReady, framed = true }: {
             // and it has to land in the store this person picked.
             rememberMe(keepSignedIn);
             const { error } = await client.auth.signInWithPassword({ email: address, password });
-            if (error) { setPassword(''); throw error; }
+            if (error) { setPassword(''); throw new Error(signInProblem(error)); }
             offerToSave(address, password);
             setPassword('');
             finish();
@@ -263,7 +268,51 @@ export function Account({ client, onReady, framed = true }: {
 /** The three Supabase calls a password change needs, so a test can stand in for the service. */
 export type PasswordAuth = Pick<SupabaseClient['auth'], 'getUser' | 'signInWithPassword' | 'updateUser' | 'mfa'>;
 
-/** What the sign-in service's refusal means, in the words of this form. */
+/**
+ * Why a sign-in was refused, in the school's words.
+ *
+ * **It does not say whether the email or the password was the wrong one, and
+ * that is a decision rather than an omission.** Asked for on 2026-11-09; the
+ * reasoning is kept here because the request is a reasonable one and will come
+ * again:
+ *
+ * 1. *It would tell anyone who can reach this page which addresses are staff
+ *    accounts.* They try addresses until one answers differently. The sign-in
+ *    sits on the public internet beside the school's front page, and the
+ *    recovery link three lines below already refuses to leak it — "If that
+ *    address has an account, a recovery link is on its way". Naming it here
+ *    would undo that on the one screen somebody probing would actually visit.
+ * 2. *EDUNEXUS could not tell you anyway.* Supabase answers both cases with the
+ *    same `invalid_credentials`, deliberately. Distinguishing them means asking
+ *    whether the address exists, which needs the **service-role key in the API
+ *    runtime** — an open gate in `docs/constraints.md`, and one that would let a
+ *    compromised runtime create, alter or delete any identity in the school.
+ *
+ * So this says both possibilities plainly and names the two ways out, which is
+ * the actionable part of what was asked for; and the states that give nothing
+ * away about anybody else **are** told apart, because withholding those helps
+ * nobody.
+ */
+export function signInProblem(error: { code?: string | undefined; message?: string | undefined } | null | undefined) {
+  if (!error) return '';
+  const code = error.code ?? '';
+  if (code === 'invalid_credentials') {
+    return 'That email and password do not match an account. Check the address for a typo, then the password — '
+      + 'capitals and a space at the end both count. If you are not sure of the password, use “Email a recovery link” below.';
+  }
+  // Safe to name: this is a state the reader is in and can act on, not a fact
+  // about whether somebody else's address is registered.
+  if (code === 'email_not_confirmed') {
+    return 'This account has not been set up yet. Open the invitation the school emailed you and choose a password first.';
+  }
+  if (code === 'over_request_rate_limit' || /request rate limit/i.test(error.message ?? '')) {
+    return 'Too many sign-in attempts in a short time. Wait a minute and try again.';
+  }
+  if (code === 'user_banned') return 'This account has been suspended. Ask the principal or the administrative officer.';
+  return error.message || 'The sign-in service refused the sign-in.';
+}
+
+/** What the sign-in service's refusal means when a password is being *changed*, in the words of this form. */
 export function passwordProblem(error: { code?: string | undefined; message?: string | undefined } | null | undefined) {
   if (!error) return '';
   if (error.code === 'same_password') return 'The new password must be different from the one you use now.';
