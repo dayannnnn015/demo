@@ -1,7 +1,8 @@
-import { StrictMode, useEffect, useMemo, useState } from 'react';
+import { StrictMode, useEffect, useMemo, useState, Fragment } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ApiError, type Api, type Row } from './api';
 import { AppShell, waitingByRoute } from './components/AppShell';
+import { Notifications } from './screens/Notifications';
 import { BrandMark } from './components/brand';
 import { PageHeader, StatusLine, idle, yearName, type Status } from './components/primitives';
 import { available, routeFor, routes } from './routes';
@@ -42,6 +43,7 @@ function Demo() {
   const [token, setToken] = useState(() => { try { return sessionStorage.getItem('edunexus-demo-as') ?? ''; } catch { return ''; } });
   const [me, setMe] = useState<Row | null>(null);
   const [page, setPage] = useState(currentHash);
+  const [visit, setVisit] = useState(0);
   const [status, setStatus] = useState<Status>(idle);
   const [tick, setTick] = useState(0);
   // undefined until read: the top bar must not say there is no active year before it has looked.
@@ -55,7 +57,9 @@ function Demo() {
   useEffect(() => {
     // A link in a sentence changes the address directly; the last screen's message must not follow it to the next.
     let shown = currentHash();
-    const sync = () => { const next = currentHash(); if (next !== shown) setStatus(idle); shown = next; setPage(next); };
+    // A link that names what to open (`#/months?section=…`, from a notification) opens it even on the screen already
+    // showing: the screen is mounted afresh, since it reads the address only as it opens (the UI notes of 8 November, note 5).
+    const sync = () => { const next = currentHash(); if (next !== shown) setStatus(idle); shown = next; setPage(next); if (location.hash.includes('?')) setVisit(v => v + 1); };
     addEventListener('hashchange', sync);
     return () => removeEventListener('hashchange', sync);
   }, []);
@@ -74,6 +78,12 @@ function Demo() {
     void api<Row>('/school').then(setSchool).catch(() => setSchool(null));
   }, [api, me, tick]);
 
+  // The bell, as the real shell has it, so a notification can be followed to its source in the demo too.
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!me) { setUnread(0); return; }
+    void api<{ unread: number }>('/notifications/count').then(a => setUnread(Number(a.unread) || 0)).catch(() => setUnread(0));
+  }, [api, me, tick]);
   // The same counts the real shell asks for, so the demo's rail shows them.
   const [waiting, setWaiting] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -114,12 +124,14 @@ function Demo() {
       context={year === undefined ? undefined : year ? `${yearName(year)} school year` : 'No active school year'}
       contextTone={year ? 'active' : 'none'}
       waiting={waiting}
+      unread={unread}
+      notificationPanel={<Notifications api={api} me={me} token={tick} setStatus={setStatus} popover onUnreadChange={setUnread} />}
       onNavigate={navigate}
       onSignOut={() => { setToken(''); location.hash = ''; }}
     >
       {route.ownHeader ? null : <PageHeader route={route} />}
       <StatusLine status={status} />
-      {route.render({ api, me, manager, setStatus, reload: () => setTick(t => t + 1), token: tick, route, account: { updateMe: patch => setMe(m => (m ? { ...m, ...patch } : m)) } })}
+      <Fragment key={visit}>{route.render({ api, me, manager, setStatus, reload: () => setTick(t => t + 1), token: tick, route, account: { updateMe: patch => setMe(m => (m ? { ...m, ...patch } : m)) } })}</Fragment>
     </AppShell>
   );
 }

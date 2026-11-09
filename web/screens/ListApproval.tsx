@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import { Icon } from '../components/icons';
+import { addressAsks } from '../components/scope';
 import { Sheet } from '../components/overlay';
 import { StatusBadge, type Submission } from './RosterSubmissions';
 import {
@@ -39,12 +40,22 @@ export function WaitingLists({ api, manager, token, setStatus, reload }: {
   const [show, setShow] = useState<'submitted' | 'all'>('submitted');
   const [open, setOpen] = useState<Submission | null>(null);
   const [tick, setTick] = useState(0);
+  // A notification about one list opens its review here, once, if it is still waiting (the UI notes of 8 November, note 5).
+  const askedList = useRef(addressAsks().get('list'));
 
   useEffect(() => {
     if (!manager) { setRows([]); return; }
     void api<Page<Submission>>(`/roster-submissions${query({ status: show, limit: 50 })}`)
       .then(r => setRows(r.items)).catch(() => setRows([]));
   }, [api, manager, token, show, tick]);
+
+  useEffect(() => {
+    const id = askedList.current;
+    const found = id ? (rows ?? []).find(s => s.id === id && s.status === 'submitted') : undefined;
+    if (!found) return;
+    askedList.current = null;
+    void api<Submission>(`/roster-submissions/${found.id}`).then(setOpen).catch(error => setStatus({ kind: 'error', text: message(error) }));
+  }, [rows]);
 
   if (!manager) return null;
   // Nothing waiting and nothing asked for: the card stays off the screen rather

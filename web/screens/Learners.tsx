@@ -13,6 +13,7 @@ import {
 } from '../components/primitives';
 import { profileFields } from '../record-fields';
 import { MyClassSheet } from './MyClass';
+import { addressAsks } from '../components/scope';
 
 // The API takes exactly these keys, so the form must not send anything else.
 
@@ -31,7 +32,12 @@ export function Learners({ api, me, manager, setStatus, reload, token, route }: 
 }) {
   const [rows, setRows] = useState<Page | null>(null);
   const blank = { search: '', birth_date: '', sex: '', grade_level: '', section_id: '' };
-  const [filters, setFilters] = useState<Record<string, string>>(blank);
+  // A notification about a class opens the registry on that class (the UI notes of 8 November, note 5). Only a class
+  // ever travels in the address, never a learner, and row security decides what it shows.
+  const [filters, setFilters] = useState<Record<string, string>>(() => {
+    const section = addressAsks().get('section');
+    return section && /^[0-9a-f-]{36}$/i.test(section) ? { ...blank, section_id: section } : blank;
+  });
   const [offset, setOffset] = useState(0);
   const [years, setYears] = useState<Row[]>([]);
   const [sections, setSections] = useState<Row[]>([]);

@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## 0.110.0 is live; the hosted database is at migration 0072 — read this first
+> ## 0.111.0; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -21,20 +21,25 @@
 > descriptions against every test, which found exactly one that depended on a
 > visible one.
 >
-> ### Still to do, in order
+> ### 0.111.0: the last two asks, done (9 November)
 >
-> **Increment 3 — remove the Subject averages tab from Promotion.** Waiting on
-> the school: *Subject averages* names both the tab and its *Subject average and
-> remark* column, and the tab also holds per-term grade entry for a whole class
-> at once. Removing all of it means roughly 990 cells entered one at a time for
-> a 55-learner section. **Do not guess which was meant.**
+> **Increment 3 — the Subject averages tab is gone from Promotion.** Decided on
+> the user's instruction to continue with full permission, after they were shown
+> the cost: grades are now typed a learner's card at a time on **Report card**
+> (or on the SF9), and **Class summary** still shows the class. The class grid by
+> learning area is the one thing that went; restoring it is one tab entry and its
+> block from 0.110.0. Recorded in [constraints.md](constraints.md).
 >
-> **Increment 5 — a notification opens the record it is about.** It will break
-> `tests/web-notifications.test.ts`, which asserts the old bare href, and it
-> touches `useScope`, shared by 13 screens, so it is last deliberately. No
-> learner id may ever go in the link: a notification names no learner by design,
-> and a URL is where one would reach browser history on a shared screen.
+> **Increment 5 — a notification opens its source.** The line is the link: the
+> screen opens at the notification's school year and class (and a waiting class
+> list opens in its review on Admissions), and it is marked read. **No learner id
+> ever goes in the address.** `useScope` takes `year` and `section` from the
+> address as a first choice only.
 >
+> **The six asks are settled:** 1, 2 and 4 in 0.110.0; 5 and 6 in 0.111.0; 3
+> (which half of a refused sign-in was wrong) is deliberately not built, as
+> recorded in constraints. **Next:** nothing in flight.
+
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Fragment } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ApiError, createApi, message, rememberMe, sessionStore, type Page, type Row } from './api';
 import { Account, PasswordChange } from './Account';
@@ -31,6 +31,7 @@ export function App() {
   const [fatal, setFatal] = useState('');
   const [signedIn, setSignedIn] = useState(false);
   const [page, setPage] = useState(currentHash);
+  const [visit, setVisit] = useState(0);
   const [status, setStatus] = useState<Status>(idle);
   const [token, setToken] = useState(0);
   // undefined until read: the top bar must not say there is no active year before it has looked.
@@ -66,7 +67,9 @@ export function App() {
   useEffect(() => {
     // A link in a sentence changes the address directly; the last screen's message must not follow it to the next.
     let shown = currentHash();
-    const sync = () => { const next = currentHash(); if (next !== shown) setStatus(idle); shown = next; setPage(next); };
+    // A link that names what to open (`#/months?section=…`, from a notification) opens it even on the screen already
+    // showing: the screen is mounted afresh, since it reads the address only as it opens (the UI notes of 8 November, note 5).
+    const sync = () => { const next = currentHash(); if (next !== shown) setStatus(idle); shown = next; setPage(next); if (location.hash.includes('?')) setVisit(v => v + 1); };
     addEventListener('hashchange', sync);
     return () => removeEventListener('hashchange', sync);
   }, []);
@@ -249,7 +252,7 @@ export function App() {
     >
       {route.ownHeader ? null : <PageHeader route={route} />}
       <StatusLine status={status} />
-      {route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token, route, account })}
+      <Fragment key={visit}>{route.render({ api, me, manager, setStatus, reload: () => setToken(t => t + 1), token, route, account })}</Fragment>
       {changingPassword ? (
         <Sheet title="Change your password" note="You will be asked for the one you use now." onClose={() => setChangingPassword(false)}>
           <PasswordChange auth={client.auth} onDone={text => { setChangingPassword(false); setStatus({ text, kind: 'done' }); }} />

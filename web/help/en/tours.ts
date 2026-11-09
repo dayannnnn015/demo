@@ -166,7 +166,7 @@ export const tours: Tour[] = [
       {
         target: 'rc-tabs',
         title: 'What you record',
-        body: '**Promotion** is where you endorse outcomes. **Report card** shows one learner’s card as it prints, to type box by box. **Subject averages**, **General average**, **Observed values** and **Comments** take one thing for the whole class at a time; a Grade 1 section records **Narratives** instead of grades. **Class summary** lays the entries side by side to check against the ECR.',
+        body: '**Promotion** is where you endorse outcomes. **Report card** shows one learner’s card as it prints, to type box by box: term grades, subject averages and remarks. **General average**, **Observed values** and **Comments** take one thing for the whole class at a time; a Grade 1 section records **Narratives** instead of grades. **Class summary** lays the entries side by side to check against the ECR.',
         absent: 'The tabs appear once the section has learners and learning areas. Kindergarten has no card yet, only its outcomes.',
       },
       {

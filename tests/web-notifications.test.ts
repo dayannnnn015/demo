@@ -3,8 +3,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { ids, testDatabase, type TestDatabase } from './helpers/database.js';
 import { mountScreen, serverApi, type ServerApi } from './helpers/dom.js';
-import { Notifications } from '../web/screens/Notifications';
+import { Notifications, sourceOf } from '../web/screens/Notifications';
 import { routes } from '../web/routes';
+import { Enrollment } from '../web/screens/Enrollment';
 
 /**
  * The notification centre's data paths, in a real DOM against the real API.
@@ -96,17 +97,36 @@ describe('the notification centre', () => {
     expect(screen.text()).toContain('Read');
   });
 
-  it('names the screen it points at rather than linking a principal somewhere they are refused', async () => {
+  it('takes a principal to the waiting list on Admissions, never to a screen shut to them', async () => {
     server.signInAs('principal');
     const screen = await mountScreen(Notifications as never, server, principal);
     // Everything, because the case above has already marked it read.
     await screen.until(m => m.text().includes('Everything'), 'the filter');
     await screen.click(screen.byText('Everything', 'button'));
     await screen.until(m => m.text().includes('class list is waiting'), 'the roster notification');
-    // Roster import is hiddenFor principal, and routeFor would answer Overview
-    // for it, so the row says whose work it is instead of linking there (0.95.5).
-    expect(screen.text()).toContain('The administrative officer imports it');
-    expect(screen.all('a[href="#/imports"]')).toHaveLength(0);
+    // Since 0.96.0 both managers approve a class list on Admissions, so the row leads there, at that year and class,
+    // with that list to review (the UI notes of 8 November, note 5). Roster import stays shut to the principal (0.95.5),
+    // and nothing links to it.
+    const [list] = await db.pg.query<{ id: string }>(`select id from edunexus.roster_submissions where section_id=$1 order by created_at desc limit 1`, [masigla]);
+    const links = screen.all('a[href^="#/enrollment?"]').map(a => a.getAttribute('href')!);
+    expect(links.length).toBeGreaterThan(0);
+    const ask = new URLSearchParams(links[0]!.split('?')[1]);
+    expect(ask.get('section')).toBe(masigla);
+    expect(ask.get('list')).toBe(list!.id);
+    expect([...ask.keys()].sort()).toEqual(['list', 'section', 'year']);
+    expect(screen.all('a[href^="#/imports"]')).toHaveLength(0);
+  });
+
+  it('opens that class list for review when the link is followed to Admissions', async () => {
+    const [list] = await db.pg.query<{ id: string }>(`select id from edunexus.roster_submissions where section_id=$1 and status='submitted'`, [masigla]);
+    location.hash = `#/enrollment?section=${masigla}&list=${list!.id}`;
+    try {
+      server.signInAs('principal');
+      const screen = await mountScreen(Enrollment as never, server, principal, { route: routes.find(r => r.id === 'enrollment')! });
+      await screen.until(m => m.all('.sheet').length > 0, 'the list’s review');
+      expect(screen.all('.sheet')[0]!.textContent).toContain('Class list for');
+      screen.unmount();
+    } finally { location.hash = ''; }
   });
 
   it('links an adviser to the screen the notification is about', async () => {
@@ -123,10 +143,23 @@ describe('the notification centre', () => {
     server.signInAs('teacher');
     const screen = await mountScreen(Notifications as never, server, teacher);
     await screen.until(m => m.text().includes('needs correcting'), 'the declined notification');
-    expect(screen.all('a[href="#/imports"]').length).toBeGreaterThan(0);
+    // Their own screen, at their own class; the list itself is theirs to read there.
+    const link = screen.all('a[href^="#/imports?"]')[0]?.getAttribute('href') ?? '';
+    expect(new URLSearchParams(link.split('?')[1]).get('section')).toBe(masigla);
     // The manager who declined it is named since 0.101.0, through a function that answers only for the caller's
     // own notification; staff_read is unchanged, so this names nobody else.
     expect(screen.text()).toContain('Administrative Officer');
     expect(screen.text()).not.toContain('Not shown to you');
+  });
+});
+
+describe('where a notification leads (the UI notes of 8 November, note 5)', () => {
+  it('carries a school year and a class, and a waiting list on Admissions, but never a learner', () => {
+    const row = { academic_year_id: 'year-1', section_id: 'section-1', learner_id: 'learner-1', subject_table: 'enrollments', subject_id: 'enrollment-1' };
+    expect(sourceOf(row, 'learners')).toBe('#/learners?year=year-1&section=section-1');
+    expect(sourceOf(row, 'enrollment')).not.toContain('learner-1');
+    expect(sourceOf(row, 'enrollment')).not.toContain('enrollment-1');
+    expect(sourceOf({ ...row, subject_table: 'roster_submissions', subject_id: 'list-1' }, 'enrollment')).toBe('#/enrollment?year=year-1&section=section-1&list=list-1');
+    expect(sourceOf({}, 'calendar')).toBe('#/calendar');
   });
 });

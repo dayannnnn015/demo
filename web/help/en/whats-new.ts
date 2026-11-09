@@ -8,6 +8,13 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.0', date: '2026-11-09',
+    items: [
+      'A notification now takes you to what it is about: press it, and the screen opens at that school year and class, marking it read. A class list waiting for approval opens straight into its review on {enrollment}.',
+      '{report-cards} no longer has a **Subject averages** tab. Type each learner’s term grades, subject averages and remarks on **Report card**, one card at a time, and check the whole class on **Class summary**.',
+    ],
+  },
+  {
     version: '0.107.0', date: '2026-11-09',
     items: [
       '{next-year} is easier to read: three steps at the top say where the year stands, each grade next year has a card with its boys and girls, and the learners are grouped by the grade they move to.',

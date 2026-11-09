@@ -345,9 +345,9 @@ export const guides: Guide[] = [
     for: 'teacher',
     summary: 'Your section’s report-card entries, copied from the DepEd class record (ECR), and each learner’s end-of-year outcome.',
     steps: [
-      'Choose your section. Under **Subject averages**, pick a learning area and type each learner’s subject average and remark exactly as the ECR shows it. **Review**, check each change, and **Record these**.',
-      'Do the same for the **General average**, the **Observed values** of each term on Grades 4 to 6, and your **Comments** on Grades 2 and 3. A Grade 1 section records each term’s **Narratives** instead of numeric grades. Each section is offered only what its card prints, so nothing you record goes unprinted.',
-      'Moving to another learning area, term, tab or section with boxes not yet recorded asks first. If someone recorded the same boxes meanwhile, the table is read again and what you typed is kept: review it once more.',
+      'Choose your section. On **Report card**, open each learner’s card and type their term grades, subject averages and remarks exactly as the ECR shows them. **Review**, check each change, and record the card.',
+      'Record the **General average**, the **Observed values** of each term on Grades 4 to 6, and your **Comments** on Grades 2 and 3. A Grade 1 section records each term’s **Narratives** instead of numeric grades. Each section is offered only what its card prints, so nothing you record goes unprinted.',
+      'Moving to another learner, term, tab or section with boxes not yet recorded asks first. If someone recorded the same boxes meanwhile, the table is read again and what you typed is kept: review it once more.',
       '**Report card** shows one learner’s card as it prints: type into any box and review. The whole card is recorded together, or nothing is.',
       '**Class summary** lays the section’s entries side by side, to check against the ECR.',
       'At the end of the year, endorse each learner’s outcome on **Promotion**, as the school decided it. The principal or administrative officer approves it or returns it to you.',

@@ -211,7 +211,6 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
   const [failed, setFailed] = useState('');
   const [chosenTab, setTab] = useState<Tab>('promotion');
   const [waiting, setWaiting] = useState<{ id: string; grade_level: number; name: string; adviser_name: string | null; waiting: number }[] | null>(null);
-  const [offeringId, setOfferingId] = useState('');
   const [column, setColumn] = useState('');
   const [periodId, setPeriodId] = useState('');
   const [tick, setTick] = useState(0);
@@ -238,7 +237,6 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
     setFailed('');
     void api<ReportRecords>(`/sections/${sectionId}/report-records`).then(r => {
       setRecords(r);
-      setOfferingId(current => (r.offerings.some(o => o.id === current) ? current : r.offerings.find(o => o.active)?.id ?? ''));
       // The subject average comes first: it is what the cards and the promotion turn on (the group leader's notes, 10 October).
       setColumn(current => (current === 'final' || r.periods.some(p => p.id === current) ? current : 'final'));
       setPeriodId(current => (r.periods.some(p => p.id === current) ? current : r.periods[0]?.id ?? ''));
@@ -267,7 +265,6 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
   // taking an adviser's typing and losing it on save.
   const unstarted = records ? unstartedTerms(records.periods) : [];
   const shut = (period: string) => unstarted.some(p => p.id === period);
-  const columnShut = !final && !!column && shut(column);
   const termShut = !!periodId && shut(periodId);
   const notStartedYet = (p: Period) => (termOpen(p) ? '' : ' — not started');
   const WaitingNote = ({ term }: { term: Period | undefined }) => (
@@ -282,7 +279,11 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
   const descriptive = records ? descriptiveGrading(grade, records.school_year.start_year) : false;
   // Promotion comes first: the screen is named for it, from the group leader's notes of 9 October.
   // The card itself, box by box, sits beside the class tables (the group leader's notes, 11 October).
-  const allTabs: [Tab, string][] = [['promotion', 'Promotion'], ['card', 'Report card'], ['grades', 'Subject averages'], ['average', 'General average'], ['values', 'Observed values'], ['comments', grade === 1 ? 'Narratives' : 'Comments'], ['summary', 'Class summary']];
+  // No Subject averages tab since 0.111.0 (asked 2026-11-09, item 6): term grades, subject averages and remarks are
+  // typed on the Report card tab, a learner's whole card at a time, or on the SF9 itself, and Class summary still lays
+  // the class side by side. Its class grid by learning area is the one thing that went. To restore it, put
+  // ['grades', 'Subject averages'] back here and its `tab === 'grades'` block, both in git history at 0.110.0.
+  const allTabs: [Tab, string][] = [['promotion', 'Promotion'], ['card', 'Report card'], ['average', 'General average'], ['values', 'Observed values'], ['comments', grade === 1 ? 'Narratives' : 'Comments'], ['summary', 'Class summary']];
   // Only the tables whose records this grade's card prints: observed values are on the Grades 4–6 card,
   // narratives on Grade 1's and comments on Grades 2–3's (testing finding F27). A table for a box the card
   // does not have would record work no SF9 or SF10 ever shows.
@@ -345,42 +346,6 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                 {tabs.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : undefined} onClick={() => (key === tab ? undefined : guard(() => setTab(key)))}>{label}</button>)}
               </div>
             </div>
-            {tab === 'grades' ? (
-              records.offerings.length ? (
-                <>
-                  <div className="card-head">
-                    <div className="toolbar">
-                      <div className="field inline">
-                        <span className="label">Learning area</span>
-                        <Select aria-label="Learning area" value={offeringId} onChange={e => { const next = e.target.value; guard(() => setOfferingId(next)); }}>
-                          {records.offerings.map(o => <option key={o.id} value={o.id}>{o.name}{o.active ? '' : ' (no longer offered)'}</option>)}
-                        </Select>
-                      </div>
-                      <div className="field inline">
-                        <span className="label">Column</span>
-                        <Select aria-label="Column" value={column} onChange={e => { const next = e.target.value; guard(() => setColumn(next)); }}>
-                          <option value="final">Subject average and remark</option>
-                          {records.periods.map(p => <option key={p.id} value={p.id}>{p.name} grade{notStartedYet(p)}</option>)}
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                  {columnShut ? <WaitingNote term={records.periods.find(p => p.id === column)} /> : null}
-                  <EntryTable
-                    key={`grades|${sectionId}|${offeringId}|${column}`} onDirty={dirtyFor('grades')}
-                    learners={learners} readOnly={readOnly || manager || columnShut} setStatus={setStatus} onSaved={reload}
-                    what={final ? 'Subject averages' : 'Grades'}
-                    columns={final ? [{ key: 'grade', label: 'Subject average', kind: 'grade' }, { key: 'remark', label: 'Remark', kind: 'remark' }] : [{ key: 'grade', label: records.periods.find(p => p.id === column)?.name ?? 'Grade', kind: 'grade' }]}
-                    stored={l => {
-                      const row = l.grades.find(g => g.offering_id === offeringId && (g.reporting_period_id ?? 'final') === column);
-                      return { values: { grade: asText(row?.grade), remark: row?.remark ?? '' }, version: row?.version ?? 0 };
-                    }}
-                    toEntry={(l, v, version) => ({ enrollment_id: l.enrollment_id, grade: numberOrNull(v.grade!), ...(final ? { remark: v.remark || null } : {}), version })}
-                    save={(entries, reason) => api(`/section-subjects/${offeringId}/report-grades`, 'POST', { reporting_period_id: final ? null : column, entries, reason })}
-                  />
-                </>
-              ) : <div className="card-body"><EmptyState title="No learning areas offered" body="Offer the section its learning areas on Subjects & offerings first." /></div>
-            ) : null}
             {tab === 'average' ? (
               <EntryTable
                 key={`average|${sectionId}`} onDirty={dirtyFor('average')}

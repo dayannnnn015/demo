@@ -258,7 +258,8 @@ export function AppShell({ me, school, current, context, contextTone, hidden = [
   }, []);
   // A link followed from help goes somewhere else, and the help it came from no longer describes the page.
   useEffect(() => {
-    const away = () => setHelp(null);
+    // A notification followed to its source closes the bell's list too (the UI notes of 8 November, note 5).
+    const away = () => { setHelp(null); setNotifications(false); };
     addEventListener('hashchange', away);
     return () => removeEventListener('hashchange', away);
   }, []);
