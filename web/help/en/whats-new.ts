@@ -8,6 +8,12 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.5', date: '2026-11-10',
+    items: [
+      'On the school’s public front page, only Home has the large picture banner. Announcements, Calendar, Questions and About now open on a plain title at the top of the page.',
+    ],
+  },
+  {
     version: '0.111.4', date: '2026-11-10',
     items: [
       'The filters above **Grade offerings** on {subjects} sit in one line again. The number of classes at the grade now appears beside **Grade level** instead of under it.',

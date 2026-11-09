@@ -2,63 +2,59 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The public front page's inner tabs, and the empty panel they used to carry.
+ * The public front page's inner tabs open on a plain title.
  *
- * Reported 2026-11-09: switching from Home to Announcements, Calendar,
- * Questions or About showed a blank dark band above the heading. The cause was
- * not a spacing value — `.valley`, the SVG backdrop those pages share, had **no
- * positioning rule at all**, so it laid out inline at the SVG's own size and
- * pushed the heading down. Home never showed it because Home does not use
- * `Valley`; it uses `.hero-art img`, which has always been positioned.
+ * Asked 2026-11-10: "remove the hero section in each tab except the main one,
+ * keep it simple." Announcements, Calendar, Questions and About each opened on
+ * a tall dark band with the valley drawn behind the heading; that band is gone,
+ * and the heading sits on the page in the page's own ink. Home keeps its
+ * hillside — it is the one hero the front page has.
  *
- * Both halves are pinned because either alone brings the band back: without the
- * positioning the SVG returns to the flow, and without trimming the padding the
- * gap it was leaving for the art stays behind.
+ * (The band this replaces was fixed once already, on 2026-11-09, for drawing an
+ * empty dark panel above the heading. Removing it removes that whole class of
+ * fault rather than pinning it.)
  */
 
 const css = readFileSync('web/styles/site.css', 'utf8');
+const pages = readFileSync('web/site/pages.tsx', 'utf8');
+const art = readFileSync('web/site/art.tsx', 'utf8');
 const rule = (selector: string) => {
-  const found = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css);
+  const found = new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css);
   if (!found) throw new Error(`no rule for ${selector}`);
   return found[1]!;
 };
 
-describe('the inner pages draw their backdrop behind the words', () => {
-  it('takes the valley out of the flow, as the home page does with its illustration', () => {
-    const valley = rule('.page-head .valley');
-    expect(valley).toContain('position: absolute');
-    expect(valley).toContain('inset: 0');
-    // Behind the heading rather than over it; `.page-head` sets `isolation: isolate`
-    // so this negative layer cannot escape the band.
-    expect(valley).toContain('z-index: -1');
-    // It has to fill the band: an absolutely positioned SVG with no size collapses.
-    expect(valley).toContain('width: 100%');
-    expect(valley).toContain('height: 100%');
+describe('the inner tabs open on a plain title', () => {
+  it('draws no backdrop behind the heading', () => {
+    expect(pages).not.toContain('<Valley');
+    expect(art).not.toContain('export function Valley');
+    expect(css).not.toContain('.page-head .valley');
   });
 
-  it('is positioned the same way Home positions its own art', () => {
-    // The fix is not a new idea; it is the rule Home already had. If these two
-    // ever disagree again, one of the two backdrops is broken.
-    const home = rule('.hero-art img');
-    for (const property of ['position: absolute', 'inset: 0', 'z-index: -1']) {
-      expect(home, `Home lost ${property}`).toContain(property);
-      expect(rule('.page-head .valley'), `the inner pages lost ${property}`).toContain(property);
-    }
+  it('is light, in the page’s own ink, not a dark band', () => {
+    const head = rule('.page-head');
+    expect(head).toContain('background: var(--white)');
+    expect(head).not.toContain('var(--night)');
+    expect(rule('.page-head h1')).toContain('color: var(--ink)');
   });
 
-  it('no longer holds a gap for art that is not in the flow', () => {
+  it('is a title, not a banner: no tall padding', () => {
     const inner = rule('.page-head-inner');
     expect(inner).toContain('padding-block:');
-    // It was clamp(48px, 8vw, 88px) clamp(110px, 14vw, 170px) — the second value
-    // mirrored the Home hero, where the illustration really does sit. Anything
-    // that tall here is the empty band coming back.
-    expect(inner).not.toMatch(/clamp\(\s*1[1-9]\d\s*px/);
-    expect(inner).not.toMatch(/\b1[2-9]\dpx\b/);
+    expect(inner).not.toMatch(/clamp\([^)]*\b(?:[6-9]\d|\d{3})px\)/);
   });
 
-  it('leaves the home page’s own hero alone', () => {
-    // Home's bottom padding is load-bearing: the hillside is drawn there and the
-    // words have to clear it. This change must not have touched it.
+  it('keeps one heading per tab', () => {
+    // A screen reader lands on each tab by its h1, so the plain title still is one.
+    expect(pages).toMatch(/function PageHead[\s\S]*?<h1>\{title\}<\/h1>/);
+  });
+});
+
+describe('Home keeps its hero', () => {
+  it('still draws the hillside behind the school’s name', () => {
+    expect(pages).toContain('<section className="hero home-section" id="home">');
+    expect(rule('.hero-art img')).toContain('position: absolute');
+    // Home's bottom padding is load-bearing: the hillside is drawn there and the words have to clear it.
     expect(rule('.hero-inner')).toContain('clamp(220px, 30vh, 320px)');
   });
 });

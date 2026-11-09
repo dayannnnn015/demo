@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## 0.111.4 is live; the hosted database is at migration 0072 — read this first
+> ## 0.111.5 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -52,7 +52,9 @@
 > asks a reason (since 0.103.0). **Live** as `edunexus-d5q9gh4en` (`aa7508f`), smoke 198/198.
 >
 > **0.111.4:** the Grade offerings filters line up; the class count sits beside its label. **Live** as
-> `edunexus-c030zzmey` (`a93d8f3`), smoke 198/198. **Next:** nothing in flight.
+> `edunexus-c030zzmey` (`a93d8f3`), smoke 198/198.
+>
+> **0.111.5:** the front page's inner tabs open on a plain title; Home keeps its hero. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
