@@ -1,68 +1,41 @@
 # Where things stand
 
-> ## 0.109.1 is live, and the hosted database is at migration 0072 — read this first
+> ## 0.110.0 is live; the hosted database is at migration 0072 — read this first
 >
-> **Deployed 2026-11-09 as `edunexus-flog1ipn3` and verified: `npm run smoke`
-> passes all 198 checks, `/health/ready` is green and `/openapi.json` reports
-> 0.109.1 with 150 paths.** `origin/master` carries it; the three increments were
-> replayed onto 0.107.0 rather than merged, for the reason in the commit.
+> **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
+> is workspace only, so the database is unchanged from 0.109.1’s release.
 >
-> | Release | Migration | What |
-> |---|---|---|
-> | 0.108.0 | `0070` | A term accepts grades only from its own `starts_on`; promotion is closed until a class's report cards are complete; an approved outcome enrols the learner into the following school year |
-> | 0.109.0 | `0071` | One SF9 per grade level, and `GET /learners/{id}/sf9-history` behind the profile's **Report card** column |
-> | 0.109.1 | `0072` | Automatic enrolment narrowed to a **promotion**: a retention is recorded and approved and enrols nobody |
+> **Three interface asks, built one increment at a time** — the empty panel on
+> the front page’s inner tabs, one name for the password toggle, and a screen
+> description folded away by default. A fourth, naming whether the email or the
+> password was wrong on a refused sign-in, was **asked for and not built**; it is
+> a settled row in [constraints.md](constraints.md) and is named on the
+> service-role gate as a request waiting behind it, so opening that gate does
+> not silently grant it too.
 >
-> Migrations `0069`–`0072` were applied in one transaction; `0069` is the waiting
-> counts 0.105.0–0.107.0 were waiting on. All 605 `record_access_events` rows
-> revalidated against 0071's rebuilt CHECK. See [the promotion gate](promotion-gate.md)
-> and [the SF9 history](sf9-history.md).
+> **Why increments.** The six asks of 2026-11-09 were first written in one go.
+> That attempt passed `npm run typecheck` while breaking three tests — one per
+> change — and was thrown away rather than patched. Each increment since has run
+> the **whole** suite before landing, and the one that touched `PageHeader`
+> (every screen’s first paragraph) began with an audit of all 29 route
+> descriptions against every test, which found exactly one that depended on a
+> visible one.
 >
-> ### Three consequences on the live data, which the school should know
+> ### Still to do, in order
 >
-> These are the rules as specified, now acting on records that already exist.
-> **None of them is a fault; all three are worth knowing before someone meets
-> them.**
+> **Increment 3 — remove the Subject averages tab from Promotion.** Waiting on
+> the school: *Subject averages* names both the tab and its *Subject average and
+> remark* column, and the tab also holds per-term grade entry for a whole class
+> at once. Removing all of it means roughly 990 cells entered one at a time for
+> a 55-learner section. **Do not guess which was meant.**
 >
-> **1. Promotion for 2026–2027 is closed until 4 January 2027, and cannot be
-> opened sooner.** The gate waits for every *configured* term. Term 3 begins
-> `2027-01-04`, and a term that has not started accepts no grades — so its
-> grades cannot be completed before that date, and promotion cannot open before
-> it. **A reporting period's dates can only be changed while its school year is a
-> draft**, and 2026–2027 is `active` with no transition back to draft, so Term 3's
-> start cannot be brought forward through the API. Grade 3 A is the section this
-> bites: 55 learners × 6 learning areas × 3 terms are required and 48 grades are
-> recorded. Already-approved outcomes are untouched and still print; what is
-> blocked is endorsing, approving or returning anything further in that section
-> — including the 2 retentions currently `returned`.
+> **Increment 5 — a notification opens the record it is about.** It will break
+> `tests/web-notifications.test.ts`, which asserts the old bare href, and it
+> touches `useScope`, shared by 13 screens, so it is last deliberately. No
+> learner id may ever go in the link: a notification names no learner by design,
+> and a URL is where one would reach browser history on a shared screen.
 >
-> **2. Thirty-nine approved promotions are queued against the creation of
-> 2027–2028.** Live holds 35 `promoted` and 4 `conditionally_promoted` outcomes,
-> all approved. The `carry_forward_approved` trigger on `academic_years` means
-> that **the moment anyone creates the 2027 school year, all 39 are enrolled at
-> once** into the next grade with no class, ready for their new adviser's pull.
-> The 11 approved `retained` and 3 `remedial` outcomes enrol nobody (`0072`).
-> Expect that year-creation request to take noticeably longer than usual.
->
-> **3. Term 3 encoding is refused until 4 January 2027**, with
-> `PERIOD_NOT_STARTED`. Terms 1 and 2 have begun and stay open for corrections,
-> which is deliberate: the ECR's figures arrive after a term is over.
->
-> ### The single next action
->
-> **Nothing is pending.** If the school needs promotion for 2026–2027 before
-> January, that is a decision rather than a fix: either Term 3's dates were
-> entered wrongly and the year has to be rebuilt as a draft, or the gate's
-> "every configured term" rule needs narrowing to "every term that has ended".
-> Put it to the school; do not loosen the gate without that.
->
-> **Still outstanding from `origin/master`'s own account below:** four test files
-> that only the old local line holds — `grade-roster-submissions`,
-> `pull-release-duplicates`, `same-day-register` and `list-approval`, about 54
-> cases — lost from this line in the Vercel recovery. They are on branch
-> `testing` in this checkout.
->
-> Everything below is `origin/master`'s own account of 0.102.2–0.107.0 and is
+> Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
 
 > ## 8 November: 0.102.2 recovered from production — read this first

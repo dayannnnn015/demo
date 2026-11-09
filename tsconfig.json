@@ -57,6 +57,7 @@
     "tests/web-notifications.test.ts",
     "tests/web-outcome-queue.test.ts",
     "tests/web-overview.test.ts",
+    "tests/web-page-description.test.ts",
     "tests/web-password.test.ts",
     "tests/web-policies.test.ts",
     "tests/web-preferences.test.ts",

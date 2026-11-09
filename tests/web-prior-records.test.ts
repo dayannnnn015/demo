@@ -120,7 +120,11 @@ async function openHistory() {
 describe('the Academic history screen', () => {
   it('renders, and asks for the learner before anything else', async () => {
     await mount();
-    expect(host.textContent).toContain('Type in the previous school years');
+    // The page's description is folded away until asked for, so what proves the
+    // header rendered is its control rather than the sentence behind it. The
+    // sentence itself is `route.lede`, and that it appears on opening is pinned
+    // in tests/web-page-description.test.ts.
+    expect(host.textContent).toContain('What is this page for?');
     expect(host.textContent).toContain('Find the learner first');
     // No learner record is read until one is named. The oversight card a
     // manager sees does read the school's school years and its encoding counts,

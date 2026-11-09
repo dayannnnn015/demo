@@ -699,12 +699,46 @@ export const byLearnerName = (a: Record<string, unknown>, b: Record<string, unkn
  * `Route` is imported as a type only, so this file never pulls the route table
  * — and the screens it declares — back in at runtime.
  */
+/**
+ * A screen's own description, folded away until it is asked for.
+ *
+ * Every screen carried its sentence open. That reads as instruction the first
+ * time and as furniture every time after, and the screens staff live in are
+ * exactly the ones they have already read it on. So it starts minimised (asked
+ * for 2026-11-09) behind a control that says what it will show.
+ *
+ * **One preference for the whole workspace, not one per screen.** Somebody who
+ * wants the descriptions wants them everywhere; twenty-nine separate toggles
+ * would be twenty-nine things to set and nothing would remember the intent.
+ *
+ * It is kept in `sessionStorage`, which is where the collapsed rail and the
+ * folded navigation groups already live, and for the same reason: a staffroom
+ * machine must not hand one person's layout to the next. Every access is
+ * guarded, because a private window throws on it rather than returning null.
+ */
+const LEDE = 'edunexus-ui-lede';
+const ledeShown = () => {
+  try { return sessionStorage.getItem(LEDE) === 'open'; } catch { return false; }
+};
 export function PageHeader({ route, actions }: { route: Route; actions?: ReactNode }) {
+  const [open, setOpen] = useState(ledeShown);
+  const id = useId();
+  const toggle = () => setOpen(was => {
+    const next = !was;
+    try { sessionStorage.setItem(LEDE, next ? 'open' : 'shut'); } catch { /* not worth failing a render over */ }
+    return next;
+  });
   return (
     <div className="view-head">
       <div className="view-titles">
-        <p className="view-sub">{route.lede}</p>
-        {route.feeds ? <span className="form-chip">Feeds<b>{route.feeds}</b></span> : null}
+        <div className="view-lede">
+          <button type="button" className="lede-toggle" aria-expanded={open} aria-controls={id} onClick={toggle}>
+            <Icon name={open ? 'collapse' : 'expand'} size={14} />
+            {open ? 'Hide what this page is for' : 'What is this page for?'}
+          </button>
+          {route.feeds ? <span className="form-chip">Feeds<b>{route.feeds}</b></span> : null}
+        </div>
+        {open ? <p className="view-sub" id={id}>{route.lede}</p> : null}
       </div>
       {actions ? <div className="view-actions">{actions}</div> : null}
     </div>

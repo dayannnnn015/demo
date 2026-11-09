@@ -571,6 +571,14 @@ code, .mono {
 }
 .view-titles { min-width: 0; display: flex; flex-direction: column; gap: var(--s2); align-items: flex-start; }
 .view-sub { margin: 0; max-width: 78ch; color: var(--ink-500); font-size: var(--t-14); }
+/* The description is folded away by default, so its handle has to read as a
+   control rather than as the sentence it is hiding. */
+.view-lede { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+.lede-toggle { display: inline-flex; align-items: center; gap: var(--s2); padding: 2px 0; border: 0; background: none;
+  color: var(--ink-500); font: inherit; font-size: var(--t-13); cursor: pointer; }
+.lede-toggle:hover { color: var(--ink-900); }
+/* On paper a description is either printed or it is not; a control to fold it is furniture. */
+@media print { .lede-toggle { display: none; } }
 .view-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--s2); }
 
 /* The form a screen's records end up on. Staff navigate by DepEd form name, so
