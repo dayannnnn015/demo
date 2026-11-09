@@ -218,6 +218,58 @@ export const faq: Faq[] = [
 
   // Report cards, the SF9 and the SF10
   {
+    id: 'sf9-per-grade', group: 'cards',
+    question: 'Does promoting a learner wipe their old report card?',
+    answer: [
+      'No. Each school year has its own SF9, because a card belongs to that year’s enrolment — so the Grade 1 card keeps its grades, its general average and its issue number for good, and the Grade 2 card starts empty.',
+      'Open a learner from {learners}, then **Enrollment**: every year they have been enrolled is listed with its own **SF9** button and a **Report card** column saying whether that year’s card has been issued. Issuing the new year’s card never replaces the old one.',
+      'Correcting an issued card does not replace it either: the correction is recorded beside it with its reason, and both are kept.',
+    ],
+    routes: ['learners', 'report-cards'],
+  },
+  {
+    id: 'sf9-no-class-yet', group: 'cards',
+    question: 'Why is the Section box on an SF9 blank?',
+    answer: [
+      'Because the learner is enrolled at that grade but is not in a class yet, which is where every promoted learner sits until an adviser takes them in. The card says so above it.',
+      'Take them into a class from {learners} and the section and adviser fill in. The printed box is left blank rather than filled with a note, because it is an official form.',
+    ],
+    routes: ['learners'],
+  },
+  {
+    id: 'promotion-not-open', group: 'cards',
+    question: 'Why can’t I endorse or approve the outcomes yet?',
+    answer: [
+      'Promotion opens for a class only once that class’s report cards are complete: every learning area’s grade in every term, each subject average and remark, and every learner’s general average. **Promotion** lists exactly what is still missing, term by term.',
+      'A Grade 1 section is judged on its term **Narratives** instead, because its card carries no numeric grade, and a Kindergarten section waits for nothing — it prints no card, and its outcome is the credential presented for Grade 1.',
+      'It is counted per class and against the learners enrolled now, so a learner who joins late closes it again until their own records are in.',
+    ],
+    routes: ['report-cards', 'grade-entry'],
+    codes: ['PROMOTION_NOT_OPEN'],
+  },
+  {
+    id: 'period-not-started', group: 'cards',
+    question: 'Why won’t it take grades for the next term?',
+    answer: [
+      'A term accepts grades from the day it starts, which the school set when it configured the school year. Finishing one term does not open the next: the next opens on its own date.',
+      'A term that has already started stays open while the school year is open, so a grade can still be entered or corrected after the term is over — which is when the ECR’s figures usually arrive.',
+      'The subject average, the general average and the remarks belong to no single term and can be entered at any time.',
+    ],
+    routes: ['report-cards'],
+    codes: ['PERIOD_NOT_STARTED'],
+  },
+  {
+    id: 'promotion-advances', group: 'cards',
+    question: 'What happens to a learner after their outcome is approved?',
+    answer: [
+      'Approving a **promotion** enrols them into next school year straight away, at the next grade and with no class yet. Next year’s adviser then takes them into their class from {learners}.',
+      'If next school year has not been created yet, the outcome is recorded and the enrolment follows the moment a manager creates that year.',
+      'This year is untouched. The learner keeps their class, their grades, their general average and their outcome, and the SF9 and SF10 still read them. Nobody is enrolled twice, and approving the same outcome again changes nothing.',
+      'A **retained** learner is not enrolled for next year by the approval: the outcome is recorded as the school’s decision and nothing else, so enrol them with everyone else when next year’s classes are set up. A learner given **Remedial** is not carried forward either, and a Grade 6 learner promoted has completed elementary school.',
+    ],
+    routes: ['report-cards', 'next-year', 'learners'],
+  },
+  {
     id: 'no-grade-math', group: 'cards',
     question: 'Why doesn’t EDUNEXUS compute the grades?',
     answer: [

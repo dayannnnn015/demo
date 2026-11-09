@@ -3,7 +3,7 @@ import type { Api } from '../api';
 import { ApiError, message } from '../api';
 import { Confirm, Sheet } from '../components/overlay';
 import { Icon } from '../components/icons';
-import { Badge, Callout, Select, StatusLine, Table, Unrecorded, learnerName, idle, type Status, ScrollArea } from '../components/primitives';
+import { Badge, Callout, Select, StatusLine, Table, Unrecorded, learnerName, idle, localToday, type Status, ScrollArea } from '../components/primitives';
 import { coreValues, marks, valueCodes } from '../forms/values';
 import { gradeProblem, type ReportLearner, type ReportRecords } from './ReportCards';
 import { Affects } from '../components/affects';
@@ -41,6 +41,16 @@ function storedValues(l: ReportLearner): Values {
 export function cardParts(grade: number, descriptive: boolean) {
   return { grades: !descriptive, values: grade >= 4, notes: grade === 1 ? ['can_do', 'to_improve'] : grade <= 3 ? ['comment'] : [] };
 }
+
+/**
+ * A term accepts its records only once it has begun, on the date the school
+ * configured for it (2026-11-09). A term already begun never closes, because
+ * the ECR's figures arrive after the term is over. The API refuses the rest
+ * with `PERIOD_NOT_STARTED`; this is so a box that cannot be recorded is not
+ * offered as if it could.
+ */
+export const termOpen = (period: { starts_on: string }) => period.starts_on <= localToday();
+export const unstartedTerms = (periods: { id: string; name: string; starts_on: string }[]) => periods.filter(p => !termOpen(p));
 
 /** The learning areas a card lists: those offered now, and any no longer offered that the learner has a grade in. */
 export const cardOfferings = (records: Pick<ReportRecords, 'offerings'>, learner: ReportLearner) =>
@@ -142,8 +152,12 @@ export function CardEditor({ api, records, descriptive, readOnly, manager = fals
   const locked = readOnly || (manager && !correcting);
 
   const isChanged = (key: string) => changedKeys.includes(key);
+  // A term that has not begun is shut, box by box, for the reason `termOpen` gives.
+  // The subject average, the general average and their remarks name no term and stay open.
+  const waiting = unstartedTerms(records.periods);
+  const shut = (period?: string) => !!period && waiting.some(p => p.id === period);
   // The form-control styles hang on .field; a box has no label of its own beyond its aria-label.
-  const gradeBox = (key: string, label: string) => locked ? <Shown kind="grade" value={stored[key] ?? ''} /> : (
+  const gradeBox = (key: string, label: string, period?: string) => locked || shut(period) ? <Shown kind="grade" value={stored[key] ?? ''} /> : (
     <div className={`field cell-field grade${isChanged(key) ? ' changed' : ''}`}>
       <input className={`score-input${gradeProblem(value(key)) ? ' invalid' : ''}`} inputMode="decimal" aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)} />
     </div>
@@ -176,6 +190,11 @@ export function CardEditor({ api, records, descriptive, readOnly, manager = fals
       </div>
       <div className="card-body report-card-editor">
         <p className="card-note">Type each box as the ECR shows it. A blank box stays <i>not recorded</i>; it is never read as zero. {learner.lrn ? <>LRN <span className="mono">{learner.lrn}</span>.</> : 'LRN missing.'}</p>
+        {waiting.length ? (
+          <Callout tone="info" title={`${waiting.length === 1 ? 'One term has' : `${waiting.length} terms have`} not started yet`}>
+            {waiting.map(p => `${p.name} (from ${p.starts_on})`).join(', ')}. Those boxes show what is on file and cannot be typed in: a term’s grades are encoded once it begins, on the date the school configured for it. The subject average, the general average and the remarks name no term and stay open.
+          </Callout>
+        ) : null}
         {parts.grades ? (
           <section aria-label="Report on learning progress and achievement">
             <h3>Report on learning progress and achievement</h3>
@@ -189,7 +208,7 @@ export function CardEditor({ api, records, descriptive, readOnly, manager = fals
                     {offerings.map(o => (
                       <tr key={o.id}>
                         <th scope="row">{o.name}{o.active ? null : <span className="muted"> (no longer offered)</span>}</th>
-                        {records.periods.map(p => <td key={p.id}>{gradeBox(`g:${o.id}:${p.id}`, `${o.name}, ${p.name}`)}</td>)}
+                        {records.periods.map(p => <td key={p.id}>{gradeBox(`g:${o.id}:${p.id}`, `${o.name}, ${p.name}`, p.id)}</td>)}
                         <td>{gradeBox(`g:${o.id}:final`, `${o.name}, subject average`)}</td>
                         <td>{remarkBox(`r:${o.id}`, `${o.name}, remark`)}</td>
                       </tr>
@@ -218,7 +237,7 @@ export function CardEditor({ api, records, descriptive, readOnly, manager = fals
                       <td className="statement">{s.text}</td>
                       {records.periods.map(p => {
                         const key = `v:${p.id}:${s.code}`;
-                        return <td key={p.id}>{locked ? <Shown kind="mark" value={stored[key] ?? ''} /> : (
+                        return <td key={p.id}>{locked || shut(p.id) ? <Shown kind="mark" value={stored[key] ?? ''} /> : (
                           <div className={`field cell-field mark${isChanged(key) ? ' changed' : ''}`}>
                             <Select aria-label={`${s.code}, ${p.name}`} title={s.text} value={value(key)} onChange={e => set(key, e.target.value)}>
                               <option value="">·</option>{marks.map(([c]) => <option key={c} value={c}>{c}</option>)}
@@ -243,7 +262,7 @@ export function CardEditor({ api, records, descriptive, readOnly, manager = fals
                 return (
                   <div key={key} className="field wide">
                     <span className="label">{label}</span>
-                    {locked ? <Shown kind="text" value={stored[key] ?? ''} /> : <textarea className="note-input" rows={2} maxLength={1000} aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)} />}
+                    {locked || shut(p.id) ? <Shown kind="text" value={stored[key] ?? ''} /> : <textarea className="note-input" rows={2} maxLength={1000} aria-label={label} value={value(key)} onChange={e => set(key, e.target.value)} />}
                   </div>
                 );
               }))}

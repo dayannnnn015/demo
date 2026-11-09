@@ -146,9 +146,35 @@ learner up with back subjects. `eligibleFor` in `cards.ts` reads the approved
 outcome to decide the grade the SF9 and SF10 certify the learner eligible for;
 `remedial` yields none yet.
 
+> **Superseded 2026-11-09 by 0069 (0.103.0).** The paragraph below was true
+> until then, and the distinction it drew is worth keeping: approving an outcome
+> and *choosing a class* are still two acts. What changed is that approval now
+> **enrols the learner into next school year** at the grade their outcome leads
+> to, with **no section** -- which is still not placing them in a class. An
+> adviser takes them into one afterwards, exactly as 0049 decided. Approval also
+> still activates no reporting period. See [the promotion gate](promotion-gate.md).
+
 **Approval still places nobody (D3a, 0.83.0.)** Approving an outcome and placing
 a learner in next year's class are two separate, separately reviewed acts. See
 [next-year-classes.md](next-year-classes.md).
+
+### Two gates on this module since 0069
+
+**A term accepts its records only once it has started.** A trigger on
+`report_grades`, `report_values` and `report_notes` refuses a reporting period
+whose `starts_on` is after today in Manila (`P1908` -> `PERIOD_NOT_STARTED`), so
+all four writers -- `record_report_grades`, `record_report_values`,
+`record_report_notes` and `record_report_card` -- obey one rule. A term already
+begun never closes, and a record naming no term (the subject average, the
+general average, the SF2 month remark) is not gated.
+
+**Promotion waits for the records this grade’s card prints.**
+`GET /api/v1/sections/:id/promotion-readiness` counts them against the section’s
+currently enrolled learners; both promotion writers refuse with `P2002` ->
+`PROMOTION_NOT_OPEN` while one is missing. It reads **no grade value** -- the rule
+at the top of this file is untouched -- and names no learner, so it writes no
+access row, for the same reason `read_grade_entry` writes none. Kindergarten
+waits for nothing; a descriptively graded grade waits for its term narratives.
 
 ## Grade entry: the oversight view, and the pattern to copy
 

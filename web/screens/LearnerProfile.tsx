@@ -6,7 +6,7 @@ import { Affects } from '../components/affects';
 import { profileFields } from '../record-fields';
 import { IdentityHistory, LrnCorrection, LrnHistory, ReviewActions } from './Reviews';
 import {
-  Badge, Callout, Editor, FormSheet, StatusLine, Table, Task, Unrecorded,
+  Badge, Callout, Cell, Editor, FormSheet, StatusLine, Table, Task, Unrecorded,
   gradeName, idle, learnerName as learnerNameOf, localToday, sentence, shown, value, type Status,
 } from '../components/primitives';
 
@@ -15,6 +15,19 @@ import {
  * beside each row. The registry owns the shape; this screen only reads it.
  */
 type Placement = { enrollment_id: string; academic_year_id: string; grade_level: number; section_id: string | null; section_name: string | null; status: string };
+
+/**
+ * One learner’s report cards year by year, from
+ * `GET /learners/{id}/sf9-history`. An issued SF9 is never overwritten by a
+ * later grade’s: each card hangs off its own enrolment, so this is a list of
+ * what has been issued rather than a list of stored documents.
+ */
+type CardYear = {
+  enrollment_id: string; academic_year_id: string; start_year: number; grade_level: number;
+  section_name: string | null; card: 'issued' | 'in_progress' | 'no_card' | 'voided';
+  issuance: { id: string; serial: number; issued_at: string; data_hash: string; corrected: boolean; reason: string | null } | null;
+  issued_count: number;
+};
 
 type Tab = 'profile' | 'enrollment';
 /*
@@ -272,6 +285,7 @@ export function EnrollmentHistory({ api, learnerId, manager, yearLabel, sectionL
   onView: (enrollment: Row) => void; onSf9: (enrollment: Row) => void;
 }) {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [cards, setCards] = useState<CardYear[] | null>(null);
   const [status, setStatus] = useState<Status>(idle);
   useEffect(() => {
     let live = true;
@@ -281,10 +295,22 @@ export function EnrollmentHistory({ api, learnerId, manager, yearLabel, sectionL
       .catch(error => { if (live) { setRows([]); setStatus({ kind: 'error', text: message(error) }); } });
     return () => { live = false; };
   }, [api, learnerId, manager]);
+  // The report card each year reached. A second read rather than a field on the
+  // enrolment: the enrolment list is shared by five screens, and whether a form
+  // was issued is not part of an enrolment record.
+  useEffect(() => {
+    let live = true;
+    setCards(null);
+    void api<{ items: CardYear[] }>(`/learners/${learnerId}/sf9-history`)
+      .then(result => { if (live) setCards(result.items); })
+      .catch(() => { if (live) setCards([]); });
+    return () => { live = false; };
+  }, [api, learnerId]);
+  const cardFor = (enrollment: unknown) => cards?.find(c => c.enrollment_id === enrollment);
   return (
     <>
       <h3>School years</h3>
-      <p className="muted">Every year this learner has been enrolled. Reading them is recorded in the privacy access log.</p>
+      <p className="muted">Every year this learner has been enrolled, and the report card it reached. An issued SF9 stays as it was issued: the next grade starts a card of its own, and neither overwrites the other. Reading them is recorded in the privacy access log.</p>
       <StatusLine status={status} />
       <Table
         loading={rows === null}
@@ -299,6 +325,25 @@ export function EnrollmentHistory({ api, learnerId, manager, yearLabel, sectionL
           { header: 'Enrolled', cell: r => <span className="mono">{value(r, 'enrolled_on')}</span> },
           { header: 'Latest change', cell: r => `${value(r, 'effective_on')} · ${sentence(value(r, 'last_reason'))}` },
           { header: 'Record', cell: r => (r.record_state === 'voided' ? <Badge tone="stopped">Voided</Badge> : <Badge tone="good">Valid</Badge>) },
+          {
+            // Which SF9 this year reached. Kindergarten prints none, and says so
+            // rather than offering a card `sf9Get` refuses.
+            header: 'Report card',
+            cell: r => {
+              const card = cardFor(r.id);
+              if (cards === null) return <span className="muted">Reading…</span>;
+              if (!card) return <Unrecorded label="Not known" />;
+              if (card.card === 'voided') return <span className="muted">Not shown for a voided record</span>;
+              if (card.card === 'no_card') return <Badge tone="neutral">No Kindergarten card</Badge>;
+              if (card.card === 'in_progress') return <Badge tone="info">In progress</Badge>;
+              return (
+                <Cell
+                  title={<Badge tone="good">Issued no. {card.issuance!.serial}</Badge>}
+                  meta={`${card.issuance!.issued_at.slice(0, 10)}${card.issued_count > 1 ? ` · corrected; all ${card.issued_count} issues kept` : ''}`}
+                />
+              );
+            },
+          },
           {
             header: 'Attendance',
             // The SF9 here is this year's card, not the current one the registry

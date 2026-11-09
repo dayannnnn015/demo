@@ -23,6 +23,7 @@ export const formOperations=([
   {id:'sf9Issue',method:'post',path:'/api/v1/enrollments/:id/forms/sf9/issuances',summary:'Issue the SF9, recording a fingerprint of exactly what it said; a different card for the same enrollment is a correction that needs a reason',body:formSchemas.reissue},
   {id:'sf10Get',method:'get',path:'/api/v1/learners/:id/forms/sf10',summary:'Lay out one learner\'s SF10: a scholastic block for every Grade 1 to 6 school year the caller may read, whether EDUNEXUS recorded it or it was transcribed from the school\'s own documents, with the grades and general average entered from the ECR, and the credential presented for Grade 1. Refused for a learner with no Grade 1 to 6 year at all: the SF10 begins at Grade 1, and a Kindergarten learner\'s records are the SF5-K and the ECCD checklist'},
   {id:'sf10Issue',method:'post',path:'/api/v1/learners/:id/forms/sf10/issuances',summary:'Issue the SF10, recording a fingerprint of exactly what it said; a different record for the same learner is a correction that needs a reason',body:formSchemas.reissue},
+  {id:'sf9History',method:'get',path:'/api/v1/learners/:id/sf9-history',summary:'One learner\'s report cards year by year: each school year they were enrolled, its grade level and class, and whether that year\'s SF9 has been issued, with the serial and fingerprint of the one that was. An issued card is never overwritten by a later grade\'s — each hangs off its own enrollment. Reads no grade; names the enrollments it returned, so it is logged'},
   {id:'formIssuanceList',method:'get',path:'/api/v1/form-issuances',summary:'List issued forms, newest first: every one for managers, your own for a teacher',query:formSchemas.issuanceQuery},
 ] as const).map(op=>({...op,module:'forms' as const}));
 export type FormOperationId=typeof formOperations[number]['id'];
@@ -70,7 +71,7 @@ const periods=z.array(z.object({id:uuid,ordinal:z.number().int(),name:z.string()
 const count=z.number().nullable();
 export const sf9Form=z.object({form:z.literal('sf9'),layout:z.enum(['grade1','grades2_3','grades4_6']),school,
   school_year:z.object({id:uuid,start_year:z.number().int(),starts_on:date,ends_on:date}),learner:cardLearner.extend({age_at_start:age,age_at_end:age}),
-  enrollment:z.object({id:uuid,grade_level:z.number().int(),section_name:z.string(),adviser_name:z.string().nullable()}),periods,rule:rule.nullable(),
+  enrollment:z.object({id:uuid,grade_level:z.number().int(),section_name:z.string().nullable(),adviser_name:z.string().nullable()}),periods,rule:rule.nullable(),
   attendance:z.object({rows:z.array(z.object({label:z.string(),term:z.string().nullable(),from:date,to:date,class_days:count,present:count,absent:count,tardy:count,known:z.boolean(),
       unmarked:z.array(date).describe('The dates of this month holding a classroom session nobody marked, which is what leaves it empty'),
       unset:z.array(date).describe('The dates the calendar has not set, or that hold an alternative-delivery session'),
@@ -108,6 +109,15 @@ export const formResponses:Record<string,z.ZodType>={
   sf2Get:sf2Form.extend({last_issuance:issuance.nullable()}),sf2Issue:z.object({form:sf2Form,issuance:issuance.extend({reprint:z.boolean()})}),
   sf4Get:sf4Form.extend({last_issuance:issuance.nullable()}),sf4Issue:z.object({form:sf4Form,issuance:issuance.extend({reprint:z.boolean()})}),
   formIssuanceList:z.object({items:z.array(issuance)}),
+  sf9History:z.object({learner:z.object({id:uuid,first_name:z.string(),middle_name:z.string().nullable(),last_name:z.string(),
+      name_extension:z.string().nullable(),lrn:z.string().nullable()}),
+    items:z.array(z.object({enrollment_id:uuid,academic_year_id:uuid,start_year:z.number().int(),year_status:z.string(),
+      grade_level:z.number().int(),section_name:z.string().nullable().describe('Null while the learner is enrolled at the grade but not in a class yet'),
+      record_state:z.string(),enrollment_status:z.string(),
+      card:z.enum(['issued','in_progress','no_card','voided']).describe('`no_card` is Kindergarten, which prints none: the school has supplied no Kindergarten card'),
+      issuance:z.object({id:uuid,serial:z.number().int(),issued_at:z.iso.datetime({offset:true}),data_hash:z.string(),
+        corrected:z.boolean(),reason:z.string().nullable()}).nullable(),
+      issued_count:z.number().int().describe('How many times this year\'s card has been issued, corrections included; every one is kept')}))}),
   sf9Get:sf9Form.extend({last_issuance:issuance.nullable()}),sf9Issue:z.object({form:sf9Form,issuance:issuance.extend({reprint:z.boolean()})}),
   sf10Get:sf10Form.extend({last_issuance:issuance.nullable()}),sf10Issue:z.object({form:sf10Form,issuance:issuance.extend({reprint:z.boolean()})}),
 };

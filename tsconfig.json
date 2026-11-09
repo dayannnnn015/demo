@@ -64,6 +64,7 @@
     "tests/web-prior-records-server.test.ts",
     "tests/web-prior-records.test.ts",
     "tests/web-profile.test.ts",
+    "tests/web-promotion-gate.test.ts",
     "tests/web-public-site.test.ts",
     "tests/web-register-adviser.test.ts",
     "tests/web-register-review.test.ts",

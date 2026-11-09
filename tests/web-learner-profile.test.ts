@@ -321,6 +321,28 @@ describe('the enrollment part', () => {
     expect(text).toContain('Enrolled');
     screen.unmount();
   });
+
+  /**
+   * The SF9 column, asked for on 2026-11-09: *"The learner's profile should
+   * preserve access to previously issued SF9 documents."* The access was
+   * already there — each year's row has its own **SF9** button, and the card is
+   * derived per enrolment so a later grade cannot overwrite an earlier one. What
+   * was missing was any way to see which years had been issued, so a reader had
+   * no way to tell a preserved card from one never made.
+   */
+  it('says, for each school year, whether that year’s report card has been issued', async () => {
+    server.signInAs('principal');
+    const screen = await mountScreen(Learners as never, server, principal, { route });
+    await screen.until(m => m.text().includes('Reyes'), 'a learner');
+    await openPanel(screen);
+    await openTab(screen, 'Enrollment');
+    await screen.until(m => m.text().includes('Report card'), 'the report-card column');
+    // Nothing has been issued for this learner, so the year reads as under way
+    // rather than as a blank the reader has to interpret.
+    expect(screen.text()).toContain('In progress');
+    expect(screen.text()).toContain('neither overwrites the other');
+    screen.unmount();
+  });
 });
 
 /**

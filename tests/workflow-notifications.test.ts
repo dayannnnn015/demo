@@ -65,9 +65,14 @@ beforeAll(async () => {
     `select id from edunexus.place_enrollment('00000000-0000-4000-a000-000000000001',$1,3::smallint,$2,'2026-06-01','regular')`, [year2026, masigla]);
   enrolment = String(placed!.id);
   // A year is activated only with consecutively numbered reporting periods.
+  //
+  // All four have **begun**, which 0069 made matter twice over: a term accepts
+  // grades only once it has started, and promotion waits for every term's
+  // grades — so a quarter dated into the future would make the promotion cases
+  // below unreachable rather than merely unrecorded.
   await db.pg.query(`insert into edunexus.reporting_periods(academic_year_id,ordinal,name,starts_on,ends_on) values
-    ($1,1,'First Quarter','2026-06-01','2026-08-31'),($1,2,'Second Quarter','2026-09-01','2026-11-30'),
-    ($1,3,'Third Quarter','2026-12-01','2027-01-31'),($1,4,'Fourth Quarter','2027-02-01','2027-03-31')`, [year2026]);
+    ($1,1,'First Quarter','2026-06-01','2026-07-31'),($1,2,'Second Quarter','2026-08-01','2026-09-15'),
+    ($1,3,'Third Quarter','2026-09-16','2026-10-31'),($1,4,'Fourth Quarter','2026-11-01','2027-03-31')`, [year2026]);
   // The month workflow needs an active year; `preview_attendance_month` refuses a draft.
   await db.pg.query(`update edunexus.academic_years set status='active' where id=$1`, [year2026]);
 });
@@ -149,6 +154,36 @@ describe('the monthly consolidation', () => {
 });
 
 describe('promotion outcomes', () => {
+  /**
+   * Promotion is closed until the class's report cards are complete (0069), so
+   * the endorsement below is only reachable once they are. Masigla's card is
+   * Grades 2-3's: a grade in every quarter for every learning area, a subject
+   * average and remark, and a general average.
+   */
+  beforeAll(async () => {
+    const reason = 'Setting up the records promotion waits for.';
+    const subject = await api.post('/api/v1/subjects', tokens.officer,
+      { code: 'FIL', name: 'Filipino', kind: 'learning_area', grade_levels: [3], active: true, reason });
+    expect(subject.status, subject.message ?? '').toBe(201);
+    const offering = await api.post(`/api/v1/sections/${masigla}/subjects`, tokens.officer,
+      { subject_id: subject.data.id, subject_version: subject.data.version, display_order: 1, reason });
+    expect(offering.status, offering.message ?? '').toBe(201);
+    const quarters = await db.pg.query<{ id: string }>('select id from edunexus.reporting_periods where academic_year_id=$1 order by ordinal', [year2026]);
+    for (const q of quarters) {
+      const made = await api.post(`/api/v1/section-subjects/${String(offering.data.id)}/report-grades`, tokens.teacher,
+        { reporting_period_id: q.id, reason, entries: [{ enrollment_id: enrolment, grade: 85, version: 0 }] });
+      expect(made.status, made.message ?? '').toBe(201);
+    }
+    const final = await api.post(`/api/v1/section-subjects/${String(offering.data.id)}/report-grades`, tokens.teacher,
+      { reporting_period_id: null, reason, entries: [{ enrollment_id: enrolment, grade: 85, remark: 'passed', version: 0 }] });
+    expect(final.status, final.message ?? '').toBe(201);
+    const average = await api.post(`/api/v1/sections/${masigla}/report-summaries`, tokens.teacher,
+      { reason, entries: [{ enrollment_id: enrolment, general_average: 85, remark: 'passed', version: 0 }] });
+    expect(average.status, average.message ?? '').toBe(201);
+    const open = await api.get(`/api/v1/sections/${masigla}/promotion-readiness`, tokens.teacher);
+    expect(open.data.ready, JSON.stringify(open.data)).toBe(true);
+  });
+
   it('tells the office that outcomes are waiting, once for the batch and with a count', async () => {
     const [current] = await db.pg.query<{ version: number }>('select version from edunexus.enrollments where id=$1', [enrolment]);
     const sent = await api.post(`/api/v1/sections/${masigla}/promotion-recommendations`, tokens.teacher,

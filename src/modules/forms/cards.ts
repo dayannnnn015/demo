@@ -13,7 +13,12 @@ type Summary = {general_average:number|null;remark:'passed'|'failed'|null}|null;
 
 export type Sf9Source = {
   school:Record<string,string|null>;today:string;learner:Learner;
-  enrollment:{id:string;grade_level:number;status:string;section_id:string;section_name:string;adviser_name:string|null};
+  // `section_id` and `section_name` are null for a learner enrolled at a grade
+  // but not yet in a class, which 0048 made possible and which every promoted
+  // learner is between the approval and their new adviser’s pull (0069). The
+  // SF10’s own source has said so since 0051; the SF9’s claimed a string and got
+  // a null, so the card printed an empty section box rather than saying why.
+  enrollment:{id:string;grade_level:number;status:string;section_id:string|null;section_name:string|null;adviser_name:string|null};
   school_year:{id:string;start_year:number;starts_on:string;ends_on:string;status:string};
   periods:(Period&{starts_on:string;ends_on:string})[];offerings:Offering[];grades:Grade[];summary:Summary;
   /** The approved end-of-year outcome, since 0033. */
@@ -139,6 +144,7 @@ export function computeSf9(source:Sf9Source,rule:DayRule|null){
   const warnings=[
     !rule&&'The school’s attendance rule is not recorded, so no attendance figure is filled in.',
     missing&&`${missing} grade${missing===1?' is':'s are'} not recorded for terms that have ended.`,
+    !source.enrollment.section_name&&'This learner is enrolled at this grade but is not in a class yet, so the section and adviser are blank.',
     ...blanked.map(r=>r.unset.length
       ?`${r.label} is empty because ${r.unset.length===1?'one date is':`${r.unset.length} dates are`} not set on the calendar or hold an alternative-delivery session (${datesIn(r.unset)}), which the school’s rule does not decide.`
       :`${r.label} is empty because ${r.unmarked.length===1?'one day has':`${r.unmarked.length} days have`} a session nobody marked (${datesIn(r.unmarked)}). A missing mark is never counted as present, so mark it on the register and this month fills in.`),

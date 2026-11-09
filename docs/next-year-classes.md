@@ -10,6 +10,21 @@ end-of-year outcomes. Section 5's last step.
 > of authority. Where this file and [constraints.md](constraints.md) disagree,
 > that file wins.
 
+> **Mostly automatic since 0069 (0.103.0).** Approving an end-of-year outcome
+> now carries that learner into the following school year by itself, in the same
+> transaction, at the grade their outcome leads to and with **no section** --
+> through this module’s own rule and the same `place_enrollment`. When the
+> following year does not exist yet, an `after insert` trigger on
+> `academic_years` runs the outstanding carry-forward the moment it is created.
+> Automatic runs are recorded in `next_year_placements` beside the manual ones,
+> with a `reason` saying which of the two triggered them, so the history below
+> reads the same either way.
+>
+> **This screen is still the way to do it in bulk**, and still the only way to
+> carry forward outcomes approved before 0069 existed. It is now a catch-up and
+> an audit rather than the step that must be remembered. Everything below is
+> unchanged and still accurate. See [the promotion gate](promotion-gate.md).
+
 ## What this is, after 0049
 
 It used to be a **draw**: every promoted learner was dealt into a section of

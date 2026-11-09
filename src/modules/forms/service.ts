@@ -161,6 +161,11 @@ export async function executeForm(id:FormOperationId,ctx:Context,input:{body:unk
       await logged(tx,'sf10Issue',sf10Records(form));
       return {form,issuance:row!.r};
     }
+    case 'sf9History':{
+      const [row]=await tx.query<{r:{learner:{id:string};items:{enrollment_id:string}[]}}>('select edunexus.read_sf9_history($1) r',[input.id]);
+      await logged(tx,'sf9History',[...new Set([row!.r.learner.id,...row!.r.items.map(i=>i.enrollment_id)])]);
+      return row!.r;
+    }
     case 'formIssuanceList':{
       const q=input.query as z.infer<typeof s.issuanceQuery>;
       return {items:await tx.query(`select * from edunexus.form_issuances where ($1::text is null or form=$1) and ($2::uuid is null or academic_year_id=$2)

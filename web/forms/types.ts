@@ -78,7 +78,8 @@ export type Sf9Form = {
   form: 'sf9'; layout: 'grade1' | 'grades2_3' | 'grades4_6'; school: FormSchool;
   school_year: { id: string; start_year: number; starts_on: string; ends_on: string };
   learner: CardLearner & { age_at_start: Age; age_at_end: Age };
-  enrollment: { id: string; grade_level: number; section_name: string; adviser_name: string | null };
+  /** Null for a learner enrolled at this grade but not in a class yet, which every promoted learner is until their new adviser pulls them in. */
+  enrollment: { id: string; grade_level: number; section_name: string | null; adviser_name: string | null };
   periods: CardPeriod[]; rule: DayRule | null;
   attendance: { rows: { label: string; term: string | null; from: string; to: string; class_days: number | null; present: number | null; absent: number | null; tardy: number | null; known: boolean; unmarked: string[]; unset: string[]; to_date?: string }[];
     total: { class_days: number | null; present: number | null; absent: number | null; tardy: number | null; to_date?: string } };

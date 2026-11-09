@@ -142,7 +142,9 @@ export function createApp(deps: Dependencies) {
           and to_regclass('edunexus.notifications') is not null
           and to_regprocedure('edunexus.read_pullable_learners(uuid,text,integer)') is not null
           and to_regprocedure('edunexus.read_encoding_progress(uuid)') is not null
-          and to_regprocedure('edunexus.read_waiting_counts()') is not null as ready`);
+          and to_regprocedure('edunexus.read_waiting_counts()') is not null
+          and to_regprocedure('edunexus.read_promotion_readiness(uuid)') is not null
+          and to_regprocedure('edunexus.read_sf9_history(uuid)') is not null as ready`);
         if (!state?.ready) throw new Error('School bootstrap is incomplete');
         await tx.query('select edunexus.consume_request()');
       });

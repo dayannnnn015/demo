@@ -18,7 +18,7 @@ import { issuedLine } from '../forms/shared';
 import type { Issuance, Sf9Form } from '../forms/types';
 import { localToday } from '../components/primitives';
 import { descriptiveGrading } from '../deped';
-import { CardEditor, cardParts } from './CardEditor';
+import { CardEditor, cardParts, termOpen, unstartedTerms } from './CardEditor';
 import { Affects, type Reach } from '../components/affects';
 
 type Props = { api: Api; me: Row; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
@@ -262,6 +262,21 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
   const kinder = records?.section.grade_level === 0;
   const grade = records?.section.grade_level ?? 0;
   const final = column === 'final';
+  // A term that has not begun records nothing: the API refuses it with
+  // PERIOD_NOT_STARTED, so the tables for it are shown read only rather than
+  // taking an adviser's typing and losing it on save.
+  const unstarted = records ? unstartedTerms(records.periods) : [];
+  const shut = (period: string) => unstarted.some(p => p.id === period);
+  const columnShut = !final && !!column && shut(column);
+  const termShut = !!periodId && shut(periodId);
+  const notStartedYet = (p: Period) => (termOpen(p) ? '' : ' — not started');
+  const WaitingNote = ({ term }: { term: Period | undefined }) => (
+    <div className="card-body">
+      <Callout tone="info" title={`${term?.name ?? 'This term'} has not started yet`}>
+        It begins on {term?.starts_on ?? 'its configured date'}. Grades for a term are encoded once it begins, on the schedule the school configured — finishing one term does not open the next. What is shown here is what is on file.
+      </Callout>
+    </div>
+  );
 
   // DepEd Order No. 15, s. 2026 grades Grade 1 descriptively from 2026–2027, and the school's Grade 1 card prints narratives, not grades.
   const descriptive = records ? descriptiveGrading(grade, records.school_year.start_year) : false;
@@ -345,14 +360,15 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                         <span className="label">Column</span>
                         <Select aria-label="Column" value={column} onChange={e => { const next = e.target.value; guard(() => setColumn(next)); }}>
                           <option value="final">Subject average and remark</option>
-                          {records.periods.map(p => <option key={p.id} value={p.id}>{p.name} grade</option>)}
+                          {records.periods.map(p => <option key={p.id} value={p.id}>{p.name} grade{notStartedYet(p)}</option>)}
                         </Select>
                       </div>
                     </div>
                   </div>
+                  {columnShut ? <WaitingNote term={records.periods.find(p => p.id === column)} /> : null}
                   <EntryTable
                     key={`grades|${sectionId}|${offeringId}|${column}`} onDirty={dirtyFor('grades')}
-                    learners={learners} readOnly={readOnly || manager} setStatus={setStatus} onSaved={reload}
+                    learners={learners} readOnly={readOnly || manager || columnShut} setStatus={setStatus} onSaved={reload}
                     what={final ? 'Subject averages' : 'Grades'}
                     columns={final ? [{ key: 'grade', label: 'Subject average', kind: 'grade' }, { key: 'remark', label: 'Remark', kind: 'remark' }] : [{ key: 'grade', label: records.periods.find(p => p.id === column)?.name ?? 'Grade', kind: 'grade' }]}
                     stored={l => {
@@ -381,12 +397,13 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                   <div className="field inline">
                     <span className="label">Term</span>
                     <Select aria-label="Term" value={periodId} onChange={e => { const next = e.target.value; guard(() => setPeriodId(next)); }}>
-                      {records.periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      {records.periods.map(p => <option key={p.id} value={p.id}>{p.name}{notStartedYet(p)}</option>)}
                     </Select>
                   </div>
                 </div>
               </div>
             ) : null}
+            {(tab === 'values' || tab === 'comments') && termShut ? <WaitingNote term={records.periods.find(p => p.id === periodId)} /> : null}
             {tab === 'values' && periodId ? (
               <>
                 <div className="card-body">
@@ -395,7 +412,7 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                 </div>
                 <EntryTable
                   key={`values|${sectionId}|${periodId}`} onDirty={dirtyFor('values')}
-                  learners={learners} readOnly={readOnly || manager} setStatus={setStatus} onSaved={reload} what="Observed values"
+                  learners={learners} readOnly={readOnly || manager || termShut} setStatus={setStatus} onSaved={reload} what="Observed values"
                   columns={valueCodes.map(code => ({ key: code, label: code, kind: 'mark' as const, title: coreValues.flatMap(v => v.statements).find(s => s.code === code)?.text }))}
                   stored={l => { const row = l.values.find(v => v.reporting_period_id === periodId); return { values: row?.ratings ?? {}, version: row?.version ?? 0 }; }}
                   toEntry={(l, v, version) => ({ enrollment_id: l.enrollment_id, ratings: Object.fromEntries(valueCodes.map(code => [code, v[code] || null])), version })}
@@ -413,11 +430,11 @@ export function ReportCards({ api, me, manager, setStatus, token, route }: Props
                   {(['can_do', 'to_improve'] as const).map(kind => (
                     <div key={kind}>
                       <div className="card-body"><h3>{kind === 'can_do' ? 'What your child can do (Mga Nagagawa)' : 'What your child is learning to improve (Dapat Linangin)'}</h3></div>
-                      <NoteTable key={`${kind}|${sectionId}|${periodId}`} onDirty={dirtyFor(kind)} kind={kind} periodId={periodId} learners={learners} readOnly={readOnly || manager} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
+                      <NoteTable key={`${kind}|${sectionId}|${periodId}`} onDirty={dirtyFor(kind)} kind={kind} periodId={periodId} learners={learners} readOnly={readOnly || manager || termShut} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
                     </div>
                   ))}
                 </>
-              ) : <NoteTable key={`comment|${sectionId}|${periodId}`} onDirty={dirtyFor('comment')} kind="comment" periodId={periodId} learners={learners} readOnly={readOnly || manager} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
+              ) : <NoteTable key={`comment|${sectionId}|${periodId}`} onDirty={dirtyFor('comment')} kind="comment" periodId={periodId} learners={learners} readOnly={readOnly || manager || termShut} api={api} sectionId={sectionId} setStatus={setStatus} onSaved={reload} />
             ) : null}
           </>
         ) : null}
@@ -517,6 +534,53 @@ const statusTone = { recommended: 'info', approved: 'good', returned: 'attention
 const statusWord = { recommended: 'Endorsed · waiting for approval', approved: 'Approved', returned: 'Returned to the adviser' } as const;
 
 /**
+ * Whether promotion is open for this class, and what is still missing.
+ * `GET /sections/{id}/promotion-readiness` counts records only — it reads no
+ * grade and names no learner, which is why the dashboard can ask for it.
+ */
+type Readiness = {
+  ready: boolean; blocked_by: 'incomplete' | 'no_periods' | 'no_offerings' | null; missing_total: number; learners: number; offerings: number;
+  requires: { descriptive: boolean; grades: boolean; note_kinds: string[] };
+  periods: { id: string; ordinal: number; name: string; starts_on: string; ends_on: string; open: boolean; missing: number; complete: boolean }[];
+  final: { missing_grades: number; missing_remarks: number; complete: boolean };
+  general_average: { missing: number; complete: boolean };
+};
+
+/** What a class is still waiting for, in the adviser's own terms: one line per thing, never a total alone. */
+function NotReady({ gate, manager }: { gate: Readiness; manager: boolean }) {
+  const rows: { what: string; missing: number; note?: string | undefined }[] = [
+    ...gate.periods.map(p => ({ what: gate.requires.grades ? `${p.name} term grades` : `${p.name} narratives`, missing: p.missing,
+      note: p.open ? undefined : `This term starts on ${p.starts_on}; its grades cannot be encoded yet.` })),
+    ...(gate.requires.grades ? [
+      { what: 'Subject averages', missing: gate.final.missing_grades },
+      { what: 'Subject remarks', missing: gate.final.missing_remarks },
+      { what: 'General averages', missing: gate.general_average.missing },
+    ] : []),
+  ];
+  return (
+    <div className="card-body">
+      <Callout tone="attention" title="Promotion is not open for this class yet">
+        {gate.blocked_by === 'no_periods'
+          ? <>This school year has no reporting periods configured. A manager configures them on <b>School years</b> while the year is a draft.</>
+          : gate.blocked_by === 'no_offerings'
+            ? <>This class has no learning areas offered, so there are no grades to complete. Offer them on <b>Subjects &amp; offerings</b> first.</>
+            : <>Every term’s grades, each subject average and remark, and each learner’s general average have to be recorded for all {gate.learners} {gate.learners === 1 ? 'learner' : 'learners'} first. {gate.missing_total} {gate.missing_total === 1 ? 'record is' : 'records are'} still missing. {manager ? 'The adviser records them; this list is what to ask them for.' : 'Record them on the tabs beside this one.'}</>}
+      </Callout>
+      {gate.blocked_by === 'incomplete' ? (
+        <Table
+          rows={rows}
+          rowKey={r => r.what}
+          columns={[
+            { header: 'Required', cell: r => <Cell title={r.what} meta={r.note} /> },
+            { header: 'Still missing', cell: r => (r.missing ? <b className="mono">{r.missing}</b> : <Badge tone="good">Complete</Badge>) },
+          ]}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Each learner's end-of-year outcome: the adviser recommends it beside the
  * general average and remarks entered from the ECR, and the principal or
  * administrative officer approves it or returns it. An approved outcome is
@@ -525,6 +589,7 @@ const statusWord = { recommended: 'Endorsed · waiting for approval', approved: 
  */
 function PromotionPanel({ api, me, manager, records, setStatus, descriptive = false, onDecided, onDirty, openApprove, onApproveOpened }: { api: Api; me: Row; manager: boolean; records: ReportRecords; setStatus: (s: Status) => void; descriptive?: boolean; onDecided?: () => void; onDirty?: ((count: number) => void) | undefined; openApprove?: boolean; onApproveOpened?: () => void }) {
   const [items, setItems] = useState<Promotion[] | null>(null);
+  const [gate, setGate] = useState<Readiness | null>(null);
   const [tick, setTick] = useState(0);
   const [deciding, setDeciding] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -533,16 +598,23 @@ function PromotionPanel({ api, me, manager, records, setStatus, descriptive = fa
     void api<{ items: Promotion[] }>(`/academic-years/${records.school_year.id}/promotions${query({ section_id: records.section.id })}`)
       .then(r => setItems(r.items)).catch(error => setStatus({ text: message(error), kind: 'error' }));
   }, [api, records, tick]);
+  // The same gate the API enforces. Asked for here rather than worked out from the
+  // records on the page, so what the screen shows and what the writers accept
+  // cannot drift apart.
+  useEffect(() => {
+    void api<Readiness>(`/sections/${records.section.id}/promotion-readiness`)
+      .then(setGate).catch(error => setStatus({ text: message(error), kind: 'error' }));
+  }, [api, records, tick]);
   // The school head signs the promotion report beside the adviser, as on every form.
   useEffect(() => { void api<Row>('/school').then(r => setHead({ name: (r.school_head_name as string | null) ?? null, position: (r.school_head_position as string | null) ?? null })).catch(() => undefined); }, [api]);
   useEffect(() => {
-    if (!openApprove || !items || !manager) return;
-    if (items.some(i => i.action && i.status !== 'approved') && records.school_year.status !== 'closed') setDeciding(true);
+    if (!openApprove || !items || !gate || !manager) return;
+    if (gate.ready && items.some(i => i.action && i.status !== 'approved') && records.school_year.status !== 'closed') setDeciding(true);
     // A link from an Overview opened earlier, or a bookmark: say why there is nothing to approve rather than opening nothing.
     else setStatus({ kind: 'done', text: `Nothing in ${records.section.name} waits for approval now; it was decided after the link was made.` });
     onApproveOpened?.();
-  }, [openApprove, items]);
-  if (!items) return <div className="card-body"><TableSkeleton columns={4} /></div>;
+  }, [openApprove, items, gate]);
+  if (!items || !gate) return <div className="card-body"><TableSkeleton columns={4} /></div>;
   const byId = new Map(items.map(i => [i.enrollment_id, i]));
   const readOnly = records.school_year.status === 'closed';
   const failed = (l: ReportLearner) => l.grades.filter(g => g.reporting_period_id === null && g.remark === 'failed').length;
@@ -553,14 +625,16 @@ function PromotionPanel({ api, me, manager, records, setStatus, descriptive = fa
     <>
       <div className="card-body">
         <p className="card-note">The adviser endorses each learner’s outcome, as the school decided it from the ECR’s final grades, and the principal or administrative officer approves it or returns it. The approved outcome fills the report card’s and permanent record’s “eligible for admission to Grade”. Approved so far: {counts}; {waiting.length} waiting.</p>
+        {gate.ready ? <p className="card-note">An approved outcome also <b>enrols the learner into next school year</b> at the grade it leads to, with no class yet, so next year’s adviser can take them into theirs. <b>Only a promotion enrols</b>: a retained learner’s outcome is recorded and approved and moves them nowhere, so they are enrolled for next year with everyone else when its classes are set up. Nothing is deleted: this year’s enrolment, grades and outcome all stay exactly as they are. If next school year has not been created yet, an approved promotion is recorded and the enrolment follows the moment it is.</p> : null}
         <div className="form-actions">
-          {manager && waiting.length && !readOnly ? <button type="button" className="btn" onClick={() => setDeciding(true)} data-tour="rc-approve">Approve or return {waiting.length} {waiting.length === 1 ? 'endorsement' : 'endorsements'}</button> : null}
+          {manager && gate.ready && waiting.length && !readOnly ? <button type="button" className="btn" onClick={() => setDeciding(true)} data-tour="rc-approve">Approve or return {waiting.length} {waiting.length === 1 ? 'endorsement' : 'endorsements'}</button> : null}
           <button type="button" className="btn secondary" onClick={() => setPrinting(true)} data-tour="rc-print"><Icon name="print" size={15} />Print the promotion report</button>
         </div>
       </div>
+      {gate.ready ? null : <NotReady gate={gate} manager={manager} />}
       <EntryTable
         onDirty={onDirty}
-        learners={learners} readOnly={readOnly || manager} setStatus={setStatus} what="Endorsements" suggested="Endorsed from the class’s end-of-year promotion report."
+        learners={learners} readOnly={readOnly || manager || !gate.ready} setStatus={setStatus} what="Endorsements" suggested="Endorsed from the class’s end-of-year promotion report."
         onSaved={() => setTick(t => t + 1)}
         extra={[
           ...(descriptive ? [] : [{ header: 'General average', cell: (l: ReportLearner) => l.summary?.general_average === null || l.summary?.general_average === undefined ? <Unrecorded label="Not recorded" /> : <span className="mono">{String(l.summary.general_average)} {l.summary.remark === 'failed' ? 'Failed' : l.summary.remark === 'passed' ? 'Passed' : ''}</span> },
@@ -626,9 +700,22 @@ function DecideSheet({ api, records, items, onClose, onDone }: { api: Api; recor
     if (text.length < 10) { setLocal({ kind: 'error', text: 'Give a reason of at least 10 characters.' }); return; }
     setBusy(true);
     try {
-      await api(`/sections/${records.section.id}/promotion-decisions`, 'POST', { entries: chosen.map(i => ({ enrollment_id: i.enrollment_id, decision: choice[i.enrollment_id], version: i.version })), reason: text });
+      const done = await api<{ advanced: number; waiting_for_next_year: number; entries: { advance: { why?: string } }[] }>(`/sections/${records.section.id}/promotion-decisions`, 'POST',
+        { entries: chosen.map(i => ({ enrollment_id: i.enrollment_id, decision: choice[i.enrollment_id], version: i.version })), reason: text });
       const approved = chosen.filter(i => choice[i.enrollment_id] === 'approved').length;
-      onDone(`${approved} ${approved === 1 ? 'outcome' : 'outcomes'} approved${chosen.length - approved ? `, ${chosen.length - approved} returned to the adviser` : ''}.`);
+      // What the approval did next, in the same words the API answered with: a
+      // learner was enrolled for next year, or is waiting for that year to exist.
+      const moved = done.advanced ? ` ${done.advanced} ${done.advanced === 1 ? 'learner was' : 'learners were'} enrolled into next school year with no class yet.` : '';
+      const held = done.waiting_for_next_year
+        ? ` ${done.waiting_for_next_year} ${done.waiting_for_next_year === 1 ? 'learner is' : 'learners are'} waiting for next school year to be created, and will be enrolled when it is.`
+        : '';
+      // A retention enrols nobody (0071), so it is said rather than left for
+      // someone to notice when the learner is missing from next year.
+      const kept = done.entries.filter(e => e.advance.why === 'retained').length;
+      const stay = kept
+        ? ` ${kept} retained ${kept === 1 ? 'learner was' : 'learners were'} not enrolled for next year: a retention is recorded only, so enrol them when next year's classes are set up.`
+        : '';
+      onDone(`${approved} ${approved === 1 ? 'outcome' : 'outcomes'} approved${chosen.length - approved ? `, ${chosen.length - approved} returned to the adviser` : ''}.${moved}${held}${stay}`);
     } catch (error) { setLocal({ kind: 'error', text: message(error) }); }
     finally { setBusy(false); }
   };
@@ -636,6 +723,9 @@ function DecideSheet({ api, records, items, onClose, onDone }: { api: Api; recor
     <Sheet title="Approve or return endorsements" note={`${gradeName(records.section.grade_level)} · ${records.section.name}. An approved outcome is printed on the learner’s forms.`} wide onClose={onClose}>
       <StatusLine status={status} />
       <Affects what="outcome" />
+      <Callout tone="info" title="Approving also enrols the learner for next year">
+        An approved promotion enrols the learner into next school year at the next grade, with no class yet, so next year’s adviser can take them in. <b>A retention enrols nobody</b> — it is recorded as the school’s decision and nothing else, so a retained learner is enrolled for next year separately. This year’s records are untouched, and a learner already enrolled next year is not enrolled twice. If next school year does not exist yet, an approved promotion is recorded and the enrolment follows when it is created.
+      </Callout>
       <Table
         rows={items}
         rowKey={i => i.enrollment_id}

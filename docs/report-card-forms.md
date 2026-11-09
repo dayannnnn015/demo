@@ -316,6 +316,29 @@ Both buttons stayed when *Type on the card* was removed (2026-11-03), because
 they do different things. The print button reads **"Print a working copy"** on
 both forms.
 
+### One card per grade level, and the history of them (0.104.0, `0070`)
+
+An SF9 belongs to an **enrollment**, which is one learner in one school year at
+one grade level -- so the card is already one per grade, and a promoted learner
+already starts a blank one. The `form_issuances` CHECK forces an `sf9` row to
+name both an `academic_year_id` and an `enrollment_id`, and the prior a reissue
+looks for is keyed on that same scope, so **a Grade 2 issuance cannot find,
+supersede or overwrite a Grade 1 one**. Nothing in that table is ever updated or
+deleted.
+
+`GET /api/v1/learners/{id}/sf9-history` lists it: one row per school year, with
+the grade, the class and whether that year’s card is `issued` (with its serial
+and fingerprint), `in_progress`, `voided`, or `no_card` -- which is
+Kindergarten, where `sf9Get` refuses and the school has supplied no card. It
+names no staff member and reads no grade. The learner’s profile shows it as a
+**Report card** column beside each school year. See
+[the SF9 history](sf9-history.md).
+
+A learner enrolled at a grade with **no class yet** -- every promoted learner,
+until their new adviser pulls them in -- has a null `section_name` on the card.
+The printed Section box stays blank, as an official form expects of an unknown,
+and the card’s own warnings say the learner is not in a class yet.
+
 ### Grades have one way in
 
 **"Type on the card" is gone.** The button, the typing mode, the review sheet,

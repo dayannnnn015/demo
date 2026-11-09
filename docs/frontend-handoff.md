@@ -513,3 +513,79 @@ that read as it should. `tests/web-prior-records.test.ts` asserts the screen
 sends only those two kinds of request before a learner is chosen, and
 `tests/web-teacher-roster.test.ts` asserts the access-event count does not move
 when it is opened.
+
+## Promotion's gate and the term window (0.103.0)
+
+Two rules the API enforces and the screens only report. Both are in
+**Promotion** (`web/screens/ReportCards.tsx`) and the card editor
+(`web/screens/CardEditor.tsx`).
+
+**The screen asks the API whether promotion is open; it does not work it out.**
+`PromotionPanel` fetches `/sections/:id/promotion-readiness` and renders
+`NotReady` when `ready` is false — a `Callout` plus one row per thing still
+missing, term by term, with each term's own count. While it is closed the
+endorsement table is read only and the approve action is not drawn, and an
+`?approve=1` link from the Overview's queue says why there is nothing to approve
+instead of opening an empty sheet. **Do not compute readiness from
+`records.learners`** even though every grade is already on the page: the
+requirement differs by grade level and school year (Kindergarten requires
+nothing; a descriptively graded grade requires narratives), and a second copy of
+that rule in the workspace would be a second thing to get wrong. The endpoint
+reads no grade and names no learner, so asking it costs nothing in the privacy
+log.
+
+**A term that has not started is shown, not offered.** `termOpen` and
+`unstartedTerms` are exported from `CardEditor.tsx` and compare `starts_on`
+against `localToday()` — a plain calendar-date comparison, never through local
+time. The term and column pickers label such a term *— not started*, the table
+for it is drawn read only above a note saying when it begins, and in the card
+editor those boxes render as `Shown` values rather than inputs. The subject
+average, the general average and the remarks name no term and stay editable,
+because the API does not gate them either. A control that would always be
+refused is worse than no control, which is the same reason a learner already in
+somebody's class is not offered to the pull.
+
+**The approval sheet says what approving does**, before it is pressed and again
+afterwards: approving enrols the learner into next school year, and the success
+line reports `advanced` and `waiting_for_next_year` from the API's own answer
+rather than guessing. That matters because the second case — the outcome
+recorded and the enrolment following when a manager creates next year — is
+invisible otherwise, and a person who is not told would reasonably conclude
+nothing happened.
+
+## The report-card column on a learner's profile (0.104.0)
+
+The **Enrollment** part of a learner's panel (`EnrollmentHistory` in
+`web/screens/LearnerProfile.tsx`) already listed every school year with its
+grade, class and status, and already carried an **SF9** button per row — which
+is still the only way to reach a past year's card. What is new is a **Report
+card** column saying whether that year's card has been issued.
+
+**It is a second fetch, not a field on the enrolment.** `/enrollments?learner_id=…`
+is shared by five screens, and whether a form was issued is not part of an
+enrolment record, so the column reads `/learners/:id/sf9-history` and matches by
+`enrollment_id`. Both reads name records and both write a privacy row, which is
+correct: they are two reads of the same learner.
+
+The four states it draws, and why none of them is a blank:
+
+| State | Drawn as |
+|---|---|
+| `issued` | `Issued no. 7` with the date, and `corrected; all N issues kept` when there is more than one |
+| `in_progress` | `In progress` — the card exists and has not been issued |
+| `no_card` | `No Kindergarten card`. `sf9Get` refuses Kindergarten, so offering a card here would be a button that always fails |
+| `voided` | *Not shown for a voided record*, matching the Attendance column beside it |
+
+While the history is still loading the cell says `Reading…`, and a year the
+history does not cover draws `Unrecorded`, because a learner's card status is a
+record and a blank cell would read as "never issued".
+
+**Do not compute this column from the enrolment rows.** Whether a card was
+issued lives in `form_issuances`, whose row policy shows a teacher only the
+forms they issued themselves; the endpoint exists precisely because the
+workspace cannot know it any other way.
+
+The table's note carries the sentence the school wanted stated — an issued SF9
+stays as it was issued, the next grade starts a card of its own, and neither
+overwrites the other. A `tests/web-learner-profile.test.ts` case asserts the
+column and that sentence are both present.

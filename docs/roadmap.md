@@ -26,8 +26,8 @@ default standing in for the school's decision.
 | 4A.1–4A.5 — Subject catalog, offerings, policy drafts, adoptions, bindings | Implemented, with screens |
 | 4B.1 — Assessment tasks and raw score entry | Implemented, with a screen |
 | 4B.2 — Grade *calculation* | **Superseded.** Nothing computes a grade; advisers enter them from the DepEd ECR (decided 2026-10-08). The old roadmap's "Next: calculation" is no longer the plan |
-| 4C — Report-card records (grades, averages, observed values, narratives) | Implemented, with screens |
-| 5 — Promotion and next-year assignment | Implemented, with screens (0033, 0034, 0036, 0049) |
+| 4C — Report-card records (grades, averages, observed values, narratives) | Implemented, with screens. Since 0.103.0 a term accepts its records only once it has **started** (0069) |
+| 5 — Promotion and next-year assignment | Implemented, with screens (0033, 0034, 0036, 0049, **0069**). Since 0.103.0 promotion is **closed until the class’s report cards are complete**, and an approved outcome **enrols the learner into next year by itself** — see [the promotion gate](promotion-gate.md) |
 | 6 — Official forms: SF2, SF4, SF9, SF10 | Implemented, with screens, printing measured in real Chrome |
 | 6B — Historical SF10 encoding | Implemented (0051), with a screen |
 | 7 — Operational acceptance and turnover | **This is the remaining work** |
@@ -407,6 +407,51 @@ it, on the first test run. The decision now lives in
 policy it bypasses. The general rule is in `constraints.md`: when a write must
 branch on records the caller may not read, the branch belongs in the definer
 function.
+
+### 7b. The promotion gate, the term window and automatic advancement ✅ **done 2026-11-09 (0.103.0)**
+
+Asked for on 2026-11-09 and built the same day, as migration `0069`. Three
+requests that turn out to be one piece of work: **the end of a school year
+should not be something a person has to remember to do.**
+
+Promotion is closed until a class’s report cards are complete, judged
+against what that grade’s card actually prints — so Kindergarten waits for
+nothing and a descriptively graded grade waits for its narratives. A term
+accepts grades only from its own `starts_on`, enforced by a trigger on the
+three record tables rather than inside the four writers. And `decide_promotions`
+now enrols each approved learner into next year in the same transaction, with no
+section, through the same `place_enrollment` everything else uses; when next
+year does not exist yet, an `after insert` trigger on `academic_years` runs the
+carry-forward the moment it is created.
+
+**What was deliberately not done, and must not be assumed later:** a retained
+learner is not placed back into the equivalent next-year section automatically —
+that would mean guessing a same-named section is the same class, against 0049’s
+settled decision. And the final grade, the subject average and the general
+average name no term, so they are not inside the term window. Both limits are
+recorded in [the promotion gate](promotion-gate.md); neither is an oversight.
+
+
+### 7c. One SF9 per grade level, and the history of them ✅ **done 2026-11-09 (0.104.0)**
+
+Asked for after 7b was finished, and **four of its five requirements were
+already true**: an SF9 is derived per *enrolment* and never stored, every
+report-card record is keyed by `enrollment_id`, and `form_issuances` CHECKs that
+an `sf9` row names both a school year and an enrolment -- with the prior a
+reissue looks for keyed on that same scope, so a later grade can neither find
+nor overwrite an earlier one, and no row is ever updated or deleted.
+
+So most of `0070` is `tests/sf9-per-grade.test.ts`, which walks a learner’s
+Grade 1 to Grade 2 year and asserts each step -- because none of that is visible
+from any one file and all of it would break silently. The one thing genuinely
+missing was the history: `GET /learners/{id}/sf9-history`, and the **Report
+card** column it feeds on the learner’s profile.
+
+**Do not add an actor to that read.** It is `security definer` so that a teacher
+can see a card the office issued, and it returns no staff name or id at all --
+widening it would hand every adviser every issuer, which is the 0.92.0 boundary.
+See [the SF9 history](sf9-history.md).
+
 
 ### 8. Batch SF10, and a batch for the encoding — **deferred, do not start**
 

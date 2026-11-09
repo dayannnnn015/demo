@@ -65,6 +65,7 @@
     "tests/web-learner-profile.test.ts",
     "tests/web-ui-notes.test.ts",
     "tests/web-settings.test.ts",
-    "tests/web-empty-school.test.ts"
+    "tests/web-empty-school.test.ts",
+    "tests/web-promotion-gate.test.ts"
   ]
 }

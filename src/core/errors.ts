@@ -119,6 +119,14 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P2100') return new AppError(409, 'NEXT_YEAR_INVALID', 'Next year’s classes go into the school year right after this one, while it is a draft or active.');
   if (code === 'P2102') return new AppError(409, 'PLACEMENT_INELIGIBLE', 'A learner is placed only from an approved promotion or retention, into a section of the grade it leads to.');
   if (code === 'P2001') return new AppError(409, 'PROMOTION_MISSING', 'There is no recommended outcome to decide for this learner.');
+  if (code === 'P2002') {
+    // Which of the three the readiness read found; the screen shows the missing terms beside this.
+    const said = String((error as { message?: unknown } | null)?.message ?? '');
+    const why = said === 'no_periods' ? 'This school year has no reporting periods configured yet.'
+      : said === 'no_offerings' ? 'This class has no learning areas offered yet, so there are no grades to complete.'
+      : 'Every term’s grades, each subject average and remark, and each learner’s general average must be recorded first.';
+    return new AppError(409, 'PROMOTION_NOT_OPEN', `Promotion is not open for this class yet. ${why}`);
+  }
   if (code === 'P1900') return new AppError(409, 'RECORD_YEAR_CLOSED', 'A closed school year’s records are read only.');
   if (code === 'P1901') return new AppError(409, 'NO_KINDERGARTEN_CARD', 'There is no Kindergarten card to record for: the school has not supplied its Kindergarten assessment policy.');
   if (code === 'P1902') return new AppError(409, 'NOT_IN_SECTION', 'Record only for learners in this section.');
@@ -126,6 +134,12 @@ export function normalizeError(error: unknown): AppError {
   if (code === 'P1904') return new AppError(409, 'NO_CHANGES', 'Nothing has changed.');
   if (code === 'P1905') return new AppError(409, 'PERIOD_YEAR', 'Use a reporting period of this school year.');
   if (code === 'P1906') return new AppError(422, 'VALUE_MARK', 'Mark each behaviour statement AO, SO, RO or NO.');
+  if (code === 'P1908') {
+    // The database names the term it refused; its words are the period's own name, never built from a record.
+    const said = String((error as { message?: unknown } | null)?.message ?? '');
+    const which = /^[^\n"]{1,60}$/.test(said) ? `${said} has` : 'That term has';
+    return new AppError(409, 'PERIOD_NOT_STARTED', `${which} not started yet. Grades are encoded for a term once it begins, on the date the school configured for it.`);
+  }
   if (code === 'P1907') {
     // The database says which card holds what was refused; its words are literal, never built from a record.
     const said = String((error as { message?: unknown } | null)?.message ?? '');
