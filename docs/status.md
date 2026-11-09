@@ -1,70 +1,69 @@
 # Where things stand
 
-> ## 0.108.0-0.109.1: the promotion gate, the SF9 history, and automatic enrolment — read this first
+> ## 0.109.1 is live, and the hosted database is at migration 0072 — read this first
 >
-> **Three increments, replayed onto `origin/master` at 0.107.0 and committed on
-> branch `promotion-and-sf9`. Migrations `0070`, `0071` and `0072`. Not
-> migrated, not merged into `master`, not deployed.**
+> **Deployed 2026-11-09 as `edunexus-flog1ipn3` and verified: `npm run smoke`
+> passes all 198 checks, `/health/ready` is green and `/openapi.json` reports
+> 0.109.1 with 150 paths.** `origin/master` carries it; the three increments were
+> replayed onto 0.107.0 rather than merged, for the reason in the commit.
 >
 > | Release | Migration | What |
 > |---|---|---|
-> | 0.108.0 | `0070` | A term accepts grades only from its own `starts_on`; promotion is closed until a class's report cards are complete; an approved outcome enrols the learner into next year |
+> | 0.108.0 | `0070` | A term accepts grades only from its own `starts_on`; promotion is closed until a class's report cards are complete; an approved outcome enrols the learner into the following school year |
 > | 0.109.0 | `0071` | One SF9 per grade level, and `GET /learners/{id}/sf9-history` behind the profile's **Report card** column |
 > | 0.109.1 | `0072` | Automatic enrolment narrowed to a **promotion**: a retention is recorded and approved and enrols nobody |
 >
-> The whole of it is in [the promotion gate](promotion-gate.md) and
-> [the SF9 history](sf9-history.md); the decisions are the newest rows in
-> [constraints.md](constraints.md).
+> Migrations `0069`–`0072` were applied in one transaction; `0069` is the waiting
+> counts 0.105.0–0.107.0 were waiting on. All 605 `record_access_events` rows
+> revalidated against 0071's rebuilt CHECK. See [the promotion gate](promotion-gate.md)
+> and [the SF9 history](sf9-history.md).
 >
-> ### What this work was renumbered from, and why it matters
+> ### Three consequences on the live data, which the school should know
 >
-> It was first written on a **stale local line** whose `docs/status.md` said
-> live was 0.102.2 at migration 0060. It is not: live serves **0.104.0** and the
-> hosted database is at **0068**. The work was authored as 0.103.0/0.104.0/0.104.1
-> with migrations 0069/0070/0071 — **all six numbers already taken** on this
-> line, 0069 by `0069_waiting_counts.sql`.
+> These are the rules as specified, now acting on records that already exist.
+> **None of them is a fault; all three are worth knowing before someone meets
+> them.**
 >
-> It was **not merged**. Local `master` carries 0.95.4–0.102.2 as 19 commits
-> that this line already holds as the single recovery commit `0a236a3`, so a
-> merge would have duplicated all of it. Instead the work was replayed as a
-> patch onto `origin/master`, which was safe because `src/`, `web/`,
-> `database/` and `package.json` are **byte-identical** between the two lines at
-> 0.102.2 — only docs and tests differed, which the Vercel recovery had lost.
-> Eleven files conflicted and were resolved by hand; the original three commits
-> are kept on branch `testing` as the record of how the work was reached.
+> **1. Promotion for 2026–2027 is closed until 4 January 2027, and cannot be
+> opened sooner.** The gate waits for every *configured* term. Term 3 begins
+> `2027-01-04`, and a term that has not started accepts no grades — so its
+> grades cannot be completed before that date, and promotion cannot open before
+> it. **A reporting period's dates can only be changed while its school year is a
+> draft**, and 2026–2027 is `active` with no transition back to draft, so Term 3's
+> start cannot be brought forward through the API. Grade 3 A is the section this
+> bites: 55 learners × 6 learning areas × 3 terms are required and 48 grades are
+> recorded. Already-approved outcomes are untouched and still print; what is
+> blocked is endorsing, approving or returning anything further in that section
+> — including the 2 retentions currently `returned`.
 >
-> **Before any work or deploy: `git fetch` and compare with `origin/master` and
-> the live `/openapi.json`.** That instruction was already in this file and was
-> not followed, which is what cost the renumbering.
+> **2. Thirty-nine approved promotions are queued against the creation of
+> 2027–2028.** Live holds 35 `promoted` and 4 `conditionally_promoted` outcomes,
+> all approved. The `carry_forward_approved` trigger on `academic_years` means
+> that **the moment anyone creates the 2027 school year, all 39 are enrolled at
+> once** into the next grade with no class, ready for their new adviser's pull.
+> The 11 approved `retained` and 3 `remedial` outcomes enrol nobody (`0072`).
+> Expect that year-creation request to take noticeably longer than usual.
+>
+> **3. Term 3 encoding is refused until 4 January 2027**, with
+> `PERIOD_NOT_STARTED`. Terms 1 and 2 have begun and stay open for corrections,
+> which is deliberate: the ECR's figures arrive after a term is over.
 >
 > ### The single next action
 >
-> **Apply migrations `0069` through `0072` to the hosted database, then deploy.**
-> All four are unapplied: live is at `0068`. `0069` is the waiting counts that
-> 0.105.0–0.107.0 already wait on; `0070`–`0072` are this work.
+> **Nothing is pending.** If the school needs promotion for 2026–2027 before
+> January, that is a decision rather than a fix: either Term 3's dates were
+> entered wrongly and the year has to be rebuilt as a draft, or the gate's
+> "every configured term" rule needs narrowing to "every term that has ended".
+> Put it to the school; do not loosen the gate without that.
 >
-> **Migrate before deploying, not after.** The readiness check now requires
-> `read_waiting_counts()`, `read_promotion_readiness(uuid)` and
-> `read_sf9_history(uuid)`; deployed against a database without them,
-> `/health/ready` answers 503 and the app reports itself not ready.
->
-> **One thing to know before applying `0070` to a database holding records:**
-> creating a school year now runs the carry-forward for the year before it, so
-> every approved **promotion** from that year is enrolled at once. On live, which
-> holds no school record, it reaches nothing.
->
-> ### Verified on this branch, not claimed
->
-> `npm run check` passed: typecheck clean, the full suite green, build succeeded,
-> and `npm run api:export` regenerated `docs/openapi.json`. A 0068 → 0072
-> upgrade rehearsal and a functional rehearsal of all seven workflows were run
-> against a throwaway PGlite database. `npm run test:race` and `npm run
-> test:load` could **not** run: Docker is not available here, and
-> `tests/concurrency.pg.test.ts` is missing from the tree. `npm run smoke` tests
-> a deployment and this is not deployed.
+> **Still outstanding from `origin/master`'s own account below:** four test files
+> that only the old local line holds — `grade-roster-submissions`,
+> `pull-release-duplicates`, `same-day-register` and `list-approval`, about 54
+> cases — lost from this line in the Vercel recovery. They are on branch
+> `testing` in this checkout.
 >
 > Everything below is `origin/master`'s own account of 0.102.2–0.107.0 and is
-> unchanged, except that its migration count is now 72 rather than 69.
+> unchanged by this release.
 
 > ## 8 November: 0.102.2 recovered from production — read this first
 >
