@@ -10,7 +10,12 @@ export type Field = {
   key: string;
   label: string;
   /** `checkboxes` is a set chosen from `options`. It is held as a comma-joined
-   *  string like every other value and submitted as an array of option keys. */
+   *  string like every other value and submitted as an array of option keys.
+   *  `radios` is one of `options`, laid out as stacked lines rather than a
+   *  select, for a choice whose wording is a sentence: a long option overflows
+   *  a select and its list is drawn outside the sheet, which is how the
+   *  school's attendance rule came to be unreadable. Like `choose`, it starts
+   *  on nothing, so a rule is never recorded because nobody moved a default. */
   type?: string;
   optional?: boolean;
   options?: [string, string][];
@@ -199,6 +204,27 @@ export function Control({ field, id, value, error, onChange, compact }: {
     'aria-invalid': error ? true : undefined,
     'aria-describedby': describedBy,
   };
+  if (field.type === 'radios') {
+    return (
+      <fieldset className={`field choose${field.wide ? ' wide' : ''}${error ? ' bad' : ''}`} id={id} tabIndex={-1} aria-invalid={error ? true : undefined} aria-describedby={describedBy}>
+        <legend className="label">{field.label}</legend>
+        <div className="radios">
+          {(field.options ?? []).map(([key, text]) => {
+            // "Tardy: half-shaded on the SF2…" reads as a name and its meaning, so it is drawn as one.
+            const cut = text.indexOf(': ');
+            return (
+              <label key={key} className={`radio-line${value === key ? ' on' : ''}`}>
+                <input type="radio" name={`${id}-choice`} value={key} checked={value === key} onChange={() => onChange(key)} />
+                <span>{cut > 0 ? <><b>{text.slice(0, cut)}</b>{text.slice(cut + 1)}</> : text}</span>
+              </label>
+            );
+          })}
+        </div>
+        {error ? <span className="field-error" id={errorId}><Icon name="alert" size={14} />{error}</span> : null}
+        {field.hint && !compact ? <span className="hint" id={hintId}>{field.hint}</span> : null}
+      </fieldset>
+    );
+  }
   if (field.type === 'checkboxes') {
     const chosen = value ? value.split(',') : [];
     return (
@@ -284,7 +310,8 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   const controlId = (key: string) => `${scope}-${key}`;
   const start = useCallback(() => Object.fromEntries(fields.map(f => {
     const raw = initial?.[f.key];
-    return [f.key, raw === null || raw === undefined ? (f.options && f.type !== 'checkboxes' && !f.choose ? (f.options[0]?.[0] ?? '') : '') : String(raw)];
+    const picksFirst = f.options && f.type !== 'checkboxes' && f.type !== 'radios' && !f.choose;
+    return [f.key, raw === null || raw === undefined ? (picksFirst ? (f.options?.[0]?.[0] ?? '') : '') : String(raw)];
   })), [fields, initial]);
   const [values, setValues] = useState<Record<string, string>>(start);
   const [busy, setBusy] = useState(false);

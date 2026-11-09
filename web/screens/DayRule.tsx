@@ -20,10 +20,10 @@ export const singleWords: Record<string, string> = {
 const mixedShort: Record<string, string> = { tardy: 'Tardy, counted present', absent: 'Absent for the day', half_day: 'Half a day present' };
 const singleShort: Record<string, string> = { counts: 'A day of classes', not_counted: 'Not a day of classes' };
 
-// Neither question has a default: the first option is a prompt, and the API refuses it.
+// Neither question has a default: nothing is selected until somebody chooses, and the API refuses an empty answer.
 const fields: Field[] = [
-  { key: 'mixed_day', label: 'A learner present for one session and absent for the other', wide: true, options: [['', 'Choose the school’s rule…'], ...Object.entries(mixedWords)] },
-  { key: 'single_session_day', label: 'A date with only one classroom session', wide: true, options: [['', 'Choose the school’s rule…'], ...Object.entries(singleWords)] },
+  { key: 'mixed_day', label: 'A learner present for one session and absent for the other', wide: true, type: 'radios', options: Object.entries(mixedWords) },
+  { key: 'single_session_day', label: 'A date with only one classroom session', wide: true, type: 'radios', options: Object.entries(singleWords) },
   { key: 'reason', label: 'Where the school approved this', type: 'textarea', minLength: 10, maxLength: 500, wide: true,
     hint: 'For example the memo, meeting or DepEd issuance the rule comes from. Kept with the rule for good.' },
 ];
