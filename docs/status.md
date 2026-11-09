@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## 0.111.0 is live; the hosted database is at migration 0072 — read this first
+> ## 0.111.1 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -42,7 +42,8 @@
 > `71f8e8b`; `npm run smoke` passes all 198 checks.
 >
 > **0.111.1:** a rejected form says each problem once — the summary box above a short form is gone, and appears
-> only when a rejected field is out of sight. **Next:** nothing in flight.
+> only when a rejected field is out of sight. **Live** as `edunexus-lb4p9now9` (`17112a9`), smoke 198/198. **Next:**
+> nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
