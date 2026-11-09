@@ -57,7 +57,8 @@
 > **0.111.5:** the front page's inner tabs open on a plain title; Home keeps its hero. **Live** as
 > `edunexus-5pj0nz7ya` (`942127d`), smoke 198/198.
 >
-> **0.111.6:** the Overview says who is signed in — the role, and an adviser's classes. **Next:** nothing in flight.
+> **0.111.6:** the Overview says who is signed in — the role, and an adviser's classes. **Live** as
+> `edunexus-iyq7l28p3` (`b22c326`), smoke 198/198. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
