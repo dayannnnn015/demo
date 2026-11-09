@@ -8,6 +8,12 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.6', date: '2026-11-10',
+    items: [
+      'Under the greeting on {overview}, the workspace now says who you are here: **Principal** or **Administrative officer**, and for an adviser the classes they advise this school year, such as “Adviser of Grade 3 – A”.',
+    ],
+  },
+  {
     version: '0.111.5', date: '2026-11-10',
     items: [
       'On the school’s public front page, only Home has the large picture banner. Announcements, Calendar, Questions and About now open on a plain title at the top of the page.',

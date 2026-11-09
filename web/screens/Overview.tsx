@@ -43,6 +43,21 @@ const longDate = () => new Date().toLocaleDateString(undefined, { weekday: 'long
 /** The name someone is greeted by, which is the first word of how they are filed. */
 const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
+/**
+ * Who the person is here, said under their name (asked 2026-11-10): the principal or the administrative officer by
+ * role, and an adviser by the classes they advise this school year, read from the sections this screen already loads.
+ */
+export function roleLine(me: Row, rooms: Row[]) {
+  const role = me.role === 'principal' ? 'Principal' : me.role === 'administrative_officer' ? 'Administrative officer' : 'Teacher';
+  const mine = rooms
+    .filter(r => r.adviser_user_id != null && r.adviser_user_id === me.user_id)
+    .sort((a, b) => Number(a.grade_level) - Number(b.grade_level) || String(a.name).localeCompare(String(b.name)));
+  if (!mine.length) return me.role === 'teacher' ? 'Teacher · no class to advise this school year' : role;
+  // "Grade 3 – A", the way a class is named on the school's own forms, and "and" between two, so one class reads as one.
+  const classes = new Intl.ListFormat('en', { type: 'conjunction' }).format(mine.map(r => `${gradeName(r.grade_level)} – ${String(r.name)}`));
+  return `${me.role === 'teacher' ? 'Adviser' : `${role} · adviser`} of ${classes}`;
+}
+
 const covering = (periods: Row[], today: string) =>
   periods.find(p => String(p.starts_on) <= today && today <= String(p.ends_on));
 
@@ -163,6 +178,7 @@ export function Overview({ api, me, manager, token }: {
         <div>
           <p className="greeting-eyebrow">{longDate()}</p>
           <h2>{greeting()}, {firstName(String(me.display_name))}</h2>
+          <p className="greeting-role">{roleLine(me, rooms)}</p>
           <p className="greeting-sub">
             {active
               ? <>Records you enter go into <b>{yearName(year)}</b>{period ? <> during <b>{String(period.name)}</b></> : null}.</>

@@ -13,6 +13,7 @@ import { AddSections } from '../web/screens/SetupBatch';
 import { Editor, Table } from '../web/components/primitives';
 import { ApiError } from '../web/api';
 import { routes } from '../web/routes';
+import { roleLine } from '../web/screens/Overview';
 
 /**
  * The UI notes of 8 November, U1 (docs/ui-notes-plan.md), held on 0.102.2.
@@ -348,5 +349,28 @@ describe('a filter row stays in line (asked 2026-11-10)', () => {
 
   it('still says how many classes the grade has, beside its label', () => {
     expect(readFileSync('web/screens/Subjects.tsx', 'utf8')).toContain("'One class' : `${gradeSections.length} classes, one card`");
+  });
+});
+
+describe('the Overview says who you are here (asked 2026-11-10)', () => {
+  // "palagay nga agad dito kung principal/AO, tas sa adviser palagay ung grade level na tinuturuan"
+  const rooms = [
+    { id: 's1', grade_level: 3, name: 'B', adviser_user_id: 't1' },
+    { id: 's2', grade_level: 1, name: 'A', adviser_user_id: 't1' },
+    { id: 's3', grade_level: 2, name: 'C', adviser_user_id: 't2' },
+    { id: 's4', grade_level: 4, name: 'D', adviser_user_id: null },
+  ];
+  it('names the principal and the administrative officer by role', () => {
+    expect(roleLine({ user_id: 'p', role: 'principal' }, rooms)).toBe('Principal');
+    expect(roleLine({ user_id: 'a', role: 'administrative_officer' }, rooms)).toBe('Administrative officer');
+  });
+  it('names an adviser by the classes they advise, lowest grade first, and no one else’s', () => {
+    expect(roleLine({ user_id: 't1', role: 'teacher' }, rooms)).toBe('Adviser of Grade 1 – A and Grade 3 – B');
+    expect(roleLine({ user_id: 't2', role: 'teacher' }, rooms)).toBe('Adviser of Grade 2 – C');
+  });
+  it('says plainly when a teacher advises no class, rather than inventing one', () => {
+    expect(roleLine({ user_id: 't9', role: 'teacher' }, rooms)).toBe('Teacher · no class to advise this school year');
+    // A section with no adviser must not match a person whose id is missing.
+    expect(roleLine({ role: 'teacher' }, rooms)).toBe('Teacher · no class to advise this school year');
   });
 });

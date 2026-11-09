@@ -617,6 +617,7 @@ code, .mono {
   color: var(--ink-500);
 }
 .greeting h2 { font-size: var(--t-26); font-weight: 600; letter-spacing: -0.025em; }
+.greeting-role { margin: var(--s1) 0 0; color: var(--accent-700); font-size: var(--t-14); font-weight: 600; }
 .greeting-sub { margin: var(--s2) 0 0; max-width: 72ch; color: var(--ink-500); font-size: var(--t-14); }
 .greeting-sub b { color: var(--ink-900); font-weight: 600; }
 

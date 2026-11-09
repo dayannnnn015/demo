@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## 0.111.5 is live; the hosted database is at migration 0072 — read this first
+> ## 0.111.6 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -55,7 +55,9 @@
 > `edunexus-c030zzmey` (`a93d8f3`), smoke 198/198.
 >
 > **0.111.5:** the front page's inner tabs open on a plain title; Home keeps its hero. **Live** as
-> `edunexus-5pj0nz7ya` (`942127d`), smoke 198/198. **Next:** nothing in flight.
+> `edunexus-5pj0nz7ya` (`942127d`), smoke 198/198.
+>
+> **0.111.6:** the Overview says who is signed in — the role, and an adviser's classes. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
