@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## 0.111.0; the hosted database is at migration 0072 — read this first
+> ## 0.111.0 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -38,7 +38,8 @@
 >
 > **The six asks are settled:** 1, 2 and 4 in 0.110.0; 5 and 6 in 0.111.0; 3
 > (which half of a refused sign-in was wrong) is deliberately not built, as
-> recorded in constraints. **Next:** nothing in flight.
+> recorded in constraints. **Live** as `edunexus-4mqybdiho` from a clean worktree of
+> `71f8e8b`; `npm run smoke` passes all 198 checks. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
