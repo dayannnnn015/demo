@@ -586,6 +586,9 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
   const yearStatus = (context?.school_year.status ?? scope.year?.status ?? 'draft') as 'draft' | 'active' | 'closed';
   const grade = gradeHere ?? Number(section?.grade_level);
   const shown = offerings && (showRetired ? offerings : offerings.filter(o => o.active));
+  // The filter is only offered where there is something to include. A grade
+  // with nothing retired drew a tick box that changed the list either way.
+  const anyRetired = (offerings ?? []).some(o => !o.active);
   const offered = new Set((offerings ?? []).map(o => o.subject_id));
   // Retired offerings stay unique per section, so they are excluded too, even
   // when hidden: adding one again means reactivating it, not a second row.
@@ -640,10 +643,12 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
                       : `${gradeSections.length} classes at this grade, and they take the same card.`}
                   </span>
                 </div>
-                <label className="check-line">
-                  <input type="checkbox" checked={showRetired} onChange={event => setShowRetired(event.target.checked)} />
-                  <span>Include retired</span>
-                </label>
+                {anyRetired ? (
+                  <label className="check-line">
+                    <input type="checkbox" checked={showRetired} onChange={event => setShowRetired(event.target.checked)} />
+                    <span>Include retired</span>
+                  </label>
+                ) : null}
               </div>
               <div className="card-head-actions">
                 {context ? <Badge tone={yearStatus === 'closed' ? 'neutral' : yearStatus === 'active' ? 'good' : 'info'}>{yearStatus === 'closed' ? 'Closed year — read only' : yearStatus === 'draft' ? 'Draft year' : 'Active year'}</Badge> : null}
