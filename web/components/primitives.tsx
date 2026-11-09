@@ -656,11 +656,26 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
 
 const calloutIcon = { info: 'info', attention: 'alert', stopped: 'stop' } as const;
 
+/**
+ * A note beside the records it is about.
+ *
+ * A titled one folds from its own heading, open to begin with. Asked for on
+ * 2026-11-10: several screens stack two or three of these above the work, and
+ * on a narrow window the warnings are the page. Folding is per note and is not
+ * remembered — a reader quietening one card must not quieten the refusal on a
+ * screen they have not opened yet, which is what one shared preference would
+ * do. An untitled callout has no heading to fold from and is always shown.
+ */
 export function Callout({ tone = 'info', title, children }: { tone?: 'info' | 'attention' | 'stopped' | 'plain'; title?: string; children: ReactNode }) {
   return (
     <div className={`callout ${tone === 'plain' ? '' : tone}`}>
       {tone === 'plain' ? null : <Icon name={calloutIcon[tone]} size={16} />}
-      <div>{title ? <h3>{title}</h3> : null}{children}</div>
+      {title ? (
+        <details className="fold" open>
+          <summary><h3>{title}</h3><Icon name="caret" size={12} /></summary>
+          <div className="fold-body">{children}</div>
+        </details>
+      ) : <div>{children}</div>}
     </div>
   );
 }

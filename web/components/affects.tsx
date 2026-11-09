@@ -30,17 +30,20 @@ export const reaches = {
 } as const;
 export type Reach = keyof typeof reaches;
 
-/** What else a save changes, in a block that sits above the save button. */
+/** What else a save changes, in a block that sits above the save button. It folds from its own
+ *  heading like any other note, and like them it starts open. */
 export function Affects({ what, children }: { what: Reach | Reach[]; children?: ReactNode }) {
   const items = [...new Set((Array.isArray(what) ? what : [what]).flatMap(w => reaches[w]))];
   return (
     <div className="affects" role="note">
       <Icon name="alert" size={15} />
-      <div>
-        <p className="affects-title">Saving this also changes</p>
-        <ul>{items.map(item => <li key={item}>{item}</li>)}</ul>
-        <p className="affects-foot">{children ?? 'Forms already issued keep what they said. The next copy printed or issued shows the change.'}</p>
-      </div>
+      <details className="fold" open>
+        <summary><h3 className="affects-title">Saving this also changes</h3><Icon name="caret" size={12} /></summary>
+        <div className="fold-body">
+          <ul>{items.map(item => <li key={item}>{item}</li>)}</ul>
+          <p className="affects-foot">{children ?? 'Forms already issued keep what they said. The next copy printed or issued shows the change.'}</p>
+        </div>
+      </details>
     </div>
   );
 }
