@@ -8,6 +8,12 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.4', date: '2026-11-10',
+    items: [
+      'The filters above **Grade offerings** on {subjects} sit in one line again. The number of classes at the grade now appears beside **Grade level** instead of under it.',
+    ],
+  },
+  {
     version: '0.111.3', date: '2026-11-10',
     items: [
       'The long notes on **Add the report-card learning areas** and the sheet that offers a grade’s card are now folded away, like every page’s description: press **Show the notes on these learning areas** to read them. Opening descriptions anywhere opens them everywhere for the rest of the tab. Neither sheet asks for a reason.',

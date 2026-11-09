@@ -649,15 +649,14 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
               <div className="toolbar">
                 <ScopePickers scope={scope} yearOnly />
                 <div className="field inline">
-                  <label className="label" htmlFor="offerings-grade">Grade level</label>
+                  {/* The count sits beside the label, not under the box: a line under one filter pushes the rest of the row out of line. */}
+                  <label className="label" htmlFor="offerings-grade">
+                    Grade level
+                    <span className="optional">{gradeSections.length === 1 ? 'One class' : `${gradeSections.length} classes, one card`}</span>
+                  </label>
                   <Select id="offerings-grade" value={String(gradeHere ?? '')} onChange={event => setChosenGrade(Number(event.target.value))}>
                     {gradesHere.map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
                   </Select>
-                  <span className="hint">
-                    {gradeSections.length === 1
-                      ? 'One class at this grade.'
-                      : `${gradeSections.length} classes at this grade, and they take the same card.`}
-                  </span>
                 </div>
                 <label className="check-line">
                   <input type="checkbox" checked={showRetired} onChange={event => setShowRetired(event.target.checked)} />

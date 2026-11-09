@@ -293,6 +293,8 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
               refused until every registered learner is in one, and they are on no section’s register. Each adviser then takes in the learners at their class’s
               grade, from <b>Add learner</b> on <b>Learner registry</b>; a manager can place one on <b>Enrollment</b>. A learner already enrolled this year is
               refused a second time, so import each learner once.
+              {' '}The template has a <span className="mono">grade_level</span> column, so one file can hold several grades; choose <b>Enrol at grade</b> only to
+              stand for the rows that leave theirs empty. A row with neither is named on its own line below.
             </Callout>
           ) : null}
         </div>
@@ -306,10 +308,6 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
                   <option value="">Each row says its own</option>
                   {[0, 1, 2, 3, 4, 5, 6].map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
                 </Select>
-                <span className="hint">
-                  The template has a <span className="mono">grade_level</span> column, so one file can hold several grades. Choose a grade here only to stand
-                  for the rows that leave theirs empty; a row with neither is named on its own line below.
-                </span>
               </div>
             ) : null}
             <div className="field inline">

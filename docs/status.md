@@ -1,6 +1,6 @@
 # Where things stand
 
-> ## 0.111.3 is live; the hosted database is at migration 0072 — read this first
+> ## 0.111.4 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -49,7 +49,9 @@
 > `edunexus-afi6aa8vq` (`b43a7cf`), smoke 198/198.
 >
 > **0.111.3:** the learning-area sheets' long notes fold behind the description switch, off by default; neither sheet
-> asks a reason (since 0.103.0). **Live** as `edunexus-d5q9gh4en` (`aa7508f`), smoke 198/198. **Next:** nothing in flight.
+> asks a reason (since 0.103.0). **Live** as `edunexus-d5q9gh4en` (`aa7508f`), smoke 198/198.
+>
+> **0.111.4:** the Grade offerings filters line up; the class count sits beside its label. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.

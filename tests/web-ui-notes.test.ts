@@ -329,3 +329,24 @@ describe('Create sections takes names one at a time (asked 2026-11-09)', () => {
     m.unmount();
   });
 });
+
+describe('a filter row stays in line (asked 2026-11-10)', () => {
+  // A line of text under one filter makes that field taller, and a toolbar aligns its items to the bottom, so every
+  // other box and checkbox in the row drops out of line with it. A count belongs beside the label instead.
+  const toolbars = (file: string) => {
+    const source = readFileSync(file, 'utf8');
+    return [...source.matchAll(/className="toolbar">([\s\S]*?)<div className="card-head-actions">/g)].map(m => m[1]!);
+  };
+
+  it('puts no hint line under a filter on Grade offerings or the class-list import', () => {
+    for (const file of ['web/screens/Subjects.tsx', 'web/screens/Imports.tsx']) {
+      const found = toolbars(file);
+      expect(found.length).toBeGreaterThan(0);
+      for (const bar of found) expect(bar).not.toContain('className="hint"');
+    }
+  });
+
+  it('still says how many classes the grade has, beside its label', () => {
+    expect(readFileSync('web/screens/Subjects.tsx', 'utf8')).toContain("'One class' : `${gradeSections.length} classes, one card`");
+  });
+});
