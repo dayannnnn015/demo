@@ -740,14 +740,43 @@ const LEDE = 'edunexus-ui-lede';
 const ledeShown = () => {
   try { return sessionStorage.getItem(LEDE) === 'open'; } catch { return false; }
 };
-export function PageHeader({ route, actions }: { route: Route; actions?: ReactNode }) {
+const DESCRIPTIONS = 'edunexus-descriptions';
+
+/**
+ * Whether descriptions are shown: one setting for the whole workspace, off by default (0.110.0 folded every page's
+ * description; since 0.111.3 the long notes inside sheets follow the same switch, asked 2026-11-09). Opening them
+ * anywhere opens them everywhere for the rest of the tab, and every mounted control follows at once.
+ */
+export function useDescriptions(): [boolean, () => void] {
   const [open, setOpen] = useState(ledeShown);
-  const id = useId();
-  const toggle = () => setOpen(was => {
-    const next = !was;
+  useEffect(() => {
+    const follow = () => setOpen(ledeShown());
+    addEventListener(DESCRIPTIONS, follow);
+    return () => removeEventListener(DESCRIPTIONS, follow);
+  }, []);
+  const toggle = () => {
+    const next = !ledeShown();
     try { sessionStorage.setItem(LEDE, next ? 'open' : 'shut'); } catch { /* not worth failing a render over */ }
-    return next;
-  });
+    setOpen(next);
+    dispatchEvent(new Event(DESCRIPTIONS));
+  };
+  return [open, toggle];
+}
+
+/** The switch for a sheet's long notes, drawn like the page's own "What is this page for?". */
+export function DescriptionToggle({ show = 'Show the notes', hide = 'Hide the notes', controls }: { show?: string; hide?: string; controls?: string }) {
+  const [open, toggle] = useDescriptions();
+  return (
+    <button type="button" className="lede-toggle" aria-expanded={open} aria-controls={controls} onClick={toggle}>
+      <Icon name={open ? 'collapse' : 'expand'} size={14} />
+      {open ? hide : show}
+    </button>
+  );
+}
+
+export function PageHeader({ route, actions }: { route: Route; actions?: ReactNode }) {
+  const [open, toggle] = useDescriptions();
+  const id = useId();
   return (
     <div className="view-head">
       <div className="view-titles">

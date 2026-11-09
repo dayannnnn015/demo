@@ -3,7 +3,9 @@ import { createElement } from 'react';
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mount } from './helpers/dom.js';
-import { PageHeader } from '../web/components/primitives';
+import { DescriptionToggle, PageHeader } from '../web/components/primitives';
+import { catalogCandidates } from '../web/screens/Subjects';
+import { reportCardAreas } from '../web/learning-areas';
 import { routes } from '../web/routes';
 
 /**
@@ -114,5 +116,38 @@ describe('what the change must not have disturbed', () => {
     // On paper a description is either printed or it is not; a control to fold
     // it is furniture, and the print block exists to drop furniture.
     expect(css).toContain('@media print { .lede-toggle { display: none; } }');
+  });
+});
+
+describe('a sheet’s long notes follow the same switch (asked 2026-11-09)', () => {
+  // "didn't we add a toggle for descriptions? ... and it's disabled by default?" The learning-area sheets carried a
+  // paragraph per row; they are descriptions, so they fold with everything else.
+  const noted = reportCardAreas.find(a => !!a.note)!;
+  const row = () => createElement('div', {}, ...catalogCandidates([]).find(c => c.key === noted.code)!.cells);
+
+  it('shows a learning area’s name and code, and not its note, until asked', async () => {
+    const view = await mount(row());
+    expect(view.text()).toContain(noted.name);
+    expect(view.text()).toContain(noted.code);
+    expect(view.text()).not.toContain(noted.note!);
+    view.unmount();
+  });
+
+  it('opens the notes and every page description together, and shuts them together', async () => {
+    const view = await mount(createElement('div', {}, createElement(PageHeader, { route }), createElement(DescriptionToggle, {}), row()));
+    await view.click(view.all('.lede-toggle')[1]!);
+    expect(view.text()).toContain(noted.note!);
+    // One setting: the page's own description opened with it, and its control says so.
+    expect(view.text()).toContain(route.lede);
+    expect(view.all('.lede-toggle')[0]!.getAttribute('aria-expanded')).toBe('true');
+    await view.click(view.all('.lede-toggle')[0]!);
+    expect(view.text()).not.toContain(noted.note!);
+    expect(view.all('.lede-toggle')[1]!.getAttribute('aria-expanded')).toBe('false');
+    view.unmount();
+  });
+
+  it('asks no reason on either learning-area sheet', () => {
+    const subjects = readFileSync('web/screens/Subjects.tsx', 'utf8');
+    expect(subjects.match(/reasoned=\{false\}/g)?.length).toBeGreaterThanOrEqual(2);
   });
 });

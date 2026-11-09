@@ -2847,3 +2847,6 @@ a.btn { text-decoration: none; }
 .section-chips .chip button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .section-chips .chip-add { display: flex; gap: var(--s2); align-items: center; }
 .section-chips .chip-add input { flex: 1; min-width: 0; }
+/* A sheet's longer notes fold behind the same switch as a page's description (asked 2026-11-09). */
+.sheet-notes { display: grid; gap: var(--s2); justify-items: start; }
+.sheet-notes > div { justify-self: stretch; }

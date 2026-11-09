@@ -8,6 +8,12 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.3', date: '2026-11-10',
+    items: [
+      'The long notes on **Add the report-card learning areas** and the sheet that offers a grade’s card are now folded away, like every page’s description: press **Show the notes on these learning areas** to read them. Opening descriptions anywhere opens them everywhere for the rest of the tab. Neither sheet asks for a reason.',
+    ],
+  },
+  {
     version: '0.111.2', date: '2026-11-09',
     items: [
       '**Create sections** on {years} no longer takes a list separated by commas. Each section is its own tag: remove one with its ×, type a name and press Enter to add one, or press the button that adds the next letter.',
