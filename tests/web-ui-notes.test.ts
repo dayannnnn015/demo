@@ -9,7 +9,8 @@ import { PriorRecords } from '../web/screens/PriorRecords';
 import { Learners } from '../web/screens/Learners';
 import { Staff } from '../web/screens/Staff';
 import { NextYear } from '../web/screens/NextYear';
-import { Table } from '../web/components/primitives';
+import { Editor, Table } from '../web/components/primitives';
+import { ApiError } from '../web/api';
 import { routes } from '../web/routes';
 
 /**
@@ -254,6 +255,40 @@ describe('next year’s classes (U5: note 2)', () => {
     expect(m.all('details.task > summary').some(x => (x.textContent ?? '').includes('No outcome recorded · 2'))).toBe(true);
     // Nothing on it is a rate: counts only.
     expect(m.text()).not.toMatch(/%/);
+    m.unmount();
+  });
+});
+
+describe('a rejected save says each problem once (asked 2026-11-09)', () => {
+  const fields = [
+    { key: 'name', label: 'Period name', maxLength: 60 },
+    { key: 'starts_on', label: 'First day', type: 'date' },
+    { key: 'ends_on', label: 'Last day', type: 'date' },
+  ];
+  const rejecting = (message: string) => async () => {
+    throw new ApiError(422, 'VALIDATION_ERROR', message, [{ path: 'starts_on', message: 'Required.' }, { path: 'ends_on', message: 'Required.' }]);
+  };
+
+  it('draws no summary when every rejected field is in sight, and puts the reader on the first one', async () => {
+    const m = await mount(createElement(Editor, { fields, submitLabel: 'Add the period', setStatus: () => undefined, onSubmit: rejecting('Review the request fields.') }));
+    await m.submit(m.byText('Add the period', 'button'));
+    await m.until(v => v.all('.field-error').length === 2, 'the two messages beside their fields');
+    expect(m.all('.error-summary')).toHaveLength(0);
+    expect(m.text().match(/Required\./g)).toHaveLength(2);
+    expect(document.activeElement).toBe(m.field('First day'));
+    expect(m.field('First day')!.getAttribute('aria-describedby')).toContain('-error');
+    m.unmount();
+  });
+
+  it('keeps a summary for a message that belongs to no one field, naming the fields without repeating them', async () => {
+    const m = await mount(createElement(Editor, { fields, submitLabel: 'Add the period', setStatus: () => undefined, onSubmit: rejecting('Periods must not overlap another period.') }));
+    await m.submit(m.byText('Add the period', 'button'));
+    await m.until(v => v.all('.error-summary').length === 1, 'the summary');
+    const box = m.all('.error-summary')[0]!;
+    expect(box.textContent).toContain('Periods must not overlap another period.');
+    expect([...box.querySelectorAll('li button')].map(b => b.textContent)).toEqual(['First day', 'Last day']);
+    // Each "Required." is said once, beside its field.
+    expect(m.text().match(/Required\./g)).toHaveLength(2);
     m.unmount();
   });
 });

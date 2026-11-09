@@ -8,6 +8,12 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.1', date: '2026-11-09',
+    items: [
+      'When a form refuses something, the message now appears once, beside the box it is about, and the cursor is put there. A box listing the problems appears only when one of them is out of sight, and then it just names the boxes to jump to.',
+    ],
+  },
+  {
     version: '0.111.0', date: '2026-11-09',
     items: [
       'A notification now takes you to what it is about: press it, and the screen opens at that school year and class, marking it read. A class list waiting for approval opens straight into its review on {enrollment}.',

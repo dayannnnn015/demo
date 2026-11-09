@@ -291,6 +291,8 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   const [bad, setBad] = useState<{ key: string; label: string; message: string }[]>([]);
   const [lede, setLede] = useState('');
   const [rejected, setRejected] = useState(0);
+  // Whether the rejection needs a summary at all (asked 2026-11-09: the box repeated what each field already said).
+  const [jump, setJump] = useState(false);
   const summary = useRef<HTMLDivElement>(null);
 
   // Reset only when what the form describes changes. Screens build `fields`
@@ -300,10 +302,26 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
   const signature = JSON.stringify([fields.map(f => [f.key, f.type ?? '', f.options?.map(o => o[0]) ?? null]), initial ?? null]);
   useEffect(() => { setValues(start()); setBad([]); }, [signature]);
 
-  // A failed save can reject several fields at once in a form taller than the
-  // window, so the reader is put in one place that names every problem and
-  // leads to each field. Moving focus here is the whole point of the summary.
-  useEffect(() => { if (rejected) summary.current?.focus(); }, [rejected]);
+  // Where a rejection puts the reader. Every message is already drawn beside its
+  // field, so when all the rejected fields are in sight a box above them only says
+  // it twice (asked 2026-11-09): focus goes to the first one, and a screen reader
+  // reads its message, which `aria-describedby` ties to it. A summary is drawn
+  // only when it adds something: a rejected field out of sight in a form taller
+  // than its window, or a message from the server that belongs to no one field.
+  // Then it names the fields as links to each, and does not repeat their messages.
+  useEffect(() => {
+    if (!rejected) return;
+    const controls = bad.map(f => document.getElementById(controlId(f.key))).filter((el): el is HTMLElement => Boolean(el));
+    const outOfSight = controls.some(el => {
+      const box = el.getBoundingClientRect();
+      const frame = el.closest('.sheet-body')?.getBoundingClientRect() ?? { top: 0, bottom: globalThis.innerHeight };
+      return box.top < frame.top || box.bottom > frame.bottom;
+    });
+    const needed = outOfSight || Boolean(lede);
+    setJump(needed);
+    if (needed) requestAnimationFrame(() => summary.current?.focus());
+    else controls[0]?.focus();
+  }, [rejected]);
 
   const problem = (key: string) => bad.find(f => f.key === key)?.message;
 
@@ -318,6 +336,7 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
       event.preventDefault();
       setBusy(true);
       setBad([]);
+      setJump(false);
       setStatus({ text: 'Saving…', kind: 'busy' });
       const payload: Record<string, unknown> = {};
       for (const field of fields) {
@@ -351,17 +370,18 @@ export function Editor({ fields, initial, submitLabel = 'Save changes', onSubmit
       } finally { setBusy(false); }
     }}>
       {warning}
-      {bad.length ? (
+      {bad.length && jump ? (
         <div className="error-summary" role="alert" tabIndex={-1} ref={summary}>
           <h3><Icon name="alert" size={16} />{bad.length === 1 ? 'One field needs attention' : `${bad.length} fields need attention`}</h3>
           {lede ? <p>{lede}</p> : null}
-          <ul>
+          <ul className="error-jumps">
             {bad.map(f => (
               <li key={f.key}>
                 {/* A button, not an anchor: the address bar is the router here,
-                    so a `#field` href would navigate away from the screen. */}
+                    so a `#field` href would navigate away from the screen. Its
+                    message is beside the field, so the link names the field alone. */}
                 <button type="button" onClick={() => document.getElementById(controlId(f.key))?.focus()}>
-                  {f.label}: {f.message}
+                  {f.label}
                 </button>
               </li>
             ))}

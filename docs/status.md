@@ -39,7 +39,10 @@
 > **The six asks are settled:** 1, 2 and 4 in 0.110.0; 5 and 6 in 0.111.0; 3
 > (which half of a refused sign-in was wrong) is deliberately not built, as
 > recorded in constraints. **Live** as `edunexus-4mqybdiho` from a clean worktree of
-> `71f8e8b`; `npm run smoke` passes all 198 checks. **Next:** nothing in flight.
+> `71f8e8b`; `npm run smoke` passes all 198 checks.
+>
+> **0.111.1:** a rejected form says each problem once — the summary box above a short form is gone, and appears
+> only when a rejected field is out of sight. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.

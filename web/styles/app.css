@@ -2833,3 +2833,6 @@ a.btn { text-decoration: none; }
    link on hover and focus. */
 .notification-link { color: inherit; text-decoration: none; }
 .notification-link:hover, .notification-link:focus-visible { text-decoration: underline; text-underline-offset: 2px; }
+
+/* The summary of a rejected save names the fields only, side by side: each message is already beside its field. */
+.error-summary ul.error-jumps { flex-direction: row; flex-wrap: wrap; gap: var(--s1) var(--s3); }
