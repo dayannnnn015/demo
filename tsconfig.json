@@ -50,7 +50,6 @@
     "tests/web-imports.test.ts",
     "tests/web-late-learner.test.ts",
     "tests/web-learner-profile.test.ts",
-    "tests/web-ui-notes.test.ts",
     "tests/web-learner-record.test.ts",
     "tests/web-learning-areas.test.ts",
     "tests/web-name-requests.test.ts",
@@ -83,11 +82,13 @@
     "tests/web-session-store.test.ts",
     "tests/web-settings.test.ts",
     "tests/web-setup-batch.test.ts",
+    "tests/web-sf2-codes.test.ts",
     "tests/web-shell.test.ts",
     "tests/web-sign-in.test.ts",
     "tests/web-subjects.test.ts",
     "tests/web-teacher-roster.test.ts",
     "tests/web-tour.test.ts",
-    "tests/web-two-step.test.ts"
+    "tests/web-two-step.test.ts",
+    "tests/web-ui-notes.test.ts"
   ]
 }

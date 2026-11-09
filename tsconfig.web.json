@@ -32,6 +32,7 @@
     "tests/web-session-store.test.ts",
     "tests/web-roster-template.test.ts",
     "tests/web-help.test.ts",
-    "tests/web-card-boxes.test.ts"
+    "tests/web-card-boxes.test.ts",
+    "tests/web-sf2-codes.test.ts"
   ]
 }
