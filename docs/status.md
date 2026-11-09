@@ -51,7 +51,8 @@
 > **0.111.3:** the learning-area sheets' long notes fold behind the description switch, off by default; neither sheet
 > asks a reason (since 0.103.0). **Live** as `edunexus-d5q9gh4en` (`aa7508f`), smoke 198/198.
 >
-> **0.111.4:** the Grade offerings filters line up; the class count sits beside its label. **Next:** nothing in flight.
+> **0.111.4:** the Grade offerings filters line up; the class count sits beside its label. **Live** as
+> `edunexus-c030zzmey` (`a93d8f3`), smoke 198/198. **Next:** nothing in flight.
 
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
