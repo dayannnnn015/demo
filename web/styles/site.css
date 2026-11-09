@@ -329,8 +329,13 @@ main:focus { outline: none; }
 
 /* --------------------------------------------------------- Inner pages */
 .page-head { position: relative; isolation: isolate; overflow: clip; background: var(--night); color: #d3e1ef; }
-.page-head .valley { opacity: .9; }
-.page-head-inner { padding-block: clamp(48px, 8vw, 88px) clamp(110px, 14vw, 170px); max-width: 860px; margin-left: max(var(--s5), (100% - var(--wrap)) / 2); }
+/* The valley is this band's backdrop, not a block in its flow. With no
+   positioning it laid out inline, above the heading, at the SVG's own size —
+   which is the empty dark panel every tab but Home grew when it was opened. The
+   bottom padding below was then holding a gap for art that was never in the
+   flow to fill it. `.hero-art img` on Home has carried these three all along. */
+.page-head .valley { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; opacity: .9; }
+.page-head-inner { padding-block: clamp(48px, 8vw, 88px) clamp(52px, 8vw, 92px); max-width: 860px; margin-left: max(var(--s5), (100% - var(--wrap)) / 2); }
 .page-head h1 { margin-top: var(--s3); color: var(--white); font-size: clamp(2.2rem, 5.5vw, 3.75rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
 .page-head p:last-child { margin-top: var(--s4); max-width: 40rem; font-size: 1.1rem; }
 .back-link { display: inline-flex; align-items: center; gap: var(--s2); margin-bottom: var(--s5); color: var(--sun); font-weight: 700; text-decoration: none; }

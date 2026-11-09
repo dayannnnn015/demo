@@ -85,6 +85,7 @@
     "tests/web-sf2-codes.test.ts",
     "tests/web-shell.test.ts",
     "tests/web-sign-in.test.ts",
+    "tests/web-site-page-head.test.ts",
     "tests/web-subjects.test.ts",
     "tests/web-teacher-roster.test.ts",
     "tests/web-tour.test.ts",
