@@ -9,6 +9,7 @@ import { PriorRecords } from '../web/screens/PriorRecords';
 import { Learners } from '../web/screens/Learners';
 import { Staff } from '../web/screens/Staff';
 import { NextYear } from '../web/screens/NextYear';
+import { AddSections } from '../web/screens/SetupBatch';
 import { Editor, Table } from '../web/components/primitives';
 import { ApiError } from '../web/api';
 import { routes } from '../web/routes';
@@ -289,6 +290,42 @@ describe('a rejected save says each problem once (asked 2026-11-09)', () => {
     expect([...box.querySelectorAll('li button')].map(b => b.textContent)).toEqual(['First day', 'Last day']);
     // Each "Required." is said once, beside its field.
     expect(m.text().match(/Required\./g)).toHaveLength(2);
+    m.unmount();
+  });
+});
+
+describe('Create sections takes names one at a time (asked 2026-11-09)', () => {
+  it('shows each grade’s sections as chips, adds by Enter, splits a pasted list, offers the next letter, and reviews exactly those', async () => {
+    server.signInAs('principal');
+    const m = await mount(createElement(AddSections, { api: server.api, year: { id: year, start_year: 2026 }, onClose: () => undefined }));
+    await m.until(v => v.byText('Review the sections', 'button') !== null && !v.byText('Review the sections', 'button')!.hasAttribute('disabled'), 'the sheet');
+    expect(m.text()).not.toMatch(/separated by commas/);
+    const chips = (grade: string) => [...(m.host.querySelector(`[aria-label="${grade} sections"]`)?.querySelectorAll('.chip span') ?? [])].map(c => c.textContent);
+    expect(chips('Grade 2')).toEqual(['A', 'B', 'C', 'D']);
+
+    await m.click(m.host.querySelector<HTMLElement>('[aria-label="Remove Grade 2 B"]'));
+    expect(chips('Grade 2')).toEqual(['A', 'C', 'D']);
+
+    const box = m.field('Grade 2') as HTMLInputElement;
+    await m.type(box, 'Sampaguita');
+    await act(async () => { box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+    await m.settle();
+    expect(chips('Grade 2')).toEqual(['A', 'C', 'D', 'Sampaguita']);
+
+    await m.type(box, 'e, F, a');
+    await m.click(box.parentElement!.querySelector<HTMLElement>('button.btn.secondary'));
+    // "a" is A again, ignoring case, so it is not added twice.
+    expect(chips('Grade 2')).toEqual(['A', 'C', 'D', 'Sampaguita', 'e', 'F']);
+
+    // Grade 1 still ends at D, so its next letter is offered.
+    const grade1 = (m.field('Grade 1') as HTMLInputElement).parentElement!;
+    await m.click([...grade1.querySelectorAll<HTMLElement>('button')].find(b => b.textContent === 'Add E') ?? null);
+    expect(chips('Grade 1')).toEqual(['A', 'B', 'C', 'D', 'E']);
+
+    await m.submit(m.byText('Review the sections', 'button'));
+    await m.until(v => v.all('tbody tr').length > 0, 'the review');
+    const reviewed = m.all('tbody tr').filter(tr => (tr.textContent ?? '').includes('Grade 2')).map(tr => tr.querySelector('b')?.textContent);
+    expect(reviewed).toEqual(['A', 'C', 'D', 'Sampaguita', 'e', 'F']);
     m.unmount();
   });
 });

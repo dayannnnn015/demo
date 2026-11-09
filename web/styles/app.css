@@ -2836,3 +2836,14 @@ a.btn { text-decoration: none; }
 
 /* The summary of a rejected save names the fields only, side by side: each message is already beside its field. */
 .error-summary ul.error-jumps { flex-direction: row; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+
+/* Create sections: each section a chip, added one name at a time (asked 2026-11-09: no comma-separated list). */
+.section-chips .chips { list-style: none; margin: 0 0 var(--s2); padding: 0; display: flex; flex-wrap: wrap; gap: var(--s1); }
+.section-chips .chip { display: inline-flex; align-items: center; gap: 2px; min-height: 28px; padding: 0 2px 0 var(--s2);
+  border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--sunk); font-size: var(--t-13); font-weight: 600; color: var(--ink-900); }
+.section-chips .chip button { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 0; border-radius: var(--r-sm);
+  background: none; color: var(--ink-500); cursor: pointer; }
+.section-chips .chip button:hover { background: var(--hover); color: var(--red-700); }
+.section-chips .chip button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.section-chips .chip-add { display: flex; gap: var(--s2); align-items: center; }
+.section-chips .chip-add input { flex: 1; min-width: 0; }

@@ -8,6 +8,12 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.2', date: '2026-11-09',
+    items: [
+      '**Create sections** on {years} no longer takes a list separated by commas. Each section is its own tag: remove one with its ×, type a name and press Enter to add one, or press the button that adds the next letter.',
+    ],
+  },
+  {
     version: '0.111.1', date: '2026-11-09',
     items: [
       'When a form refuses something, the message now appears once, beside the box it is about, and the cursor is put there. A box listing the problems appears only when one of them is out of sight, and then it just names the boxes to jump to.',
