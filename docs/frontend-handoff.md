@@ -219,7 +219,7 @@ Change history is manager-only on this screen, deliberately: a teacher's history
 
 [Section 3B.2](monthly-attendance.md) has a manager screen: `web/screens/Months.tsx`, at `/months`. Teachers have none, because the `/status` read available to them carries no counts and no learner detail — there is nothing to draw.
 
-It offers only the transitions allowed from the current state, and no edit form, because nothing edits a month in place. Every blocking issue is rendered as the sentence that says what to do next and which screen does it; `issueText` holds that mapping and a test asserts each documented code has one. Every count on the screen is a raw AM/PM classroom session and is labelled as such — not a school day, an attendance credit, a percentage or an SF4 total. Membership sits behind an explicit control because it names learner records.
+It offers only the transitions allowed from the current state, and no edit form, because nothing edits a month in place. Every blocking issue is rendered as the sentence that says what to do next and which screen does it; `issueText` holds that mapping and a test asserts each documented code has one. Every count on the screen is a raw AM/PM classroom session and is labelled as such — not a school day, an attendance credit, a percentage or an SF4 total. It shows neither a member list nor a transition history: both cards were removed on 2026-11-10 and the endpoints behind them are still there, uncalled.
 
 ## The classroom absence monitor screen
 

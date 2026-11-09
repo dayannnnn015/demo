@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Api, Row } from '../api';
 import { Sheet } from '../components/overlay';
-import { Callout, Editor, Table, Task, type Field, type Status } from '../components/primitives';
+import { Editor, Table, Task, Unrecorded, type Field, type Status } from '../components/primitives';
 import type { DayRule } from '../forms/types';
 import { Affects } from '../components/affects';
 
@@ -54,15 +54,10 @@ export function DayRuleCard({ api, me, setStatus, token }: { api: Api; me: Row; 
         </div>
       </div>
       <div className="card-body">
-        {state && !rule ? (
-          <Callout tone="attention" title="Not recorded yet">
-            The forms leave their totals empty until {principal ? 'you record' : 'the principal records'} it. EDUNEXUS does not guess it.
-          </Callout>
-        ) : null}
-        {rule ? (
+        {state ? (
           <dl className="facts">
-            <div><dt>One session present, one absent</dt><dd>{mixedShort[rule.mixed_day] ?? rule.mixed_day}</dd></div>
-            <div><dt>A date with one classroom session</dt><dd>{singleShort[rule.single_session_day] ?? rule.single_session_day}</dd></div>
+            <div><dt>One session present, one absent</dt><dd>{rule ? mixedShort[rule.mixed_day] ?? rule.mixed_day : <Unrecorded />}</dd></div>
+            <div><dt>A date with one classroom session</dt><dd>{rule ? singleShort[rule.single_session_day] ?? rule.single_session_day : <Unrecorded />}</dd></div>
           </dl>
         ) : null}
         {state?.history.length ? (

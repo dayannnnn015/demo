@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { Api, Page, Row } from '../api';
+import type { Api, Row } from '../api';
 import { ApiError, message, query } from '../api';
 import type { Route } from '../routes';
 import { clamp, firstOf, lastOf, monthName, monthOf, step, weekday, type Month } from '../dates';
@@ -9,9 +9,8 @@ import { ScopePickers, useScope } from '../components/scope';
 import { Sf4Report } from './Sf4';
 import {
   Badge, Callout, Cell, EmptyState, PageHeader, PrintButton, StatusLine, Table, TableSkeleton,
-  idle, byLearnerName, learnerName, localToday, type Status,
+  idle, localToday, type Status,
 } from '../components/primitives';
-import { MarkValue, type Mark } from './Attendance';
 import { Session } from './Calendar';
 import { Affects } from '../components/affects';
 
@@ -30,11 +29,6 @@ type Current = {
   review: Review; data_hash: string; issues: string[]; can_submit: boolean; source: 'live' | 'submission_snapshot';
 };
 type Plan = Current & { action: Action; target_status: Status2; reason: string; can_commit: boolean; review_hash: string | null };
-type Event = { id: string; month_version: number; action: Action; reason: string; recorded_at: string; review_snapshot: { target_status: Status2 } };
-type Member = {
-  enrollment_id: string; first_name: string; middle_name: string | null; last_name: string; name_extension: string | null;
-  dates: { day_on: string; am: Mark; pm: Mark }[];
-};
 
 /**
  * What blocks a submission, in words a school head can act on. The API returns
@@ -155,131 +149,6 @@ function TransitionSheet({ api, sectionId, monthOn, version, action, onClose, on
         </form>
       )}
     </Sheet>
-  );
-}
-
-/** Who the month covers and what each of them was marked, read on request. */
-function Membership({ api, sectionId, monthOn, token }: { api: Api; sectionId: string; monthOn: string; token: number }) {
-  const [rows, setRows] = useState<Member[] | null>(null);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => { setOpen(false); setRows(null); setCursor(null); }, [sectionId, monthOn, token]);
-
-  useEffect(() => {
-    if (!open) return;
-    void api<Page<Member>>(`/sections/${sectionId}/attendance/months/members${query({ month_on: monthOn, limit: 100 })}`)
-      .then(page => { setRows(page.items); setCursor(page.pagination?.next_after_id ?? null); })
-      .catch(() => { setRows([]); setCursor(null); });
-  }, [api, sectionId, monthOn, open]);
-
-  const more = async () => {
-    if (!cursor) return;
-    try {
-      const page = await api<Page<Member>>(`/sections/${sectionId}/attendance/months/members${query({ month_on: monthOn, limit: 100, after_id: cursor })}`);
-      setRows(current => [...(current ?? []), ...page.items]);
-      setCursor(page.pagination?.next_after_id ?? null);
-    } catch { setCursor(null); }
-  };
-
-  if (!open) {
-    return (
-      <div className="card">
-        <div className="card-head"><h2>Membership and marks</h2></div>
-        <div className="card-body">
-          <p className="muted">Who this month covers and what each of them was marked, date by date. It names learner records, so it is read when it is needed rather than on every load.</p>
-          <button type="button" className="btn ghost small" onClick={() => setOpen(true)}><Icon name="eye" size={14} />Show membership</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card">
-      <div className="card-head"><h2>Membership and marks</h2></div>
-      <Table
-        loading={rows === null}
-        rows={[...(rows ?? [])].sort(byLearnerName)}
-        rowKey={row => row.enrollment_id}
-        empty={<EmptyState title="Nobody in this month" body="No valid enrolment covers any date in this month for this section." />}
-        columns={[
-          { header: 'Learner', cell: row => <Cell title={learnerName(row)} /> },
-          { header: 'Dates covered', cell: row => row.dates.length, numeric: true },
-          { header: 'Present', cell: row => row.dates.filter(d => d.am === 'present' || d.pm === 'present').length, numeric: true },
-          { header: 'Absent', cell: row => row.dates.filter(d => d.am === 'absent' || d.pm === 'absent').length, numeric: true },
-        ]}
-        detailLabel="Dates"
-        detail={row => (
-          <Table
-            rows={row.dates}
-            rowKey={date => date.day_on}
-            empty={<p className="muted">No dates covered.</p>}
-            columns={[
-              { header: 'Date', cell: date => <Cell title={<span className="mono">{date.day_on}</span>} meta={weekday(date.day_on)} /> },
-              { header: 'Morning', cell: date => <MarkValue mark={date.am} /> },
-              { header: 'Afternoon', cell: date => <MarkValue mark={date.pm} /> },
-            ]}
-          />
-        )}
-      />
-      {cursor ? <div className="card-body"><button type="button" className="btn ghost small" onClick={() => void more()}>Show more learners</button></div> : null}
-    </div>
-  );
-}
-
-/** Every transition this month has been through, newest first. */
-function History({ api, sectionId, monthOn }: { api: Api; sectionId: string; monthOn: string }) {
-  const [rows, setRows] = useState<Event[] | null>(null);
-  const [cursor, setCursor] = useState<number | null>(null);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => { setOpen(false); setRows(null); setCursor(null); }, [sectionId, monthOn]);
-
-  useEffect(() => {
-    if (!open) return;
-    void api<Page<Event>>(`/sections/${sectionId}/attendance/months/transitions${query({ month_on: monthOn, limit: 5 })}`)
-      .then(page => { setRows(page.items); setCursor(page.pagination?.next_before_version ?? null); })
-      .catch(() => { setRows([]); setCursor(null); });
-  }, [api, sectionId, monthOn, open]);
-
-  const older = async () => {
-    if (cursor === null) return;
-    try {
-      const page = await api<Page<Event>>(`/sections/${sectionId}/attendance/months/transitions${query({ month_on: monthOn, limit: 5, before_version: cursor })}`);
-      setRows(current => [...(current ?? []), ...page.items]);
-      setCursor(page.pagination?.next_before_version ?? null);
-    } catch { setCursor(null); }
-  };
-
-  if (!open) {
-    return (
-      <div className="card">
-        <div className="card-head"><h2>Transition history</h2></div>
-        <div className="card-body">
-          <p className="muted">Every submission, return, lock and reopening of this month, newest first. Use it to check a transition whose response you never saw, before recording it a second time.</p>
-          <button type="button" className="btn ghost small" onClick={() => setOpen(true)}><Icon name="activity" size={14} />Show transition history</button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card">
-      <div className="card-head"><h2>Transition history</h2></div>
-      <Table
-        loading={rows === null}
-        rows={rows ?? []}
-        rowKey={row => row.id}
-        empty={<EmptyState title="No transitions yet" body="This month has never been submitted, returned, locked or reopened." />}
-        columns={[
-          { header: 'Version', cell: row => <span className="mono">{row.month_version}</span> },
-          { header: 'Action', cell: row => <Badge tone={statusTone(row.review_snapshot.target_status)}>{statusName(row.review_snapshot.target_status)}</Badge> },
-          { header: 'Reason', cell: row => row.reason },
-          { header: 'Recorded', cell: row => <span className="mono">{new Date(row.recorded_at).toLocaleString()}</span> },
-        ]}
-      />
-      {cursor !== null ? <div className="card-body"><button type="button" className="btn ghost small" onClick={() => void older()}>Show older transitions</button></div> : null}
-    </div>
   );
 }
 
@@ -439,9 +308,6 @@ export function Months({ api, me, setStatus, reload, token, route }: Props) {
           </div>
         ) : null}
       </div>
-
-      {sectionId && monthOn ? <Membership api={api} sectionId={sectionId} monthOn={monthOn} token={token} /> : null}
-      {sectionId && monthOn ? <History api={api} sectionId={sectionId} monthOn={monthOn} /> : null}
 
       {year && monthOn ? <Sf4Report api={api} me={me} year={year} monthOn={monthOn} setStatus={setStatus} /> : null}
 

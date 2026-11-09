@@ -1,5 +1,30 @@
 # Where things stand
 
+> ## 0.110.1 is committed and not deployed; 0.110.0 is live and the hosted database is at migration 0072
+>
+> **Three interface pieces removed on 2026-11-10, at the user’s request.** No
+> endpoint, schema, permission, error code or migration: workspace and docs only,
+> so the database is unchanged from 0.109.1’s release. The monthly consolidation
+> screen loses its *Membership and marks* and *Transition history* cards, and the
+> attendance rule card on the Instructional calendar loses its *Not recorded yet*
+> callout.
+>
+> **The request also named the attendance rule card itself, and it was kept.** It
+> is the only place the rule can be recorded and the SF2’s and SF4’s figures are
+> counted by nothing else — the 2026-11-05 row in
+> [constraints.md](constraints.md) says so and
+> `tests/web-attendance-rule-home.test.ts` guards it — so it was raised instead of
+> deleted, and the user chose to keep the card and drop only the callout. Both the
+> request and the answer are a settled row now, so it is not simply re-raised and
+> quietly granted next time.
+>
+> **Two endpoints are now uncalled and were deliberately left in place:**
+> `GET /sections/:id/attendance/months/members` and `.../transitions`. This
+> removed two readers, not two reads; `npm run smoke` still checks both.
+>
+> **Next action: deploy 0.110.1.** It needs no migration. Then Increment 3 and
+> Increment 5 below, both still open and both unchanged by this release.
+
 > ## 0.110.0 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0

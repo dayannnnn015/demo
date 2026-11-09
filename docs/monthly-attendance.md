@@ -54,7 +54,7 @@ Member pages sort by enrollment UUID. Frozen pages are stable. Live pages may ch
 
 **Every count says what it is.** Present, absent, unmarked and expected are raw AM/PM classroom sessions, printed with a sentence saying they are not school days, attendance credits, percentages or SF4 totals. The mark-meanings gate is what stands between these numbers and any of those words.
 
-**Membership is read on request.** The member list names learner records, so it sits behind an explicit control rather than loading with the page.
+**Neither the member list nor the transition history is on the screen.** Both cards were removed on 2026-11-10, at the user’s request. The member list named learner records and `monthSnapshot` writes a `record_access_events` row naming every one of them, so a card nobody opened was a privacy cost with no reader; the transition log restated what the page’s own status badge and the journal already hold. `GET .../months/members` and `GET .../months/transitions` are unchanged and still answer — nothing in the workspace calls them now.
 
 A closed year offers no transitions at all, matching the rule that no monthly transition or reopening is allowed in one.
 
