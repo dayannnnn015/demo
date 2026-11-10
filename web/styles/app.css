@@ -737,6 +737,9 @@ code, .mono {
   button. It read as a control that did nothing, which is what was reported.
   A control is not a word: it sits beside the sentence, not inside it.
 */
+/* A section heading with the control that folds its notes, on one line. */
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s3); }
+.section-head > h3 { margin: 0; }
 .area-proposal { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s3) 0; }
 .area-proposal > .btn { flex: none; }
 .area-proposal > .card-note { flex: 1 1 20rem; margin: 0; }

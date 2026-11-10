@@ -195,6 +195,54 @@ describe('the Academic history screen', () => {
    * add, so on opening the sheet — grade still on *Choose…* — there was
    * nothing at all, and it was reported twice as a feature never built.
    */
+  /**
+   * Asked for on 2026-11-10: the sheet carried too much prose to read.
+   *
+   * Every hint follows the workspace's one notes switch, which is off by
+   * default, so the form opens as labels and boxes. What is pinned here is that
+   * the explanation is reachable rather than deleted, and that a field's own
+   * rejection is **not** a note and is never folded away with them.
+   */
+  it('opens without its notes, and shows them on the one switch', async () => {
+    await mount();
+    await openHistory();
+    await press('Add a school year');
+    const sheet = document.querySelector('.sheet-body')!;
+
+    expect(sheet.textContent).not.toContain('A quarter the document does not carry is left empty');
+    expect(sheet.querySelector('.hint')).toBeNull();
+
+    await press('Show the notes', sheet);
+    expect(sheet.textContent).toContain('A quarter the document does not carry is left empty');
+    expect(sheet.querySelector('.hint')).toBeTruthy();
+  });
+
+  /**
+   * The box was asked to go on 2026-11-10. The SF10 still prints a General
+   * Average row per block, so a year that already carries one must keep it: a
+   * correction that sent null would have wiped a figure off an official form.
+   */
+  it('no longer offers a General average box, and keeps the one a year already carries', async () => {
+    await mount();
+    await openHistory();
+    await press('Add a school year');
+    let sheet = document.querySelector('.sheet-body')!;
+    expect(sheet.querySelector('input[name="general_average"]')).toBeNull();
+    await press('Close', sheet).catch(() => undefined);
+
+    // The year on record carries 89.5. Correcting it must not send null.
+    const root = await mount();
+    await openHistory();
+    await press('Correct');
+    sheet = document.querySelector('.sheet-body')!;
+    expect(sheet.querySelector('input[name="general_average"]')).toBeNull();
+    await type(sheet, 'textarea[name="reason"]', 'Checked again against the adviser class record.');
+    await submit(sheet.querySelector('form')!);
+    const save = sent.find(s => s.method === 'PATCH');
+    expect((save!.body as { year: { general_average: number | null } }).year.general_average).toBe(89.5);
+    root.unmount();
+  });
+
   it('says the areas can be listed before a grade is chosen, and offers them after', async () => {
     await mount();
     await openHistory();

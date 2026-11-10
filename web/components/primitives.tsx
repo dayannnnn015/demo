@@ -194,7 +194,14 @@ export function Control({ field, id, value, error, onChange, compact }: {
   onChange: (value: string) => void;
   compact?: boolean;
 }) {
-  const hintId = field.hint && !compact ? `${id}-hint` : undefined;
+  // A hint explains rather than records, so it follows the workspace's one
+  // notes switch like every other description (0.111.3). Folded away, a form is
+  // its labels and its boxes; the explanation is one click above it. The id is
+  // computed from whether it is actually drawn, because `aria-describedby`
+  // pointing at an element that is not there names nothing to a screen reader.
+  const [notes] = useDescriptions();
+  const showHint = Boolean(field.hint) && !compact && notes;
+  const hintId = showHint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
   const shared = {
@@ -221,7 +228,7 @@ export function Control({ field, id, value, error, onChange, compact }: {
           })}
         </div>
         {error ? <span className="field-error" id={errorId}><Icon name="alert" size={14} />{error}</span> : null}
-        {field.hint && !compact ? <span className="hint" id={hintId}>{field.hint}</span> : null}
+        {showHint ? <span className="hint" id={hintId}>{field.hint}</span> : null}
       </fieldset>
     );
   }
@@ -249,7 +256,7 @@ export function Control({ field, id, value, error, onChange, compact }: {
           ))}
         </span>
         {error ? <span className="field-error" id={errorId}><Icon name="alert" size={14} />{error}</span> : null}
-        {field.hint && !compact ? <span className="hint" id={hintId}>{field.hint}</span> : null}
+        {showHint ? <span className="hint" id={hintId}>{field.hint}</span> : null}
       </fieldset>
     );
   }
@@ -286,7 +293,7 @@ export function Control({ field, id, value, error, onChange, compact }: {
               onChange={e => onChange(e.target.value)}
             />}
       {error ? <span className="field-error" id={errorId}><Icon name="alert" size={14} />{error}</span> : null}
-      {field.hint && !compact ? <span className="hint" id={hintId}>{field.hint}</span> : null}
+      {showHint ? <span className="hint" id={hintId}>{field.hint}</span> : null}
     </div>
   );
 }

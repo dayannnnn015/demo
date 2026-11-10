@@ -1,5 +1,17 @@
 # Where things stand
 
+> ## 0.111.9 is committed, not deployed
+>
+> **Forms open quiet.** Every field hint follows the one notes switch, off by
+> default, so a form is its labels and boxes and the explanation is a click
+> above it. A rejection, a warning and an *Affects* block are not notes and
+> stay. **The *General average* box is gone from Academic history**, asked for;
+> a year already carrying one keeps it, because the SF10 prints that row.
+>
+> **0.111.8 was never deployed** — `npx vercel --prod` was refused by the
+> permission check. Live is 0.111.7, so neither 0.111.8 nor this is on the
+> school’s address yet.
+>
 > ## 0.111.8 is live
 >
 > **The offer to list a grade’s learning areas is always drawn.** It

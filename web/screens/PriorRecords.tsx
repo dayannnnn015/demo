@@ -9,8 +9,8 @@ import { reportCardAreas } from '../learning-areas';
 import { credentialName, schoolYearLabel, shownGrade, type Credential } from '../forms/types';
 import { EncodingProgress } from './EncodingProgress';
 import {
-  Badge, Callout, Cell, Control, Editor, EmptyState, Finder, PageHeader, StatusLine, Table, Task, Unrecorded,
-  gradeName, idle, learnerName, type Field, type Status,
+  Badge, Callout, Cell, Control, DescriptionToggle, Editor, EmptyState, Finder, PageHeader, StatusLine, Table, Task, Unrecorded,
+  gradeName, idle, learnerName, useDescriptions, type Field, type Status,
 } from '../components/primitives';
 
 /**
@@ -499,6 +499,9 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
     : [blankSubject(0), blankSubject(1), blankSubject(2)]));
 
   const id = (key: string) => `${scope}-${key}`;
+  // The sheet's own prose follows the same switch its fields' hints do, so one
+  // control quiets the whole form rather than each paragraph having its own.
+  const [notes] = useDescriptions();
   /** The draft is a plain record, so every read of it is a string; a field never typed into is empty, not missing. */
   const h = (key: string) => head[key] ?? '';
   const setField = (key: string, value: string) => {
@@ -556,7 +559,6 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
     { key: 'school_address', label: 'Address of school', optional: true, maxLength: 300 },
     { key: 'section_name', label: 'Section', optional: true, maxLength: 60 },
     { key: 'adviser_name', label: 'Adviser or teacher', optional: true, maxLength: 150 },
-    { key: 'general_average', label: 'General average', optional: true, ...gradeField, hint: 'Exactly as the document carries it. Nothing here computes one.' },
     { key: 'remark', label: 'Remark', optional: true, options: [['', 'Not on the document'], ['passed', 'Passed'], ['failed', 'Failed']] },
     { key: 'source', label: 'Document this was copied from', wide: true, minLength: 10, maxLength: 500,
       hint: 'Which spreadsheet, form or photocopy this year was read out of, so the transcription can be checked later.' },
@@ -599,7 +601,10 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
         start_year: began, grade_level: Number(h('grade_level')),
         school_name: h('school_name').trim(), school_code: text(h('school_code')), school_address: text(h('school_address')),
         section_name: text(h('section_name')), adviser_name: text(h('adviser_name')),
-        general_average: num(h('general_average')), remark: text(h('remark')),
+        // The box is gone from this sheet, asked for on 2026-11-10, but a year
+        // already carrying an average keeps it: sending null here would have
+        // wiped it on the next correction, and it prints on the SF10.
+        general_average: block ? (block.general_average as number | null) : null, remark: text(h('remark')),
         source: h('source').trim(),
       },
       subjects: rows.map(s => ({
@@ -654,11 +659,16 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
           ))}
         </div>
 
-        <h3>Learning areas</h3>
-        <p className="muted">
-          As the document lists them, in its own order. A quarter the document does not carry is left empty — a missing grade is never a zero. The final rating and the
-          remark are the ones already written on the document.
-        </p>
+        <div className="section-head">
+          <h3>Learning areas</h3>
+          <DescriptionToggle show="Show the notes" hide="Hide the notes" controls={id('areas-note')} />
+        </div>
+        {notes ? (
+          <p className="muted" id={id('areas-note')}>
+            As the document lists them, in its own order. A quarter the document does not carry is left empty — a missing grade is never a zero. The final rating and the
+            remark are the ones already written on the document.
+          </p>
+        ) : null}
         {/*
           * Always said, never only sometimes shown.
           *
@@ -678,7 +688,7 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
               ])}>
                 <Icon name="plus" size={14} />List the {gradeName(grade)} learning areas
               </button>
-              <p className="card-note">The areas this school’s own report cards print for {gradeName(grade)}. Check them against the document and edit what differs.</p>
+              {notes ? <p className="card-note">The areas this school’s own report cards print for {gradeName(grade)}. Check them against the document and edit what differs.</p> : null}
             </>
           ) : (
             <p className="card-note">
