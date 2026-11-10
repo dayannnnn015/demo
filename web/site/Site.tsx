@@ -267,7 +267,6 @@ function StaffPortal({ onClose }: { onClose: () => void }) {
           <button ref={close} type="button" className="announcement-dialog-close" onClick={onClose} aria-label="Close staff sign-in"><SiteIcon name="close" size={20} /></button>
         </div>
         <iframe className="portal-frame" src="/app?embed=signin" title="Sign in to EDUNEXUS" />
-        <p className="portal-foot">For the school’s staff. <a href="/app">Open the sign-in page instead</a></p>
       </div>
     </div>
   );
