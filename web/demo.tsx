@@ -21,6 +21,11 @@ const people: [string, string, string][] = [
   ['00000000-0000-4000-8000-000000000002', 'Demo Administrative Officer', 'Manages learner records'],
   ['00000000-0000-4000-8000-000000000003', 'Demo Adviser, Grade 1', 'Has last month’s register and this month’s so far'],
   ['00000000-0000-4000-8000-000000000004', 'Demo Adviser, Grade 2', 'Has one day of the register half-taken'],
+  ['00000000-0000-4000-8000-000000000005', 'Demo Adviser, Kindergarten', 'Has outcomes recommended, most of them approved'],
+  ['00000000-0000-4000-8000-000000000006', 'Demo Adviser, Grade 3', 'Has the last school week in the register'],
+  ['00000000-0000-4000-8000-000000000007', 'Demo Adviser, Grade 4', 'Has the last school week in the register'],
+  ['00000000-0000-4000-8000-000000000008', 'Demo Adviser, Grade 5', 'Has the last school week in the register'],
+  ['00000000-0000-4000-8000-000000000009', 'Demo Adviser, Grade 6', 'Has the last school week in the register'],
 ];
 
 const demoApi = (token: string): Api => async <T,>(path: string, method = 'GET', body?: unknown): Promise<T> => {

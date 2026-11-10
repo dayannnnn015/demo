@@ -11,6 +11,9 @@ coverage/
 # depth, and web/public/ is Vite's source public directory — the favicon
 # lives there and must be tracked.
 /public/
+# The demo’s own build output, beside it. The demo page is never part of the
+# real bundle, so it has its own outDir and its own ignore line.
+/public-demo/
 
 
 .vercel
