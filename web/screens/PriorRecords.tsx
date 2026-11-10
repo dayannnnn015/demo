@@ -659,17 +659,35 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
           As the document lists them, in its own order. A quarter the document does not carry is left empty — a missing grade is never a zero. The final rating and the
           remark are the ones already written on the document.
         </p>
-        {addable.length ? (
-          <div className="area-proposal">
-            <button type="button" className="btn ghost small" onClick={() => setSubjects(list => [
-              ...list.filter(s => s.name.trim() !== ''),
-              ...addable.map((a, i) => ({ ...blankSubject(list.length + i), name: a.name, code: a.code })),
-            ])}>
-              <Icon name="plus" size={14} />List the {gradeName(grade)} learning areas
-            </button>
-            <p className="card-note">The areas this school’s own report cards print for {gradeName(grade)}. Check them against the document and edit what differs.</p>
-          </div>
-        ) : null}
+        {/*
+          * Always said, never only sometimes shown.
+          *
+          * This offer used to render only when there was something to add,
+          * which meant it was absent on opening the sheet — the grade starts on
+          * *Choose…*, so there is no grade to propose areas for yet — and the
+          * reader met an empty table with no sign the list could be filled at
+          * all. It was reported as a feature that had never been built. So the
+          * line is always here and says which of the three states it is in.
+          */}
+        <div className="area-proposal">
+          {addable.length ? (
+            <>
+              <button type="button" className="btn ghost small" onClick={() => setSubjects(list => [
+                ...list.filter(s => s.name.trim() !== ''),
+                ...addable.map((a, i) => ({ ...blankSubject(list.length + i), name: a.name, code: a.code })),
+              ])}>
+                <Icon name="plus" size={14} />List the {gradeName(grade)} learning areas
+              </button>
+              <p className="card-note">The areas this school’s own report cards print for {gradeName(grade)}. Check them against the document and edit what differs.</p>
+            </>
+          ) : (
+            <p className="card-note">
+              {proposal.length
+                ? `Every learning area this school’s report cards print for ${gradeName(grade)} is already listed. Add any further area the document carries.`
+                : `Choose the grade level above and the learning areas this school’s own report cards print for it can be listed here in one go.`}
+            </p>
+          )}
+        </div>
         <div className="table-wrap grid-form">
           <table className="data">
             <thead>

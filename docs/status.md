@@ -1,5 +1,13 @@
 # Where things stand
 
+> ## 0.111.8 is live
+>
+> **The offer to list a grade’s learning areas is always drawn.** It
+> rendered only when it had something to add, so on opening **Add a school
+> year** — grade still on *Choose…* — there was nothing at all, and it was
+> reported twice as a feature never built. It now names which of three states
+> it is in, and all three are tested.
+>
 > ## 0.111.7 merges the 2026-11-10 interface work onto the live line
 >
 > **Built on `promotion-and-sf9`, which was sixteen commits behind**

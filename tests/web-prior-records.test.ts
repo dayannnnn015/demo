@@ -190,6 +190,32 @@ describe('the Academic history screen', () => {
    * what is pinned here is the behaviour that was being blamed, at two grades,
    * because the whole point of the control is that the list follows the grade.
    */
+  /**
+   * Why this one exists: the offer rendered only when it had something to
+   * add, so on opening the sheet — grade still on *Choose…* — there was
+   * nothing at all, and it was reported twice as a feature never built.
+   */
+  it('says the areas can be listed before a grade is chosen, and offers them after', async () => {
+    await mount();
+    await openHistory();
+    await press('Add a school year');
+    const sheet = document.querySelector('.sheet-body')!;
+    const offer = () => sheet.querySelector('.area-proposal')!;
+
+    // No grade yet, so no list can be named - but the reader is told it exists.
+    expect(offer().textContent).toContain('Choose the grade level above');
+    expect(offer().querySelector('button')).toBeNull();
+
+    await type(sheet, 'select[name="grade_level"]', '2');
+    expect(offer().querySelector('button')?.textContent).toContain('List the Grade 2 learning areas');
+
+    // Once every area is listed there is nothing left to offer, and it says so
+    // rather than vanishing, which is the fault this test is here for.
+    await press('List the Grade 2 learning areas', sheet);
+    expect(offer().querySelector('button')).toBeNull();
+    expect(offer().textContent).toContain('is already listed');
+  });
+
   it('fills the learning areas from the grade the year is at', async () => {
     await mount();
     await openHistory();
