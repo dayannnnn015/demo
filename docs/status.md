@@ -1,5 +1,42 @@
 # Where things stand
 
+> ## Read this first: this branch is behind `origin/master`
+>
+> **`promotion-and-sf9` is 0.110.2 and is fifteen commits behind `origin/master`,
+> which is at 0.111.6 and recorded live.** The user was told on 2026-11-10 and
+> chose to keep building here, so this is a known state and not a mistake to
+> undo quietly. Two of 0.110.2’s five changes overlap work already on master and
+> **will collide when the two meet**: `dda5360` (0.111.3) folds long notes behind
+> the one workspace-wide description switch, *off* by default, where 0.110.2
+> folds each note from its own heading, *open* by default; and `a93d8f3`
+> (0.111.4) reworked the Grade offerings toolbar that 0.110.2 edits. Decide which
+> fold the school wants before merging — both answer the same ask, differently,
+> and the reasoning for each is a settled row in [constraints.md](constraints.md).
+>
+> ## 0.110.2 is committed and pushed, not deployed
+>
+> **Five interface asks of 2026-11-10, one increment each**, the whole suite run
+> before every one of them. No endpoint, schema, permission, error code or
+> migration, so the hosted database is untouched.
+>
+> 1. The attendance rule is chosen from stacked lines, not a select (`a8505cb`).
+>    `Editor` gained a `radios` field type; it starts on nothing, and `start()`
+>    excludes it from the first-option default for that reason.
+> 2. Grade offerings shows **Include retired** only where something is retired
+>    (`e3b2a5e`). The filter itself was kept — it does work.
+> 3. Every titled note folds from its own heading, open to begin with
+>    (`736b784`), in `Callout` and `Affects`.
+> 4. `FileRules` replaces both copies of the class-list file hint (`7bb8b36`).
+> 5. The staff sign-in panel drops its footer link (`cbacfeb`). The **Staff
+>    portal** control and `/app` stay — that is the way in.
+>
+> **Before 0.110.1, in the same session:** the monthly screen lost its
+> *Membership and marks* and *Transition history* cards and the attendance rule
+> card lost its *Not recorded yet* callout (`f5cd719`).
+>
+> **Next action: decide the merge with master**, above, before anything else.
+> Nothing here is deployed and nothing here needs a migration.
+
 > ## 0.110.1 is committed and not deployed; 0.110.0 is live and the hosted database is at migration 0072
 >
 > **Three interface pieces removed on 2026-11-10, at the user’s request.** No
