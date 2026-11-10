@@ -660,15 +660,15 @@ function YearSheet({ api, learner, learnerLabel, block, school, taken, recorded,
           remark are the ones already written on the document.
         </p>
         {addable.length ? (
-          <p className="card-note">
+          <div className="area-proposal">
             <button type="button" className="btn ghost small" onClick={() => setSubjects(list => [
               ...list.filter(s => s.name.trim() !== ''),
               ...addable.map((a, i) => ({ ...blankSubject(list.length + i), name: a.name, code: a.code })),
             ])}>
               <Icon name="plus" size={14} />List the {gradeName(grade)} learning areas
             </button>
-            {' '}The areas this school’s own report cards print for {gradeName(grade)}. Check them against the document and edit what differs.
-          </p>
+            <p className="card-note">The areas this school’s own report cards print for {gradeName(grade)}. Check them against the document and edit what differs.</p>
+          </div>
         ) : null}
         <div className="table-wrap grid-form">
           <table className="data">

@@ -13,6 +13,19 @@
 > fold the school wants before merging — both answer the same ask, differently,
 > and the reasoning for each is a settled row in [constraints.md](constraints.md).
 >
+> ## 0.110.3 is committed and pushed, not deployed
+>
+> **A control is not a word in the sentence beside it.** *List the <grade>
+> learning areas* on Academic history was reported as doing nothing; it was a
+> layout fault, not a logic one, and the handler was always right. The button
+> sat inside the `<p>` describing it, whose second line painted over its lower
+> half and took the clicks. It now sits beside the sentence. Two tests press it
+> at Grade 1 and Grade 4, which the behaviour never had.
+>
+> **The staff sign-in footer question is settled**: the ask was the line and its
+> link only, which `cbacfeb` already removed. `/app` and the **Staff portal**
+> control stay. Nothing further to do there except deploy.
+>
 > ## 0.110.2 is committed and pushed, not deployed
 >
 > **Five interface asks of 2026-11-10, one increment each**, the whole suite run

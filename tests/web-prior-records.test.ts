@@ -181,6 +181,50 @@ describe('the Academic history screen', () => {
     expect((add as HTMLButtonElement).disabled).toBe(true);
   });
 
+  /**
+   * The control that fills the rows from the school's own report cards.
+   *
+   * It had no test, and it was reported as doing nothing. The cause was
+   * layout, not logic — the button sat inside the sentence beside it, whose
+   * second line painted over the button's lower half and took the clicks — so
+   * what is pinned here is the behaviour that was being blamed, at two grades,
+   * because the whole point of the control is that the list follows the grade.
+   */
+  it('fills the learning areas from the grade the year is at', async () => {
+    await mount();
+    await openHistory();
+    await press('Add a school year');
+    const sheet = document.querySelector('.sheet-body')!;
+
+    // Grade 1 prints five areas on this school's card.
+    await type(sheet, 'select[name="grade_level"]', '1');
+    await press('List the Grade 1 learning areas', sheet);
+    const names = () => [...sheet.querySelectorAll<HTMLInputElement>('input[name^="name-"]')].map(i => i.value).filter(Boolean);
+    expect(names()).toEqual(['Language', 'Reading and Literacy', 'Mathematics', 'GMRC (Good Manners and Right Conduct)', 'Makabansa']);
+
+    // The three empty rows it started with are gone rather than left under the list.
+    expect(sheet.querySelectorAll('input[name^="name-"]')).toHaveLength(5);
+
+    // A typed row is the document's own and survives; the offer then names only what is missing.
+    await type(sheet, 'input[name="name-0"]', 'Mother Tongue');
+    await press('List the Grade 1 learning areas', sheet);
+    expect(names()).toContain('Mother Tongue');
+    expect(names()).toContain('Language');
+    expect(names().filter(n => n === 'Language')).toHaveLength(1);
+  });
+
+  it('offers the areas of the grade chosen, not of the learner’s current one', async () => {
+    await mount();
+    await openHistory();
+    await press('Add a school year');
+    const sheet = document.querySelector('.sheet-body')!;
+
+    await type(sheet, 'select[name="grade_level"]', '4');
+    // Grades 4-6 print ten, so the offer is not a fixed list.
+    await press('List the Grade 4 learning areas', sheet);
+    expect(sheet.querySelectorAll('input[name^="name-"]')).toHaveLength(10);
+  });
+
   it('sends one request carrying the year and its learning areas together', async () => {
     await mount();
     await openHistory();
