@@ -8,6 +8,49 @@ export type Release = { version: string; date: string; items: string[] };
 
 export const whatsNew: Release[] = [
   {
+    version: '0.111.6', date: '2026-11-10',
+    items: [
+      'Under the greeting on {overview}, the workspace now says who you are here: **Principal** or **Administrative officer**, and for an adviser the classes they advise this school year, such as “Adviser of Grade 3 – A”.',
+    ],
+  },
+  {
+    version: '0.111.5', date: '2026-11-10',
+    items: [
+      'On the school’s public front page, only Home has the large picture banner. Announcements, Calendar, Questions and About now open on a plain title at the top of the page.',
+    ],
+  },
+  {
+    version: '0.111.4', date: '2026-11-10',
+    items: [
+      'The filters above **Grade offerings** on {subjects} sit in one line again. The number of classes at the grade now appears beside **Grade level** instead of under it.',
+    ],
+  },
+  {
+    version: '0.111.3', date: '2026-11-10',
+    items: [
+      'The long notes on **Add the report-card learning areas** and the sheet that offers a grade’s card are now folded away, like every page’s description: press **Show the notes on these learning areas** to read them. Opening descriptions anywhere opens them everywhere for the rest of the tab. Neither sheet asks for a reason.',
+    ],
+  },
+  {
+    version: '0.111.2', date: '2026-11-09',
+    items: [
+      '**Create sections** on {years} no longer takes a list separated by commas. Each section is its own tag: remove one with its ×, type a name and press Enter to add one, or press the button that adds the next letter.',
+    ],
+  },
+  {
+    version: '0.111.1', date: '2026-11-09',
+    items: [
+      'When a form refuses something, the message now appears once, beside the box it is about, and the cursor is put there. A box listing the problems appears only when one of them is out of sight, and then it just names the boxes to jump to.',
+    ],
+  },
+  {
+    version: '0.111.0', date: '2026-11-09',
+    items: [
+      'A notification now takes you to what it is about: press it, and the screen opens at that school year and class, marking it read. A class list waiting for approval opens straight into its review on {enrollment}.',
+      '{report-cards} no longer has a **Subject averages** tab. Type each learner’s term grades, subject averages and remarks on **Report card**, one card at a time, and check the whole class on **Class summary**.',
+    ],
+  },
+  {
     version: '0.107.0', date: '2026-11-09',
     items: [
       '{next-year} is easier to read: three steps at the top say where the year stands, each grade next year has a card with its boys and girls, and the learners are grouped by the grade they move to.',

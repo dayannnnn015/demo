@@ -9,8 +9,11 @@ import { PriorRecords } from '../web/screens/PriorRecords';
 import { Learners } from '../web/screens/Learners';
 import { Staff } from '../web/screens/Staff';
 import { NextYear } from '../web/screens/NextYear';
-import { Table } from '../web/components/primitives';
+import { AddSections } from '../web/screens/SetupBatch';
+import { Editor, Table } from '../web/components/primitives';
+import { ApiError } from '../web/api';
 import { routes } from '../web/routes';
+import { roleLine } from '../web/screens/Overview';
 
 /**
  * The UI notes of 8 November, U1 (docs/ui-notes-plan.md), held on 0.102.2.
@@ -255,5 +258,119 @@ describe('next year’s classes (U5: note 2)', () => {
     // Nothing on it is a rate: counts only.
     expect(m.text()).not.toMatch(/%/);
     m.unmount();
+  });
+});
+
+describe('a rejected save says each problem once (asked 2026-11-09)', () => {
+  const fields = [
+    { key: 'name', label: 'Period name', maxLength: 60 },
+    { key: 'starts_on', label: 'First day', type: 'date' },
+    { key: 'ends_on', label: 'Last day', type: 'date' },
+  ];
+  const rejecting = (message: string) => async () => {
+    throw new ApiError(422, 'VALIDATION_ERROR', message, [{ path: 'starts_on', message: 'Required.' }, { path: 'ends_on', message: 'Required.' }]);
+  };
+
+  it('draws no summary when every rejected field is in sight, and puts the reader on the first one', async () => {
+    const m = await mount(createElement(Editor, { fields, submitLabel: 'Add the period', setStatus: () => undefined, onSubmit: rejecting('Review the request fields.') }));
+    await m.submit(m.byText('Add the period', 'button'));
+    await m.until(v => v.all('.field-error').length === 2, 'the two messages beside their fields');
+    expect(m.all('.error-summary')).toHaveLength(0);
+    expect(m.text().match(/Required\./g)).toHaveLength(2);
+    expect(document.activeElement).toBe(m.field('First day'));
+    expect(m.field('First day')!.getAttribute('aria-describedby')).toContain('-error');
+    m.unmount();
+  });
+
+  it('keeps a summary for a message that belongs to no one field, naming the fields without repeating them', async () => {
+    const m = await mount(createElement(Editor, { fields, submitLabel: 'Add the period', setStatus: () => undefined, onSubmit: rejecting('Periods must not overlap another period.') }));
+    await m.submit(m.byText('Add the period', 'button'));
+    await m.until(v => v.all('.error-summary').length === 1, 'the summary');
+    const box = m.all('.error-summary')[0]!;
+    expect(box.textContent).toContain('Periods must not overlap another period.');
+    expect([...box.querySelectorAll('li button')].map(b => b.textContent)).toEqual(['First day', 'Last day']);
+    // Each "Required." is said once, beside its field.
+    expect(m.text().match(/Required\./g)).toHaveLength(2);
+    m.unmount();
+  });
+});
+
+describe('Create sections takes names one at a time (asked 2026-11-09)', () => {
+  it('shows each grade’s sections as chips, adds by Enter, splits a pasted list, offers the next letter, and reviews exactly those', async () => {
+    server.signInAs('principal');
+    const m = await mount(createElement(AddSections, { api: server.api, year: { id: year, start_year: 2026 }, onClose: () => undefined }));
+    await m.until(v => v.byText('Review the sections', 'button') !== null && !v.byText('Review the sections', 'button')!.hasAttribute('disabled'), 'the sheet');
+    expect(m.text()).not.toMatch(/separated by commas/);
+    const chips = (grade: string) => [...(m.host.querySelector(`[aria-label="${grade} sections"]`)?.querySelectorAll('.chip span') ?? [])].map(c => c.textContent);
+    expect(chips('Grade 2')).toEqual(['A', 'B', 'C', 'D']);
+
+    await m.click(m.host.querySelector<HTMLElement>('[aria-label="Remove Grade 2 B"]'));
+    expect(chips('Grade 2')).toEqual(['A', 'C', 'D']);
+
+    const box = m.field('Grade 2') as HTMLInputElement;
+    await m.type(box, 'Sampaguita');
+    await act(async () => { box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+    await m.settle();
+    expect(chips('Grade 2')).toEqual(['A', 'C', 'D', 'Sampaguita']);
+
+    await m.type(box, 'e, F, a');
+    await m.click(box.parentElement!.querySelector<HTMLElement>('button.btn.secondary'));
+    // "a" is A again, ignoring case, so it is not added twice.
+    expect(chips('Grade 2')).toEqual(['A', 'C', 'D', 'Sampaguita', 'e', 'F']);
+
+    // Grade 1 still ends at D, so its next letter is offered.
+    const grade1 = (m.field('Grade 1') as HTMLInputElement).parentElement!;
+    await m.click([...grade1.querySelectorAll<HTMLElement>('button')].find(b => b.textContent === 'Add E') ?? null);
+    expect(chips('Grade 1')).toEqual(['A', 'B', 'C', 'D', 'E']);
+
+    await m.submit(m.byText('Review the sections', 'button'));
+    await m.until(v => v.all('tbody tr').length > 0, 'the review');
+    const reviewed = m.all('tbody tr').filter(tr => (tr.textContent ?? '').includes('Grade 2')).map(tr => tr.querySelector('b')?.textContent);
+    expect(reviewed).toEqual(['A', 'C', 'D', 'Sampaguita', 'e', 'F']);
+    m.unmount();
+  });
+});
+
+describe('a filter row stays in line (asked 2026-11-10)', () => {
+  // A line of text under one filter makes that field taller, and a toolbar aligns its items to the bottom, so every
+  // other box and checkbox in the row drops out of line with it. A count belongs beside the label instead.
+  const toolbars = (file: string) => {
+    const source = readFileSync(file, 'utf8');
+    return [...source.matchAll(/className="toolbar">([\s\S]*?)<div className="card-head-actions">/g)].map(m => m[1]!);
+  };
+
+  it('puts no hint line under a filter on Grade offerings or the class-list import', () => {
+    for (const file of ['web/screens/Subjects.tsx', 'web/screens/Imports.tsx']) {
+      const found = toolbars(file);
+      expect(found.length).toBeGreaterThan(0);
+      for (const bar of found) expect(bar).not.toContain('className="hint"');
+    }
+  });
+
+  it('still says how many classes the grade has, beside its label', () => {
+    expect(readFileSync('web/screens/Subjects.tsx', 'utf8')).toContain("'One class' : `${gradeSections.length} classes, one card`");
+  });
+});
+
+describe('the Overview says who you are here (asked 2026-11-10)', () => {
+  // "palagay nga agad dito kung principal/AO, tas sa adviser palagay ung grade level na tinuturuan"
+  const rooms = [
+    { id: 's1', grade_level: 3, name: 'B', adviser_user_id: 't1' },
+    { id: 's2', grade_level: 1, name: 'A', adviser_user_id: 't1' },
+    { id: 's3', grade_level: 2, name: 'C', adviser_user_id: 't2' },
+    { id: 's4', grade_level: 4, name: 'D', adviser_user_id: null },
+  ];
+  it('names the principal and the administrative officer by role', () => {
+    expect(roleLine({ user_id: 'p', role: 'principal' }, rooms)).toBe('Principal');
+    expect(roleLine({ user_id: 'a', role: 'administrative_officer' }, rooms)).toBe('Administrative officer');
+  });
+  it('names an adviser by the classes they advise, lowest grade first, and no one else’s', () => {
+    expect(roleLine({ user_id: 't1', role: 'teacher' }, rooms)).toBe('Adviser of Grade 1 – A and Grade 3 – B');
+    expect(roleLine({ user_id: 't2', role: 'teacher' }, rooms)).toBe('Adviser of Grade 2 – C');
+  });
+  it('says plainly when a teacher advises no class, rather than inventing one', () => {
+    expect(roleLine({ user_id: 't9', role: 'teacher' }, rooms)).toBe('Teacher · no class to advise this school year');
+    // A section with no adviser must not match a person whose id is missing.
+    expect(roleLine({ role: 'teacher' }, rooms)).toBe('Teacher · no class to advise this school year');
   });
 });

@@ -66,17 +66,17 @@ describe('the Promotion screen reports the API’s own gate', () => {
     screen.unmount();
   });
 
-  it('marks a term that has not started in the picker, and will not take grades for it', async () => {
+  it('marks a term that has not started on the report card, and will not take grades for it', async () => {
+    // Since 0.111.0 term grades are typed on the Report card tab (the Subject averages tab was removed at the school's
+    // request), so the rule is checked where the typing now happens.
     server.signInAs('teacher');
     const screen = await mountScreen(ReportCards as never, server, teacher, { route });
-    await screen.until(m => m.text().includes('Subject averages'), 'the tabs');
-    await screen.click(screen.byText('Subject averages', 'button'));
-    await screen.until(m => m.text().includes('Learning area'), 'the grades tab');
-    const options = screen.all('option').map(o => o.textContent ?? '');
-    expect(options).toContain('First Quarter grade');
-    expect(options).toContain('Second Quarter grade');
-    // The one that has not begun says so where it is chosen.
-    expect(options).toContain('Third Quarter grade — not started');
+    await screen.until(m => m.byText('Report card', 'button') !== null, 'the tabs');
+    expect(screen.byText('Subject averages', 'button')).toBeNull();
+    await screen.click(screen.byText('Report card', 'button'));
+    await screen.until(m => m.text().includes('not started yet'), 'the card');
+    // The one that has not begun is named, with the date it begins, and its boxes take no typing.
+    expect(screen.text()).toContain('Third Quarter (from 2027-01-01)');
     screen.unmount();
   });
 

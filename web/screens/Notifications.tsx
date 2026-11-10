@@ -30,28 +30,31 @@ type Props = { api: Api; me: Row; token: number; setStatus: (s: Status) => void;
  * fix; widening the screen is not, because the division of work is the
  * school's to set and they have set it.
  */
-const says: Record<string, { text: string; goes?: string; closed?: string }> = {
-  roster_submitted: { text: 'A class list is waiting to be imported', goes: 'imports', closed: 'The administrative officer imports it' },
-  roster_withdrawn: { text: 'A class list was withdrawn before it was decided', goes: 'imports', closed: 'Nothing is waiting for you' },
-  roster_imported: { text: 'Your class list was imported', goes: 'imports' },
-  roster_declined: { text: 'Your class list was declined — it needs correcting', goes: 'imports' },
-  learner_placed: { text: 'A learner was placed in a class', goes: 'enrollment' },
-  learner_moved: { text: 'A learner was moved between classes', goes: 'enrollment' },
-  learner_withdrawn: { text: 'A learner was withdrawn', goes: 'enrollment' },
-  learner_reentered: { text: 'A learner re-entered', goes: 'enrollment' },
-  learner_unplaced: { text: 'A learner is registered at a grade with no class', goes: 'enrollment' },
-  month_submitted: { text: 'A monthly consolidation was submitted', goes: 'months' },
-  month_returned: { text: 'Your monthly consolidation was returned', goes: 'months' },
-  month_locked: { text: 'A monthly consolidation was locked', goes: 'months' },
-  promotion_endorsed: { text: 'Promotion outcomes are waiting for approval', goes: 'report-cards' },
-  promotion_approved: { text: 'Your promotion outcomes were approved', goes: 'report-cards' },
-  promotion_returned: { text: 'Your promotion outcomes were returned', goes: 'report-cards' },
-  adviser_assigned: { text: 'You were made adviser of a class', goes: 'staff' },
-  adviser_removed: { text: 'You are no longer adviser of a class', goes: 'staff' },
-  calendar_changed: { text: 'The instructional calendar changed', goes: 'calendar' },
-  year_activated: { text: 'A school year was activated', goes: 'years' },
-  year_closed: { text: 'A school year was closed', goes: 'years' },
-  next_year_placed: { text: 'Next year’s classes were completed', goes: 'next-year' },
+const says: Record<string, { text: string; goes?: string[]; closed?: string }> = {
+  // Where each kind leads, in order of preference: the first screen this reader may open (the UI notes of
+  // 8 November, note 5). A class list waits on Admissions, where both managers approve it since 0.96.0, so the
+  // principal is no longer shown a screen that is shut to them.
+  roster_submitted: { text: 'A class list is waiting to be imported', goes: ['enrollment', 'imports'], closed: 'The administrative officer imports it' },
+  roster_withdrawn: { text: 'A class list was withdrawn before it was decided', goes: ['enrollment', 'imports'], closed: 'Nothing is waiting for you' },
+  roster_imported: { text: 'Your class list was imported', goes: ['imports'] },
+  roster_declined: { text: 'Your class list was declined — it needs correcting', goes: ['imports'] },
+  learner_placed: { text: 'A learner was placed in a class', goes: ['enrollment', 'learners'] },
+  learner_moved: { text: 'A learner was moved between classes', goes: ['enrollment', 'learners'] },
+  learner_withdrawn: { text: 'A learner was withdrawn', goes: ['enrollment', 'learners'] },
+  learner_reentered: { text: 'A learner re-entered', goes: ['enrollment', 'learners'] },
+  learner_unplaced: { text: 'A learner is registered at a grade with no class', goes: ['enrollment', 'learners'] },
+  month_submitted: { text: 'A monthly consolidation was submitted', goes: ['months', 'attendance'] },
+  month_returned: { text: 'Your monthly consolidation was returned', goes: ['months', 'attendance'] },
+  month_locked: { text: 'A monthly consolidation was locked', goes: ['months', 'attendance'] },
+  promotion_endorsed: { text: 'Promotion outcomes are waiting for approval', goes: ['report-cards'] },
+  promotion_approved: { text: 'Your promotion outcomes were approved', goes: ['report-cards'] },
+  promotion_returned: { text: 'Your promotion outcomes were returned', goes: ['report-cards'] },
+  adviser_assigned: { text: 'You were made adviser of a class', goes: ['staff', 'learners'] },
+  adviser_removed: { text: 'You are no longer adviser of a class', goes: ['staff', 'learners'] },
+  calendar_changed: { text: 'The instructional calendar changed', goes: ['calendar'] },
+  year_activated: { text: 'A school year was activated', goes: ['years', 'overview'] },
+  year_closed: { text: 'A school year was closed', goes: ['years', 'overview'] },
+  next_year_placed: { text: 'Next year’s classes were completed', goes: ['next-year', 'learners'] },
 };
 
 /** The class a notification is about, from the only facts its payload may carry. */
@@ -80,10 +83,26 @@ export function describeSubject(payload: Row) {
  * `decide_roster_submission` checks `is_manager()` and would accept either.
  */
 function pointsAt(kind: string, role: unknown) {
-  const goes = says[kind]?.goes;
-  const target = goes ? routes.find(r => r.id === goes) : undefined;
-  if (!target) return null;
-  return { route: target, open: available(target, role) };
+  const goes = says[kind]?.goes ?? [];
+  const candidates = goes.map(id => routes.find(r => r.id === id)).filter((r): r is NonNullable<typeof r> => Boolean(r));
+  const open = candidates.find(r => available(r, role));
+  if (open) return { route: open, open: true };
+  return candidates[0] ? { route: candidates[0], open: false } : null;
+}
+
+/**
+ * The address a notification opens: its screen, at the school year and class it is about, and for a class list
+ * waiting, that list (the UI notes of 8 November, note 5). **Never a learner**: `learner_id` is not read here, by
+ * design, because an address reaches browser history on a shared staffroom screen, and the screen it opens is the
+ * one that names a learner and writes the access row for it.
+ */
+export function sourceOf(row: Row, routeId: string) {
+  const ask = new URLSearchParams();
+  if (row.academic_year_id) ask.set('year', String(row.academic_year_id));
+  if (row.section_id) ask.set('section', String(row.section_id));
+  if (row.subject_table === 'roster_submissions' && row.subject_id && routeId === 'enrollment') ask.set('list', String(row.subject_id));
+  const q = ask.toString();
+  return `#/${routeId}${q ? `?${q}` : ''}`;
 }
 
 export function Notifications({ api, me, token, setStatus, popover = false, onUnreadChange }: Props) {
@@ -158,13 +177,17 @@ export function Notifications({ api, me, token, setStatus, popover = false, onUn
             { header: 'What happened', cell: r => {
               const about = describeSubject((r.payload ?? {}) as Row);
               const to = pointsAt(String(r.kind), me.role);
+              const text = says[String(r.kind)]?.text ?? String(r.kind);
+              const href = to?.open ? sourceOf(r, to.route.id) : null;
+              // The whole line opens where it happened, and reading it there marks it read.
+              const follow = () => { if (r.read_at === null) void api('/notifications/read', 'POST', { id: String(r.id) }).then(() => setRefresh(n => n + 1)).catch(() => undefined); };
               return (
                 <Cell
-                  title={says[String(r.kind)]?.text ?? String(r.kind)}
+                  title={href ? <a className="notification-link" href={href} onClick={follow}>{text}</a> : text}
                   meta={<>
                     {about ? <span>{about}</span> : null}
-                    {to?.open
-                      ? <a href={`#/${to.route.id}`}>{to.route.nav}</a>
+                    {href
+                      ? <a href={href} onClick={follow}>Open on {to!.route.nav}</a>
                       : to ? <span className="muted">{says[String(r.kind)]?.closed ?? `On ${to.route.nav}`}</span> : null}
                   </>}
                 />

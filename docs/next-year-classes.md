@@ -10,7 +10,7 @@ end-of-year outcomes. Section 5's last step.
 > of authority. Where this file and [constraints.md](constraints.md) disagree,
 > that file wins.
 
-> **Mostly automatic since 0069 (0.103.0).** Approving an end-of-year outcome
+> **Mostly automatic since 0070 (0.108.0).** Approving an end-of-year outcome
 > now carries that learner into the following school year by itself, in the same
 > transaction, at the grade their outcome leads to and with **no section** --
 > through this module’s own rule and the same `place_enrollment`. When the

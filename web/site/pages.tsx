@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { monthName, monthOf, weekday } from '../dates';
-import { SiteIcon, Valley, type IconName } from './art';
+import { SiteIcon, type IconName } from './art';
 import { Link, type Go } from './Site';
 import {
   ahead, daysBetween, eventDates, kindWord, longDate, paragraphs, postedOn, schoolName, shortDate, termName, today, yearProgress,
@@ -322,13 +322,12 @@ function ContactList({ site, tone }: { site: PublicSite; tone?: 'light' }) {
 
 /* --------------------------------------------------------- Inner pages */
 
-function PageHead({ kicker, title, lede, children }: { kicker: string; title: string; lede?: string; children?: ReactNode }) {
+/** A plain title for every tab but Home: the hillside banner is Home's alone (asked 2026-11-10, "keep it simple"). */
+function PageHead({ kicker, title, lede }: { kicker: string; title: string; lede?: string }) {
   return (
     <section className="page-head">
-      <Valley still />
       <div className="wrap page-head-inner">
-        {children}
-        <p className="kicker kicker-light">{kicker}</p>
+        <p className="kicker">{kicker}</p>
         <h1>{title}</h1>
         {lede ? <p>{lede}</p> : null}
       </div>

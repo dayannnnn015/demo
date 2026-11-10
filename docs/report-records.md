@@ -146,7 +146,7 @@ learner up with back subjects. `eligibleFor` in `cards.ts` reads the approved
 outcome to decide the grade the SF9 and SF10 certify the learner eligible for;
 `remedial` yields none yet.
 
-> **Superseded 2026-11-09 by 0069 (0.103.0).** The paragraph below was true
+> **Superseded 2026-11-09 by 0070 (0.108.0).** The paragraph below was true
 > until then, and the distinction it drew is worth keeping: approving an outcome
 > and *choosing a class* are still two acts. What changed is that approval now
 > **enrols the learner into next school year** at the grade their outcome leads

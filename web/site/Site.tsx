@@ -17,7 +17,9 @@ const pathOf = () => { const p = location.pathname.replace(/\/+$/, ''); return !
 // Contact lives on the About page; /contact is kept so an old link still lands on it.
 // Questions appear only once the school has published one, so the menu never leads to an empty page.
 const nav = [['/', 'Home'], ['/announcements', 'Announcements'], ['/calendar', 'Calendar'], ['/faq', 'Questions'], ['/about', 'About & contact']] as const;
-const pageTarget = (path: string) => ({ '/': 'home', '/announcements': 'announcements-content', '/calendar': 'calendar-content', '/about': 'about-content', '/contact': 'contact' } as Record<string, string>)[path];
+// A tab opens at its top, title and all: the inner tabs used to skip a tall banner to reach their content, and since
+// 2026-11-10 they have a plain title instead, which is worth seeing. Only Contact still lands part-way down its page.
+const pageTarget = (path: string) => ({ '/': 'home', '/contact': 'contact' } as Record<string, string>)[path];
 let announcementOrigin = '/announcements';
 const scrollToPageTarget = (path: string) => requestAnimationFrame(() => {
   const element = document.getElementById(pageTarget(path) ?? '');

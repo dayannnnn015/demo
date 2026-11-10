@@ -617,6 +617,7 @@ code, .mono {
   color: var(--ink-500);
 }
 .greeting h2 { font-size: var(--t-26); font-weight: 600; letter-spacing: -0.025em; }
+.greeting-role { margin: var(--s1) 0 0; color: var(--accent-700); font-size: var(--t-14); font-weight: 600; }
 .greeting-sub { margin: var(--s2) 0 0; max-width: 72ch; color: var(--ink-500); font-size: var(--t-14); }
 .greeting-sub b { color: var(--ink-900); font-weight: 600; }
 
@@ -2910,3 +2911,25 @@ a.btn { text-decoration: none; }
 .step.ready .step-mark { border-color: var(--accent-700); color: var(--accent-800); }
 /* A note under a head's filters takes its own line rather than squeezing beside the last control. */
 .card-head:has(> .toolbar) > .card-note { flex-basis: 100%; margin-top: 0; }
+
+/* A notification's line opens where it happened (the UI notes of 8 November, note 5): read as the title it is, and a
+   link on hover and focus. */
+.notification-link { color: inherit; text-decoration: none; }
+.notification-link:hover, .notification-link:focus-visible { text-decoration: underline; text-underline-offset: 2px; }
+
+/* The summary of a rejected save names the fields only, side by side: each message is already beside its field. */
+.error-summary ul.error-jumps { flex-direction: row; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+
+/* Create sections: each section a chip, added one name at a time (asked 2026-11-09: no comma-separated list). */
+.section-chips .chips { list-style: none; margin: 0 0 var(--s2); padding: 0; display: flex; flex-wrap: wrap; gap: var(--s1); }
+.section-chips .chip { display: inline-flex; align-items: center; gap: 2px; min-height: 28px; padding: 0 2px 0 var(--s2);
+  border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--sunk); font-size: var(--t-13); font-weight: 600; color: var(--ink-900); }
+.section-chips .chip button { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 0; border-radius: var(--r-sm);
+  background: none; color: var(--ink-500); cursor: pointer; }
+.section-chips .chip button:hover { background: var(--hover); color: var(--red-700); }
+.section-chips .chip button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.section-chips .chip-add { display: flex; gap: var(--s2); align-items: center; }
+.section-chips .chip-add input { flex: 1; min-width: 0; }
+/* A sheet's longer notes fold behind the same switch as a page's description (asked 2026-11-09). */
+.sheet-notes { display: grid; gap: var(--s2); justify-items: start; }
+.sheet-notes > div { justify-self: stretch; }

@@ -328,16 +328,11 @@ main:focus { outline: none; }
 .contact-light .contact-none { color: #b8c9dc; }
 
 /* --------------------------------------------------------- Inner pages */
-.page-head { position: relative; isolation: isolate; overflow: clip; background: var(--night); color: #d3e1ef; }
-/* The valley is this band's backdrop, not a block in its flow. With no
-   positioning it laid out inline, above the heading, at the SVG's own size —
-   which is the empty dark panel every tab but Home grew when it was opened. The
-   bottom padding below was then holding a gap for art that was never in the
-   flow to fill it. `.hero-art img` on Home has carried these three all along. */
-.page-head .valley { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; opacity: .9; }
-.page-head-inner { padding-block: clamp(48px, 8vw, 88px) clamp(52px, 8vw, 92px); max-width: 860px; margin-left: max(var(--s5), (100% - var(--wrap)) / 2); }
-.page-head h1 { margin-top: var(--s3); color: var(--white); font-size: clamp(2.2rem, 5.5vw, 3.75rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
-.page-head p:last-child { margin-top: var(--s4); max-width: 40rem; font-size: 1.1rem; }
+/* Every tab but Home opens on a plain title, not a banner: the hillside is Home's alone (asked 2026-11-10). */
+.page-head { background: var(--white); border-bottom: 1px solid var(--line); color: var(--ink-3); }
+.page-head-inner { padding-block: clamp(28px, 5vw, 48px) clamp(24px, 4vw, 36px); }
+.page-head h1 { margin-top: var(--s2); color: var(--ink); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.page-head p:last-child { margin-top: var(--s3); max-width: 40rem; font-size: 1.05rem; }
 .back-link { display: inline-flex; align-items: center; gap: var(--s2); margin-bottom: var(--s5); color: var(--sun); font-weight: 700; text-decoration: none; }
 .back-link:hover { color: #ffd166; }
 
@@ -445,7 +440,7 @@ main:focus { outline: none; }
 }
 
 @media print {
-  .site-header, .site-footer, .test-ribbon, .skip-link, .valley, .hero-art, .gov-bar, .quick, .today-badge { display: none !important; }
+  .site-header, .site-footer, .test-ribbon, .skip-link, .hero-art, .gov-bar, .quick, .today-badge { display: none !important; }
   .hero, .page-head, .band-night { background: none !important; color: var(--ink) !important; min-height: 0; }
   .hero-name, .hero-name .line-sub, .page-head h1, .visit h2 { color: var(--ink) !important; }
   .hero-inner { padding-block: 0; }

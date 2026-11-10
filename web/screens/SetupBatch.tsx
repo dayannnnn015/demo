@@ -5,6 +5,7 @@ import { BatchSheet, stopsBatch, type Candidate } from '../components/batch';
 import { Sheet } from '../components/overlay';
 import { Badge, Callout, Select, StatusLine, Table, gradeName, idle, yearName, type Status } from '../components/primitives';
 import { Affects } from '../components/affects';
+import { Icon } from '../components/icons';
 
 /** Every section of one year. The list pages by 25 on screen, but a batch must see the whole year. */
 export async function allSections(api: Api, yearId: string) {
@@ -31,12 +32,16 @@ export async function activeTeachers(api: Api) {
  * where the names start, not a rule — every list is edited before anything is
  * created, and the school may name its sections however it likes.
  */
-export const sf4Names: Record<number, string> = { 0: 'A, B, C, D, E, F', 1: 'A, B, C, D', 2: 'A, B, C, D', 3: 'A, B, C, D', 4: 'A, B, C, D', 5: 'A, B, C, D', 6: 'A, B, C, D' };
+export const sf4Names: Record<number, string[]> = { 0: ['A', 'B', 'C', 'D', 'E', 'F'], 1: ['A', 'B', 'C', 'D'], 2: ['A', 'B', 'C', 'D'], 3: ['A', 'B', 'C', 'D'], 4: ['A', 'B', 'C', 'D'], 5: ['A', 'B', 'C', 'D'], 6: ['A', 'B', 'C', 'D'] };
 
-/** Splits a typed list of names, dropping blanks and repeats so one name is one section. */
-export function sectionNames(text: string) {
+/**
+ * One grade's names, tidied: blanks and repeats dropped (ignoring case) so one name is one section. A pasted list —
+ * "A, B, C" or one per line — still splits into names, though nobody is asked to type commas any more.
+ */
+export function sectionNames(input: string | string[]) {
   const seen = new Set<string>();
-  return text.split(/[,\n]/).map(n => n.trim().replace(/\s+/g, ' ')).filter(n => {
+  const raw = Array.isArray(input) ? input : [input];
+  return raw.flatMap(n => n.split(/[,\n]/)).map(n => n.trim().replace(/\s+/g, ' ')).filter(n => {
     const key = n.toLowerCase();
     if (!n || seen.has(key)) return false;
     seen.add(key);
@@ -47,7 +52,7 @@ export function sectionNames(text: string) {
 /** The same test as the database's unique index: one name per grade per year, ignoring case and outer spaces. */
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-export function sectionCandidates(names: Record<number, string>, existing: Row[]): Candidate[] {
+export function sectionCandidates(names: Record<number, string[] | string>, existing: Row[]): Candidate[] {
   return [0, 1, 2, 3, 4, 5, 6].flatMap(grade => sectionNames(names[grade] ?? '').map(name => {
     const taken = existing.some(s => Number(s.grade_level) === grade && sameName(String(s.name), name));
     return {
@@ -68,7 +73,7 @@ export function sectionCandidates(names: Record<number, string>, existing: Row[]
  */
 export function AddSections({ api, year, onClose }: { api: Api; year: Row; onClose: (written: number) => void }) {
   const id = useId();
-  const [names, setNames] = useState<Record<number, string>>(sf4Names);
+  const [names, setNames] = useState<Record<number, string[]>>(sf4Names);
   const [existing, setExisting] = useState<Row[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -98,7 +103,7 @@ export function AddSections({ api, year, onClose }: { api: Api; year: Row; onClo
   }
 
   return (
-    <Sheet title={`Create sections for ${yearName(year)}`} note="Type each grade's section names, then review the list before anything is created." wide onClose={() => onClose(0)}>
+    <Sheet title={`Create sections for ${yearName(year)}`} note="Add or remove each grade's sections, then review the list before anything is created." wide onClose={() => onClose(0)}>
       {failed ? <Callout tone="stopped" title="This year's sections could not be read">Nothing was created. Close this and try again.</Callout> : null}
       <form noValidate onSubmit={event => { event.preventDefault(); setReviewing(true); }}>
         <Callout tone="info" title="Started from the school's SF4">
@@ -106,11 +111,8 @@ export function AddSections({ api, year, onClose }: { api: Api; year: Row; onClo
         </Callout>
         <div className="form-grid batch-reason">
           {[0, 1, 2, 3, 4, 5, 6].map(grade => (
-            <div className="field" key={grade}>
-              <label className="label" htmlFor={`${id}-${grade}`}>{gradeName(grade)}</label>
-              <input id={`${id}-${grade}`} value={names[grade] ?? ''} maxLength={400} onChange={event => setNames(current => ({ ...current, [grade]: event.target.value }))} />
-              <span className="hint">{sectionNames(names[grade] ?? '').length || 'No'} section{sectionNames(names[grade] ?? '').length === 1 ? '' : 's'}, separated by commas</span>
-            </div>
+            <SectionChips key={grade} id={`${id}-${grade}`} grade={grade} names={names[grade] ?? []}
+              onChange={next => setNames(current => ({ ...current, [grade]: next }))} />
           ))}
         </div>
         <div className="form-actions">
@@ -119,6 +121,56 @@ export function AddSections({ api, year, onClose }: { api: Api; year: Row; onClo
         </div>
       </form>
     </Sheet>
+  );
+}
+
+/** The letter after a grade's last single-letter section, offered as the likely next name: A–D gives E. */
+export function nextLetter(names: string[]) {
+  const letters = names.filter(n => /^[A-Y]$/i.test(n)).map(n => n.toUpperCase().charCodeAt(0));
+  if (!letters.length) return names.length ? null : 'A';
+  const next = String.fromCharCode(Math.max(...letters) + 1);
+  return names.some(n => n.toUpperCase() === next) ? null : next;
+}
+
+/**
+ * One grade's sections as separate names (asked 2026-11-09: no comma-separated list). Each name is its own chip,
+ * removed with its ×; a new one is typed and added with Enter or Add, and the next letter is a press away. A pasted
+ * "A, B, C" still becomes three, so a list copied from elsewhere is not lost.
+ */
+function SectionChips({ id, grade, names, onChange }: { id: string; grade: number; names: string[]; onChange: (next: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const add = (text: string) => {
+    const merged = sectionNames([...names, text]);
+    if (merged.length !== names.length) onChange(merged);
+    setDraft('');
+  };
+  const next = nextLetter(names);
+  return (
+    <div className="field section-chips">
+      <label className="label" htmlFor={id}>{gradeName(grade)} <span className="optional">{names.length || 'No'} section{names.length === 1 ? '' : 's'}</span></label>
+      {names.length ? (
+        <ul className="chips" aria-label={`${gradeName(grade)} sections`}>
+          {names.map(name => (
+            <li key={name} className="chip">
+              <span>{name}</span>
+              <button type="button" aria-label={`Remove ${gradeName(grade)} ${name}`} title="Remove" onClick={() => onChange(names.filter(n => n !== name))}>
+                <Icon name="close" size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="chip-add">
+        <input id={id} value={draft} maxLength={80} placeholder="New section"
+          onChange={event => setDraft(event.target.value)}
+          // Enter adds the name here rather than submitting the whole sheet for review.
+          onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); if (draft.trim()) add(draft); } }} />
+        {/* One button: what is typed, or else the next letter. */}
+        {draft.trim()
+          ? <button type="button" className="btn secondary small" onClick={() => add(draft)}>Add</button>
+          : next ? <button type="button" className="btn secondary small" onClick={() => add(next)}>Add {next}</button> : null}
+      </div>
+    </div>
   );
 }
 

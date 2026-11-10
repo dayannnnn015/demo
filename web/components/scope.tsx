@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { query } from '../api';
 import { Select, gradeName, sentence, yearName } from './primitives';
@@ -24,6 +24,13 @@ export type Scope = {
   section: Row | undefined;
 };
 
+/**
+ * What a link asked this screen to open, as `#/months?year=…&section=…`: a notification followed to its source
+ * (the UI notes of 8 November, note 5), or the Overview's queue. Only a school year and a class ever travel this
+ * way, never a learner: an address reaches browser history on a shared staffroom screen.
+ */
+export const addressAsks = () => new URLSearchParams(globalThis.location?.hash.split('?')[1] ?? '');
+
 export const sectionName = (section: Row | undefined) =>
   section ? `${gradeName(section.grade_level)} · ${String(section.name)}` : 'Unavailable';
 
@@ -32,14 +39,19 @@ export function useScope(api: Api, token: number): Scope {
   const [yearId, setYearId] = useState('');
   const [sections, setSections] = useState<Row[] | null>(null);
   const [sectionId, setSectionId] = useState('');
+  // Asked for by the address the screen opened on; a choice only if it is one this person may see.
+  const asked = useRef(addressAsks());
 
   useEffect(() => {
     void api<Page>('/academic-years').then(page => {
       setYears(page.items);
-      // Open on the year the school is actually running, not the first row.
+      // Open on the year a link asked for, else the year the school is actually running, not the first row.
+      const want = asked.current.get('year');
       setYearId(current => (page.items.some(y => y.id === current)
         ? current
-        : String((page.items.find(y => y.status === 'active') ?? page.items[0])?.id ?? '')));
+        : want && page.items.some(y => y.id === want)
+          ? want
+          : String((page.items.find(y => y.status === 'active') ?? page.items[0])?.id ?? '')));
     }).catch(() => setYears([]));
   }, [api, token]);
 
@@ -51,7 +63,10 @@ export function useScope(api: Api, token: number): Scope {
         setSections(page.items);
         // A section belongs to one year, so a year change drops a section that
         // is not in the new one rather than carrying a dead id into a fetch.
-        setSectionId(current => (page.items.some(s => s.id === current) ? current : String(page.items[0]?.id ?? '')));
+        const want = asked.current.get('section');
+        setSectionId(current => (page.items.some(s => s.id === current)
+          ? current
+          : want && page.items.some(s => s.id === want) ? want : String(page.items[0]?.id ?? '')));
       })
       .catch(() => { setSections([]); setSectionId(''); });
   }, [api, yearId, token]);

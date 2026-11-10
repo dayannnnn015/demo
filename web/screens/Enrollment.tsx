@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Api, Page, Row } from '../api';
 import { message, query } from '../api';
 import type { Route } from '../routes';
@@ -11,6 +11,7 @@ import {
 } from '../components/primitives';
 import { Affects } from '../components/affects';
 import { WaitingLists } from './ListApproval';
+import { addressAsks } from '../components/scope';
 
 type Props = { api: Api; manager: boolean; setStatus: (s: Status) => void; reload: () => void; token: number; route: Route };
 
@@ -179,10 +180,15 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
   const [rows, setRows] = useState<Page | null>(null);
   const [learners, setLearners] = useState<Record<string, Row>>({});
 
+  // A notification followed here names a year and a class (the UI notes of 8 November, note 5); they are the first choice.
+  const asked = useRef(addressAsks());
   useEffect(() => {
     void api<Page>('/academic-years').then(r => {
       setYears(r.items);
-      setYearId(current => (r.items.some(y => y.id === current) ? current : String((r.items.find(y => y.status === 'active') ?? r.items[0])?.id ?? '')));
+      const want = asked.current.get('year');
+      setYearId(current => (r.items.some(y => y.id === current) ? current
+        : want && r.items.some(y => y.id === want) ? want
+          : String((r.items.find(y => y.status === 'active') ?? r.items[0])?.id ?? '')));
     }).catch(() => setYears([]));
   }, [api, token]);
 
@@ -190,7 +196,9 @@ export function Enrollment({ api, manager, setStatus, reload, token, route }: Pr
     if (!yearId) return;
     void api<Page>(`/sections${query({ academic_year_id: yearId, limit: 100 })}`).then(r => {
       setSections(r.items);
-      setSectionId(current => (r.items.some(s => s.id === current) ? current : String(r.items[0]?.id ?? '')));
+      const want = asked.current.get('section');
+      setSectionId(current => (r.items.some(s => s.id === current) ? current
+        : want && r.items.some(s => s.id === want) ? want : String(r.items[0]?.id ?? '')));
     }).catch(() => setSections([]));
   }, [api, yearId, token]);
 

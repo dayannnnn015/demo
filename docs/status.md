@@ -1,81 +1,40 @@
 # Where things stand
 
-> ## Read this first: this branch is behind `origin/master`
+> ## 0.111.7 merges the 2026-11-10 interface work onto the live line
 >
-> **`promotion-and-sf9` is 0.110.2 and is fifteen commits behind `origin/master`,
-> which is at 0.111.6 and recorded live.** The user was told on 2026-11-10 and
-> chose to keep building here, so this is a known state and not a mistake to
-> undo quietly. Two of 0.110.2’s five changes overlap work already on master and
-> **will collide when the two meet**: `dda5360` (0.111.3) folds long notes behind
-> the one workspace-wide description switch, *off* by default, where 0.110.2
-> folds each note from its own heading, *open* by default; and `a93d8f3`
-> (0.111.4) reworked the Grade offerings toolbar that 0.110.2 edits. Decide which
-> fold the school wants before merging — both answer the same ask, differently,
-> and the reasoning for each is a settled row in [constraints.md](constraints.md).
+> **Built on `promotion-and-sf9`, which was sixteen commits behind**
+> `origin/master` the whole time it was written — the branch was at 0.110.0
+> while live ran 0.111.6. That was found only when a cloud routine was being
+> set up, and the user chose to finish the work there and merge afterwards,
+> which is what 0.111.7 is. Nothing of 0.111.0–0.111.6 was lost: a deploy from
+> the unmerged branch would have rolled production back seven releases, the
+> same accident `docs/status.md` already records for 8 November.
 >
-> ## 0.110.3 is committed and pushed, not deployed
+> **Seven changes, each its own commit with the whole suite run before it.**
+> No endpoint, schema, permission, error code or migration, so the hosted
+> database stays at 0072.
 >
-> **A control is not a word in the sentence beside it.** *List the <grade>
-> learning areas* on Academic history was reported as doing nothing; it was a
-> layout fault, not a logic one, and the handler was always right. The button
-> sat inside the `<p>` describing it, whose second line painted over its lower
-> half and took the clicks. It now sits beside the sentence. Two tests press it
-> at Grade 1 and Grade 4, which the behaviour never had.
+> 1. The monthly screen lost *Membership and marks* and *Transition history*;
+>    the attendance rule card lost its *Not recorded yet* callout.
+> 2. The attendance rule is chosen from stacked lines, not a select
+>    (`Editor` gained `radios`, which starts on nothing).
+> 3. **Include retired** appears only where something is retired.
+> 4. Every titled note folds from its own heading, open to begin with.
+> 5. `FileRules` replaces both copies of the class-list file hint.
+> 6. The staff sign-in panel drops its footer line; **Staff portal** stays.
+> 7. *List the <grade> learning areas* works where it is aimed — it was a
+>    layout fault, and the behaviour now has the two tests it never had.
 >
-> **The staff sign-in footer question is settled**: the ask was the line and its
-> link only, which `cbacfeb` already removed. `/app` and the **Staff portal**
-> control stay. Nothing further to do there except deploy.
+> **How the one collision was settled.** 0.111.3 folds a *description* behind
+> one switch, off by default, and its settled row already says a refusal, a
+> warning or an *Affects* block is not a description and stays in sight. The
+> per-note fold of change 4 is the other half of that rule, not a reversal of
+> it: a warning is still shown by default and can now be folded on its own.
+> Both survive the merge, each governing its own kind of text.
 >
-> ## 0.110.2 is committed and pushed, not deployed
->
-> **Five interface asks of 2026-11-10, one increment each**, the whole suite run
-> before every one of them. No endpoint, schema, permission, error code or
-> migration, so the hosted database is untouched.
->
-> 1. The attendance rule is chosen from stacked lines, not a select (`a8505cb`).
->    `Editor` gained a `radios` field type; it starts on nothing, and `start()`
->    excludes it from the first-option default for that reason.
-> 2. Grade offerings shows **Include retired** only where something is retired
->    (`e3b2a5e`). The filter itself was kept — it does work.
-> 3. Every titled note folds from its own heading, open to begin with
->    (`736b784`), in `Callout` and `Affects`.
-> 4. `FileRules` replaces both copies of the class-list file hint (`7bb8b36`).
-> 5. The staff sign-in panel drops its footer link (`cbacfeb`). The **Staff
->    portal** control and `/app` stay — that is the way in.
->
-> **Before 0.110.1, in the same session:** the monthly screen lost its
-> *Membership and marks* and *Transition history* cards and the attendance rule
-> card lost its *Not recorded yet* callout (`f5cd719`).
->
-> **Next action: decide the merge with master**, above, before anything else.
-> Nothing here is deployed and nothing here needs a migration.
+> **Next action: deploy 0.111.7.** It needs no migration.
 
-> ## 0.110.1 is committed and not deployed; 0.110.0 is live and the hosted database is at migration 0072
->
-> **Three interface pieces removed on 2026-11-10, at the user’s request.** No
-> endpoint, schema, permission, error code or migration: workspace and docs only,
-> so the database is unchanged from 0.109.1’s release. The monthly consolidation
-> screen loses its *Membership and marks* and *Transition history* cards, and the
-> attendance rule card on the Instructional calendar loses its *Not recorded yet*
-> callout.
->
-> **The request also named the attendance rule card itself, and it was kept.** It
-> is the only place the rule can be recorded and the SF2’s and SF4’s figures are
-> counted by nothing else — the 2026-11-05 row in
-> [constraints.md](constraints.md) says so and
-> `tests/web-attendance-rule-home.test.ts` guards it — so it was raised instead of
-> deleted, and the user chose to keep the card and drop only the callout. Both the
-> request and the answer are a settled row now, so it is not simply re-raised and
-> quietly granted next time.
->
-> **Two endpoints are now uncalled and were deliberately left in place:**
-> `GET /sections/:id/attendance/months/members` and `.../transitions`. This
-> removed two readers, not two reads; `npm run smoke` still checks both.
->
-> **Next action: deploy 0.110.1.** It needs no migration. Then Increment 3 and
-> Increment 5 below, both still open and both unchanged by this release.
-
-> ## 0.110.0 is live; the hosted database is at migration 0072 — read this first
+> ## 0.111.6 is live; the hosted database is at migration 0072 — read this first
 >
 > **Deployed 2026-11-09 and verified by `npm run smoke`.** No migration: 0.110.0
 > is workspace only, so the database is unchanged from 0.109.1’s release.
@@ -96,20 +55,45 @@
 > descriptions against every test, which found exactly one that depended on a
 > visible one.
 >
-> ### Still to do, in order
+> ### 0.111.0: the last two asks, done (9 November)
 >
-> **Increment 3 — remove the Subject averages tab from Promotion.** Waiting on
-> the school: *Subject averages* names both the tab and its *Subject average and
-> remark* column, and the tab also holds per-term grade entry for a whole class
-> at once. Removing all of it means roughly 990 cells entered one at a time for
-> a 55-learner section. **Do not guess which was meant.**
+> **Increment 3 — the Subject averages tab is gone from Promotion.** Decided on
+> the user's instruction to continue with full permission, after they were shown
+> the cost: grades are now typed a learner's card at a time on **Report card**
+> (or on the SF9), and **Class summary** still shows the class. The class grid by
+> learning area is the one thing that went; restoring it is one tab entry and its
+> block from 0.110.0. Recorded in [constraints.md](constraints.md).
 >
-> **Increment 5 — a notification opens the record it is about.** It will break
-> `tests/web-notifications.test.ts`, which asserts the old bare href, and it
-> touches `useScope`, shared by 13 screens, so it is last deliberately. No
-> learner id may ever go in the link: a notification names no learner by design,
-> and a URL is where one would reach browser history on a shared screen.
+> **Increment 5 — a notification opens its source.** The line is the link: the
+> screen opens at the notification's school year and class (and a waiting class
+> list opens in its review on Admissions), and it is marked read. **No learner id
+> ever goes in the address.** `useScope` takes `year` and `section` from the
+> address as a first choice only.
 >
+> **The six asks are settled:** 1, 2 and 4 in 0.110.0; 5 and 6 in 0.111.0; 3
+> (which half of a refused sign-in was wrong) is deliberately not built, as
+> recorded in constraints. **Live** as `edunexus-4mqybdiho` from a clean worktree of
+> `71f8e8b`; `npm run smoke` passes all 198 checks.
+>
+> **0.111.1:** a rejected form says each problem once — the summary box above a short form is gone, and appears
+> only when a rejected field is out of sight. **Live** as `edunexus-lb4p9now9` (`17112a9`), smoke 198/198. **Next:**
+> nothing in flight.
+>
+> **0.111.2:** Create sections takes names one at a time, as chips, rather than a comma-separated line. **Live** as
+> `edunexus-afi6aa8vq` (`b43a7cf`), smoke 198/198.
+>
+> **0.111.3:** the learning-area sheets' long notes fold behind the description switch, off by default; neither sheet
+> asks a reason (since 0.103.0). **Live** as `edunexus-d5q9gh4en` (`aa7508f`), smoke 198/198.
+>
+> **0.111.4:** the Grade offerings filters line up; the class count sits beside its label. **Live** as
+> `edunexus-c030zzmey` (`a93d8f3`), smoke 198/198.
+>
+> **0.111.5:** the front page's inner tabs open on a plain title; Home keeps its hero. **Live** as
+> `edunexus-5pj0nz7ya` (`942127d`), smoke 198/198.
+>
+> **0.111.6:** the Overview says who is signed in — the role, and an adviser's classes. **Live** as
+> `edunexus-iyq7l28p3` (`b22c326`), smoke 198/198. **Next:** nothing in flight.
+
 > Everything below is `origin/master`’s own account of 0.102.2–0.107.0 and is
 > unchanged by this release.
 

@@ -1,12 +1,13 @@
 import { useEffect, useId, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Api, Row } from '../api';
 import { query } from '../api';
 import type { Route } from '../routes';
 import { Icon } from '../components/icons';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
 import {
-  Badge, Button, Callout, Cell, Editor, EmptyState, FormSheet, PageHeader, PrintButton, Select, Table,
-  Task, Unrecorded, gradeName, type Field, type Status,
+  Badge, Button, Callout, Cell, DescriptionToggle, Editor, EmptyState, FormSheet, PageHeader, PrintButton, Select, Table,
+  Task, Unrecorded, gradeName, useDescriptions, type Field, type Status,
 } from '../components/primitives';
 import { cardFor, disputedFor, formName, gradesOf, lineOf, reportCardAreas, type ReportCardArea } from '../learning-areas';
 import { BatchSheet, type Candidate } from '../components/batch';
@@ -138,11 +139,25 @@ function SubjectHistory({ api, subject }: { api: Api; subject: Subject }) {
 
 /** A proposed learning area: its name, its permanent code, and any note the documents force — prose that has to wrap, unlike a cell's mono meta line. */
 function AreaCell({ code, name, note }: { code: string; name: string; note?: string | undefined }) {
+  // The note is a description, so it follows the one show/hide setting and is folded by default (asked 2026-11-09).
+  const [open] = useDescriptions();
   return (
     <span className="batch-area">
       <span><b>{name}</b> <span className="mono batch-code">{code}</span></span>
-      {note ? <span className="batch-note">{note}</span> : null}
+      {note && open ? <span className="batch-note">{note}</span> : null}
     </span>
+  );
+}
+
+/** A sheet's longer explanation, folded behind the same switch as every page's description. */
+function SheetNotes({ children }: { children: ReactNode }) {
+  const [open] = useDescriptions();
+  const id = useId();
+  return (
+    <div className="sheet-notes">
+      <DescriptionToggle show="Show the notes on these learning areas" hide="Hide the notes" controls={id} />
+      {open ? <div id={id}>{children}</div> : null}
+    </div>
   );
 }
 
@@ -212,11 +227,13 @@ function AddReportCardAreas({ api, catalog, onClose }: { api: Api; catalog: Subj
       title="Add the report-card learning areas"
       note="Each subject is its own record. A refused row does not stop the others."
       intro={(
-        <Callout tone="info" title="Copied from the school’s own forms">
-          These are the learning areas printed on the school’s report cards for Grades 1 to 6, and on DepEd’s SF10 as revised in 2025 under DepEd Order No. 10, s. 2024.
-          Nothing is added until you tick it, and each one is recorded under your name, with what was added and when. Codes are permanent; names and grades can be revised later.
-          No Kindergarten card has been supplied, so none is proposed for Kindergarten.
-        </Callout>
+        <SheetNotes>
+          <Callout tone="info" title="Copied from the school’s own forms">
+            These are the learning areas printed on the school’s report cards for Grades 1 to 6, and on DepEd’s SF10 as revised in 2025 under DepEd Order No. 10, s. 2024.
+            Nothing is added until you tick it, and each one is recorded under your name, with what was added and when. Codes are permanent; names and grades can be revised later.
+            No Kindergarten card has been supplied, so none is proposed for Kindergarten.
+          </Callout>
+        </SheetNotes>
       )}
       headers={['Learning area', 'Applies to']}
       candidates={candidates}
@@ -271,10 +288,12 @@ function OfferReportCard({ api, sections, grade, catalog: opened, onClose }: { a
         ? `To ${sectionName(section)}, the one class at this grade. Each offering is its own record; a refused row does not stop the others.`
         : `To all ${sections.length} classes at this grade. Each offering is its own record; a refused row does not stop the others.`}
       intro={grade === 0 ? null : (
-        <Callout tone="info" title={`The learning areas the ${gradeName(grade)} card prints`}>
-          In the order the card prints them, which becomes their order in the section. Only subjects already in the catalog can be offered; add the others from the catalog first.
-          {disputed ? ' The documents disagree about the rows left unticked, so whether this section takes them is yours to decide.' : ''}
-        </Callout>
+        <SheetNotes>
+          <Callout tone="info" title={`The learning areas the ${gradeName(grade)} card prints`}>
+            In the order the card prints them, which becomes their order in the section. Only subjects already in the catalog can be offered; add the others from the catalog first.
+            {disputed ? ' The documents disagree about the rows left unticked, so whether this section takes them is yours to decide.' : ''}
+          </Callout>
+        </SheetNotes>
       )}
       headers={['Line', 'Learning area', 'Printed on']}
       candidates={candidates}
@@ -633,15 +652,14 @@ export function Subjects({ api, manager, setStatus, reload, token, route }: Prop
               <div className="toolbar">
                 <ScopePickers scope={scope} yearOnly />
                 <div className="field inline">
-                  <label className="label" htmlFor="offerings-grade">Grade level</label>
+                  {/* The count sits beside the label, not under the box: a line under one filter pushes the rest of the row out of line. */}
+                  <label className="label" htmlFor="offerings-grade">
+                    Grade level
+                    <span className="optional">{gradeSections.length === 1 ? 'One class' : `${gradeSections.length} classes, one card`}</span>
+                  </label>
                   <Select id="offerings-grade" value={String(gradeHere ?? '')} onChange={event => setChosenGrade(Number(event.target.value))}>
                     {gradesHere.map(g => <option key={g} value={String(g)}>{gradeName(g)}</option>)}
                   </Select>
-                  <span className="hint">
-                    {gradeSections.length === 1
-                      ? 'One class at this grade.'
-                      : `${gradeSections.length} classes at this grade, and they take the same card.`}
-                  </span>
                 </div>
                 {anyRetired ? (
                   <label className="check-line">
