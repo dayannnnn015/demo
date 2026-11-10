@@ -26,6 +26,7 @@ export type Resolution = { row: number; action: 'use_existing'; learner_id: stri
 export { MAX_BYTES, MAX_ROWS, csvProblem, csvStats } from '../csv';
 import { EnlistSheet } from './LateLearner';
 import { ROSTER_HEADER, csvProblem, csvStats, MAX_BYTES, MAX_ROWS, rosterFileText, rosterTemplateWorkbook } from '../csv';
+import { FileRules } from '../components/filerules';
 import { downloadXlsx } from '../xlsx';
 
 /** The resolutions a preview is sent with, one per row, in row order. */
@@ -345,10 +346,7 @@ export function Imports({ api, setStatus, reload, token, route }: Props) {
                 setFileName(file.name);
                 try { setCsv(await rosterFileText(file)); } catch (error) { setFileName(''); setStatus({ text: message(error), kind: 'error' }); }
               }} />
-              <span className="hint">
-                The header must be exactly <span className="mono">{template?.csv.trim() ?? ROSTER_HEADER}</span>.
-                Keep every LRN as text with all twelve digits, dates as YYYY-MM-DD, and sex as male or female.
-              </span>
+              <FileRules header={template?.csv.trim() ?? ROSTER_HEADER} />
             </div>
           </div>
           <Task title="Paste the CSV text instead" note="For a list copied from a text editor">

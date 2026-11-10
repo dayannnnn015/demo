@@ -6,6 +6,7 @@ import { clamp } from '../dates';
 import { Icon } from '../components/icons';
 import { ScopePickers, sectionName, useScope } from '../components/scope';
 import { ROSTER_HEADER, csvProblem, csvStats, rosterFileText, rosterTemplateWorkbook } from '../csv';
+import { FileRules } from '../components/filerules';
 import { downloadXlsx } from '../xlsx';
 import { LateRowSheet, csvRow } from './LateLearner';
 import {
@@ -174,13 +175,13 @@ export function RosterSubmit({ api, setStatus, token, route }: Props) {
         <div className="card-body">
           <div className="form-grid">
             <div className="field wide">
-              <label className="label" htmlFor={`${id}-file`}>CSV file</label>
+              <label className="label" htmlFor={`${id}-file`}>Excel or CSV file</label>
               <input id={`${id}-file`} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={async event => {
                 const file = event.target.files?.[0];
                 if (!file) return;
                 try { setCsv(await rosterFileText(file)); } catch (error) { setStatus({ text: message(error), kind: 'error' }); }
               }} />
-              <span className="hint">The Excel template, or a CSV file. The header must be exactly <span className="mono">{ROSTER_HEADER}</span>. every LRN with all twelve digits, since each learner needs one; dates as YYYY-MM-DD; sex as male or female.</span>
+              <FileRules header={ROSTER_HEADER} />
             </div>
           </div>
           <Task title="Paste the CSV text instead" note="For a list copied from a text editor">

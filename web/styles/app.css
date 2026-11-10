@@ -1945,6 +1945,30 @@ textarea.tall { min-height: 12rem; font-family: var(--font-mono); font-size: var
 .batch-code { margin-left: var(--s1); font-size: var(--t-11); color: var(--ink-500); }
 .batch-note { font-size: var(--t-12); line-height: 1.45; color: var(--ink-500); white-space: normal; max-width: 34rem; }
 .batch-form { white-space: nowrap; }
+
+/*
+  The columns a class-list file must carry, and the rules its cells follow.
+
+  Drawn rather than written out: the nine column names are the file's first
+  line, so they are a numbered line here too, because what a reader has to
+  check is the order. The rules sit against the column each one governs, which
+  is the question actually being asked — "what goes in sex?" — and not the one
+  a trailing clause answers.
+*/
+.file-rules { margin-top: var(--s2); font-size: var(--t-12); color: var(--ink-500); }
+.file-rules-lede { margin: 0 0 var(--s2); }
+.file-rules-cols { display: flex; flex-wrap: wrap; gap: var(--s1); margin: 0 0 var(--s3); padding: 0; list-style: none; counter-reset: col; }
+.file-rules-cols li {
+  display: inline-flex; align-items: baseline; gap: var(--s2);
+  padding: 2px var(--s2); border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--sunk); color: var(--ink-700); font-size: var(--t-11);
+}
+.file-rules-cols li::before { counter-increment: col; content: counter(col); color: var(--ink-400); }
+.file-rules-list { display: grid; gap: var(--s1); margin: 0; }
+.file-rules-list > div { display: flex; gap: var(--s2); }
+.file-rules-list dt { flex: none; min-width: 6.5rem; color: var(--ink-700); }
+.file-rules-list dd { margin: 0; }
+@media (max-width: 560px) { .file-rules-list > div { display: block; } .file-rules-list dt { margin-bottom: 2px; } }
 /*
   A choice whose options are sentences.
 
